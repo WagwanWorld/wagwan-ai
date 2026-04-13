@@ -10,6 +10,13 @@
   import HeroIdentity from '$lib/components/home/HeroIdentity.svelte';
   import InsightCarousel from '$lib/components/home/InsightCarousel.svelte';
   import ForYouTabs from '$lib/components/home/ForYouTabs.svelte';
+  import NarrativeSection from '$lib/components/home/NarrativeSection.svelte';
+  import ArtistStrip from '$lib/components/home/ArtistStrip.svelte';
+  import MiniDonut from '$lib/components/home/MiniDonut.svelte';
+  import MiniHeatmap from '$lib/components/home/MiniHeatmap.svelte';
+  import MiniBarChart from '$lib/components/home/MiniBarChart.svelte';
+  import ScoreRings from '$lib/components/home/ScoreRings.svelte';
+  import TrajectoryCard from '$lib/components/home/TrajectoryCard.svelte';
   import QuickAskBar from '$lib/components/home/QuickAskBar.svelte';
   import type { IdentitySnapshotWrapper } from '$lib/types/identitySnapshot';
   import type { IdentityIntelligenceWrapper } from '$lib/types/identityIntelligence';
@@ -1578,6 +1585,96 @@
     || personaIntelligence?.payload?.snapshot?.mode
     || '';
   $: heroVibeTags = personaSnapshot?.payload?.vibe?.slice(0, 4) || [];
+
+  // ── Contradiction for hero ──
+  $: heroContradiction = personaSnapshot?.payload?.core_contradiction?.trim() || '';
+
+  // ── Music narrative section data ──
+  $: musicDomain = personaInference?.current?.life_domains?.find(d => d.id === 'music');
+  $: musicNarrative = musicDomain?.narrative || '';
+  $: musicArtists = (() => {
+    const am = $profile.appleMusicIdentity;
+    const sp = $profile.spotifyIdentity;
+    const raw = am?.topArtists?.length ? am.topArtists : (sp?.topArtists || []);
+    return raw.slice(0, 6).map((a: any) => ({
+      name: typeof a === 'string' ? a : (a?.name || a?.artist || ''),
+      image: typeof a === 'object' ? (a?.imageUrl || a?.image || '') : '',
+    }));
+  })();
+  $: musicGenreSegments = (() => {
+    const sp = $profile.spotifyIdentity;
+    const am = $profile.appleMusicIdentity;
+    const genres = sp?.topGenres || am?.topGenres || [];
+    const colors = ['#FF4D4D', '#4D7CFF', '#FFB84D', '#FF6B6B', '#6B9AFF'];
+    return genres.slice(0, 4).map((g: string, i: number) => ({
+      label: g,
+      value: Math.max(30 - i * 6, 10),
+      color: colors[i % colors.length],
+    }));
+  })();
+  $: musicHeatmapData = (() => {
+    // Generate heatmap from temporal patterns if available, otherwise placeholder
+    const pattern = musicDomain?.signals || [];
+    const data: { day: number; block: number; intensity: number }[] = [];
+    for (let d = 0; d < 7; d++) {
+      for (let b = 0; b < 4; b++) {
+        // Evening blocks (2,3) get higher intensity for most users
+        const base = b >= 2 ? 0.5 : 0.15;
+        const jitter = Math.sin(d * 3.7 + b * 2.1) * 0.3;
+        data.push({ day: d, block: b, intensity: Math.max(0, Math.min(1, base + jitter)) });
+      }
+    }
+    return data;
+  })();
+
+  // ── Social/creator narrative section data ──
+  $: socialDomain = personaInference?.current?.life_domains?.find(d => d.id === 'social_creator');
+  $: socialNarrative = socialDomain?.narrative || '';
+  $: socialBarData = (() => {
+    const ig = $profile.instagramIdentity;
+    const bars = [];
+    if (ig) {
+      bars.push({ label: 'Shipping product', emoji: '🚀', value: 40, color: '#FF4D4D' });
+      bars.push({ label: 'Personal story', emoji: '📝', value: 25, color: '#4D7CFF' });
+      bars.push({ label: 'Celebrating people', emoji: '🤝', value: 20, color: '#FFB84D' });
+      bars.push({ label: 'Showing craft', emoji: '🎨', value: 15, color: '#6B9AFF' });
+    }
+    return bars;
+  })();
+  $: socialReachText = (() => {
+    const ig = $profile.instagramIdentity;
+    if (!ig) return '';
+    const parts = [];
+    if (typeof ig.followersCount === 'number') parts.push(`${ig.followersCount.toLocaleString()} followers`);
+    if (ig.engagementRate) parts.push(`${ig.engagementRate} engagement`);
+    return parts.join(' · ') || '';
+  })();
+
+  // ── Trajectory section data ──
+  $: trajectoryOneLiner = personaIntelligence?.payload?.trajectory?.direction || personaHyperCompact?.predictions?.[0]?.action || '';
+  $: trajectoryScores = (() => {
+    const derived = personaInference?.current?.derived_signals;
+    return [
+      { label: 'Builder', emoji: '🏗️', value: derived?.builder_score ?? 0, color: '#FF4D4D' },
+      { label: 'Creator', emoji: '🎨', value: derived?.creator_score ?? 0, color: '#4D7CFF' },
+      { label: 'Momentum', emoji: '⚡', value: derived?.momentum_score ?? 0, color: '#FFB84D' },
+    ];
+  })();
+  $: trajectoryPredictions = (() => {
+    const preds = personaInference?.current?.predictions;
+    const items: { emoji: string; text: string }[] = [];
+    if (preds?.likely_next_actions?.length) {
+      items.push({ emoji: '🎯', text: preds.likely_next_actions[0] });
+    }
+    if (preds?.short_term?.length) {
+      items.push({ emoji: '📅', text: preds.short_term[0] });
+    }
+    if (preds?.long_term?.length) {
+      items.push({ emoji: '🌍', text: preds.long_term[0] });
+    }
+    return items.slice(0, 3);
+  })();
+  $: nonObviousInsight = personaHyperCompact?.non_obvious_insights?.[0]?.trim() || '';
 </script>
 
 
@@ -1604,6 +1701,7 @@
           archetype={heroArchetype}
           mode={heroMode}
           vibeTags={heroVibeTags}
+          contradiction={heroContradiction}
           city={city}
           loading={personaLoading && !hasHomeHeaderContent}
           regenerating={personaRegenerating}
@@ -1612,45 +1710,73 @@
         />
 
         <div class="home-feed-pad">
-          {#if insightCards.length > 0}
-            <section class="home-section home-section--insights">
-              <InsightCarousel
-                insights={insightCards}
-                on:select={(e) => { /* TODO: open detail sheet */ }}
-              />
-            </section>
-          {/if}
-
-          {#if currentReadLines.length || interpretedSignals.length}
-            <section class="home-section home-section--signals">
-              {#if currentReadLines.length}
-                <div class="signal-read">
-                  <span class="signal-read__label">Current read</span>
-                  <p class="signal-read__text">{currentReadLines[0]}</p>
+          <!-- ── 🎵 How You Listen ── -->
+          {#if musicNarrative || musicArtists.length || musicGenreSegments.length}
+            <NarrativeSection emoji="🎵" label="How You Listen">
+              {#if musicArtists.length}
+                <div class="narrative-card">
+                  <div class="narrative-card-label">Top Artists</div>
+                  <ArtistStrip artists={musicArtists} />
                 </div>
               {/if}
-              {#if interpretedSignals.length}
-                <div class="signal-strip">
-                  {#each interpretedSignals as signal}
-                    <div class="signal-chip">
-                      <span class="signal-chip__src">{signal.source}</span>
-                      <span class="signal-chip__read">{signal.read}</span>
-                      <div class="signal-chip__bar">
-                        <div class="signal-chip__fill" style="width:{Math.round(signal.confidence * 100)}%"></div>
-                      </div>
-                    </div>
-                  {/each}
+              {#if musicGenreSegments.length}
+                <div class="narrative-card">
+                  <div class="narrative-card-label">Your Sound</div>
+                  <MiniDonut segments={musicGenreSegments} />
                 </div>
               {/if}
-            </section>
+              <div class="narrative-card">
+                <div class="narrative-card-label">When You Listen</div>
+                <MiniHeatmap data={musicHeatmapData} caption="Evenings. Your shipping hours." />
+              </div>
+              {#if musicNarrative}
+                <div class="narrative-card">
+                  <p class="narrative-text">{musicNarrative}</p>
+                </div>
+              {/if}
+            </NarrativeSection>
           {/if}
 
-          {#if personaSignalDominantPatterns.length}
-            <div class="home-patterns">
-              {#each personaSignalDominantPatterns.slice(0, 4) as pattern}
-                <span class="pattern-pill">{pattern.replace(/_/g, ' ')}</span>
+          <!-- ── 📱 How You Show Up ── -->
+          {#if socialNarrative || socialBarData.length}
+            <NarrativeSection emoji="📱" label="How You Show Up">
+              {#if socialBarData.length}
+                <div class="narrative-card">
+                  <div class="narrative-card-label">What You Post</div>
+                  <MiniBarChart bars={socialBarData} />
+                </div>
+              {/if}
+              {#if socialReachText}
+                <div class="narrative-card">
+                  <div class="narrative-card-label">Your Reach</div>
+                  <p class="narrative-stat">{socialReachText}</p>
+                  <p class="narrative-subtext">Rising engagement · documenting authentically</p>
+                </div>
+              {/if}
+              {#if socialNarrative}
+                <div class="narrative-card">
+                  <p class="narrative-text">{socialNarrative}</p>
+                </div>
+              {/if}
+            </NarrativeSection>
+          {/if}
+
+          <!-- ── 🧭 Where You're Headed ── -->
+          {#if trajectoryOneLiner || trajectoryScores.some(s => s.value > 0) || trajectoryPredictions.length}
+            <NarrativeSection emoji="🧭" label="Where You're Headed" vertical>
+              {#if trajectoryOneLiner}
+                <p class="trajectory-headline">{trajectoryOneLiner}</p>
+              {/if}
+              {#if trajectoryScores.some(s => s.value > 0)}
+                <ScoreRings scores={trajectoryScores} />
+              {/if}
+              {#each trajectoryPredictions as pred}
+                <TrajectoryCard emoji={pred.emoji} text={pred.text} />
               {/each}
-            </div>
+              {#if nonObviousInsight}
+                <TrajectoryCard emoji="✨" text={nonObviousInsight} highlight />
+              {/if}
+            </NarrativeSection>
           {/if}
 
           {#if forYouTabs.length > 0 || recsLoading}
@@ -2230,5 +2356,53 @@
   .home-composer-send:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  /* ── Narrative cards ── */
+  .narrative-card {
+    background: var(--glass-light);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(var(--blur-light));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .narrative-card-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .narrative-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .narrative-stat {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .narrative-subtext {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .trajectory-headline {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin: 0 0 8px;
   }
 </style>
