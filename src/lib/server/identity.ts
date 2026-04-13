@@ -75,6 +75,9 @@ interface RawProfile {
     latestReleases?: { artistName?: string; title?: string }[];
     heavyRotationTracks?: { title?: string; artistName?: string }[];
     recentlyPlayed?: { title?: string; artistName?: string }[];
+    libraryArtists?: string[];
+    lovedSongs?: { title?: string; artistName?: string }[];
+    recommendedNames?: string[];
   } | null;
   googleIdentity?: {
     topChannels?: string[];
@@ -324,9 +327,17 @@ export function buildIdentityGraph(profile: RawProfile): IdentityGraph {
 
   const budget = (profile.budget as 'low' | 'mid' | 'high') ?? 'mid';
 
-  const topArtists = sp?.topArtists?.length
-    ? sp.topArtists.slice(0, 6)
-    : (am?.topArtists?.slice(0, 6) ?? []);
+  const amLovedArtists = (am?.lovedSongs ?? [])
+    .map(s => s.artistName?.trim())
+    .filter((n): n is string => Boolean(n));
+  const topArtists = dedupeInterestsPreserveOrder(
+    [
+      ...(sp?.topArtists?.length ? sp.topArtists.slice(0, 6) : (am?.topArtists?.slice(0, 6) ?? [])),
+      ...(am?.libraryArtists ?? []).slice(0, 8),
+      ...amLovedArtists,
+    ],
+    12,
+  );
   const topGenres = sp?.topGenres?.length
     ? sp.topGenres.slice(0, 5)
     : (am?.topGenres?.slice(0, 5) ?? []);
@@ -508,9 +519,17 @@ export function buildIdentityGraph(profile: RawProfile): IdentityGraph {
     return `${prefix} ${parts.join(', ')}`;
   }
 
+  const amLovedLine = (am?.lovedSongs ?? [])
+    .slice(0, 5)
+    .map(t => (t.artistName ? `${t.artistName} — ${t.title}` : t.title ?? ''))
+    .filter(Boolean)
+    .join('; ');
+  const amRecsLine = (am?.recommendedNames ?? []).slice(0, 4).join(', ');
   const appleListeningHint = [
     appleTrackLine(am?.heavyRotationTracks, 'heavy:'),
     appleTrackLine(am?.recentlyPlayed, 'recent:'),
+    amLovedLine ? `loved: ${amLovedLine}` : '',
+    amRecsLine ? `apple recommends: ${amRecsLine}` : '',
   ]
     .filter(Boolean)
     .join(' | ')
@@ -574,7 +593,12 @@ export function buildIdentityGraph(profile: RawProfile): IdentityGraph {
   const igInsightsTags = ig?.igInsightsTags ?? [];
 
   const appleMusicDescriptorTags = dedupeInterestsPreserveOrder(
-    [...(am?.rotationPlaylists ?? []), ...(am?.libraryPlaylists ?? [])].map(s => String(s).slice(0, 48)),
+    [
+      ...(am?.topGenres ?? []),
+      ...(am?.rotationPlaylists ?? []).slice(0, 4),
+      ...(am?.libraryPlaylists ?? []).slice(0, 3),
+      ...(am?.recommendedNames ?? []).slice(0, 3),
+    ].map(s => String(s).slice(0, 48)),
     10,
   );
 
