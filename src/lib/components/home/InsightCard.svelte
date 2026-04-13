@@ -103,16 +103,11 @@
 
   .insight-card__statement {
     margin: 14px 0 0;
-    font-family: var(--font-display, Georgia, serif);
-    font-style: italic;
+    font-family: var(--font-sans);
     font-weight: 400;
     font-size: 1.05rem;
     line-height: 1.4;
     color: var(--text-primary);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .insight-card__supporting {

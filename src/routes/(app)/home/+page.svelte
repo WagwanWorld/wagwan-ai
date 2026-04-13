@@ -1858,8 +1858,7 @@
   }
 
   .signal-read__text {
-    font-family: var(--font-display);
-    font-style: italic;
+    font-family: var(--font-sans);
     font-size: clamp(0.95rem, 3vw, 1.1rem);
     line-height: 1.5;
     color: var(--text-primary);
@@ -2047,13 +2046,12 @@
 
   .home-chat-mode__btn--active {
     background: var(--accent-soft);
-    border-color: oklch(75% 0.22 130 / 0.25);
+    border-color: rgba(255, 77, 77, 0.25);
     color: var(--accent-primary);
   }
 
   .home-chat-title {
-    font-family: var(--font-display);
-    font-style: italic;
+    font-family: var(--font-sans);
     font-size: 1.1rem;
     font-weight: 400;
     color: var(--text-primary);
