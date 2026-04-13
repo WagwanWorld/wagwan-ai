@@ -6,9 +6,11 @@
 @layer base {
   .home-page-root[data-home-surface='dark'],
   html:has([data-app-chrome='dark']) {
-    --home-lime: #c4f24a;
-    --home-lime-soft: rgba(196, 242, 74, 0.14);
-    --home-lime-glow: rgba(196, 242, 74, 0.32);
+    --home-accent: #FF4D4D;
+    --home-accent-soft: rgba(255, 77, 77, 0.14);
+    --home-accent-glow: rgba(255, 77, 77, 0.32);
+    --home-blue: #4D7CFF;
+    --home-gold: #FFB84D;
 
     --home-font-title: clamp(1.45rem, 2.2vw, 1.75rem);
     --home-font-section: clamp(0.875rem, 1.1vw, 1rem);
@@ -18,7 +20,7 @@
     --home-section-gap-lg: 48px;
     --home-shell-pad-x: clamp(24px, 5vw, 80px);
     --home-layout-gutter: clamp(16px, 2.4vw, 28px);
-    --home-accent-gradient: linear-gradient(90deg, #c4f24a 0%, oklch(55% 0.14 200) 100%);
+    --home-accent-gradient: linear-gradient(90deg, #FF4D4D 0%, #4D7CFF 50%, #FFB84D 100%);
 
     /* Backgrounds — blue-tinted blacks for perceptual consistency with lime */
     --bg-primary: oklch(8% 0.008 260);
@@ -36,26 +38,22 @@
     --glass-medium: rgba(255, 255, 255, 0.08);
     --glass-strong: rgba(255, 255, 255, 0.11);
 
-    /* Accent — lime only, no gradient */
-    --accent-primary: #c4f24a;
-    --accent-secondary: #9edb2f;
-    --accent-tertiary: #7cb518;
-    --accent-glow: oklch(75% 0.22 130 / 0.32);
-    --accent-soft: oklch(75% 0.22 130 / 0.12);
+    /* Accent — red / blue / gold */
+    --accent-primary: #FF4D4D;
+    --accent-secondary: #4D7CFF;
+    --accent-tertiary: #FFB84D;
+    --accent-glow: rgba(255, 77, 77, 0.32);
+    --accent-soft: rgba(255, 77, 77, 0.12);
     --brand-red-soft: rgba(248, 113, 113, 0.12);
 
-    /* Ambient blobs — lime + teal only (purple/indigo removed) */
-    --blob-tint-a: oklch(75% 0.22 130 / 0.18);    /* lime */
-    --blob-tint-b: oklch(55% 0.14 200 / 0.15);    /* deep teal */
-    --blob-tint-c: oklch(65% 0.10 210 / 0.12);    /* teal-blue */
-    --blob-glow: oklch(75% 0.22 130 / 0.20);
-    --ambient-lime: oklch(75% 0.22 130 / 0.10);
-    --ambient-teal: oklch(55% 0.14 200 / 0.10);
-    --ambient-amber: oklch(72% 0.16 80 / 0.08);
-    /* Legacy aliases used by AmbientGradients (updated in Task 6) */
-    --ambient-blue: var(--ambient-teal);
-    --ambient-red: oklch(58% 0.18 25 / 0.06);
-    --ambient-gold: var(--ambient-lime);
+    /* Ambient blobs — red / blue / gold */
+    --blob-tint-a: oklch(60% 0.22 25 / 0.18);     /* warm red */
+    --blob-tint-b: oklch(55% 0.20 260 / 0.16);    /* blue */
+    --blob-tint-c: oklch(72% 0.16 80 / 0.14);     /* amber gold */
+    --blob-glow: oklch(60% 0.22 25 / 0.20);
+    --ambient-red: oklch(60% 0.22 25 / 0.15);
+    --ambient-blue: oklch(55% 0.20 260 / 0.15);
+    --ambient-gold: oklch(72% 0.16 80 / 0.12);
 
     --bg: var(--bg-primary);
     --card: var(--glass-light);
@@ -81,10 +79,10 @@
 
     /* Shadows — tinted lime, not pure black */
     --shadow-tall-card: 0 12px 40px oklch(8% 0.008 260 / 0.6);
-    --shadow-card-hover: 0 8px 28px oklch(75% 0.22 130 / 0.22);
+    --shadow-card-hover: 0 8px 28px rgba(255, 77, 77, 0.18);
 
-    --calendar-today-bg: oklch(75% 0.22 130 / 0.12);
-    --calendar-today-border: oklch(75% 0.22 130 / 0.35);
+    --calendar-today-bg: rgba(77, 124, 255, 0.12);
+    --calendar-today-border: rgba(77, 124, 255, 0.35);
     --calendar-today-label: var(--accent-primary);
     --text-on-media: #ffffff;
     --text-on-media-muted: rgba(255, 255, 255, 0.55);
@@ -101,15 +99,15 @@
 
     --accent-gradient-wash: linear-gradient(
       120deg,
-      oklch(75% 0.22 130 / 0.12) 0%,
-      oklch(55% 0.14 200 / 0.10) 45%,
-      oklch(65% 0.10 210 / 0.08) 100%
+      rgba(255, 77, 77, 0.12) 0%,
+      rgba(77, 124, 255, 0.10) 45%,
+      rgba(255, 184, 77, 0.08) 100%
     );
     --accent-border-mesh: linear-gradient(
       135deg,
-      oklch(75% 0.22 130 / 0.42),
-      oklch(55% 0.14 200 / 0.35),
-      oklch(65% 0.10 210 / 0.30)
+      rgba(255, 77, 77, 0.42),
+      rgba(77, 124, 255, 0.35),
+      rgba(255, 184, 77, 0.30)
     );
 
     --mesh-orb-base-opacity: 0.32;
@@ -122,9 +120,9 @@
       linear-gradient(rgba(18, 22, 30, 0.92), rgba(12, 14, 20, 0.88)) padding-box,
       linear-gradient(
           125deg,
-          oklch(75% 0.22 130 / 0.35),
-          oklch(55% 0.14 200 / 0.22),
-          oklch(65% 0.10 210 / 0.18)
+          rgba(255, 77, 77, 0.30),
+          rgba(77, 124, 255, 0.22),
+          rgba(255, 184, 77, 0.18)
         )
         border-box;
     box-shadow:
