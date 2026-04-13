@@ -60,7 +60,7 @@ export async function redisGetJson<T>(key: string): Promise<T | null> {
 export async function redisSetJson(key: string, value: unknown, ttlSec: number): Promise<void> {
   const c = await ensureClient();
   if (!c) return;
-  const ex = Math.max(1, Math.min(Math.floor(ttlSec), 86400));
+  const ex = Math.max(1, Math.min(Math.floor(ttlSec), 2_592_000)); // 30 days max
   try {
     await c.set(key, JSON.stringify(value), { EX: ex });
   } catch (e) {
@@ -80,5 +80,15 @@ export async function redisGetDelJson<T>(key: string): Promise<T | null> {
   } catch (e) {
     console.error('[redis] getdel', key, e);
     return null;
+  }
+}
+
+export async function redisDel(key: string): Promise<void> {
+  const c = await ensureClient();
+  if (!c) return;
+  try {
+    await c.del(key);
+  } catch (e) {
+    console.error('[redis] del', key, e);
   }
 }
