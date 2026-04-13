@@ -9,7 +9,7 @@
   import { primaryAccountKeyFromOAuthState } from '$lib/auth/accountKey';
   import { fetchCloudProfile } from '$lib/auth/profileRemote';
 
-  let step = 1;
+  let step = 0;
 
   // ── Google ──
   let googleConnected = false;
@@ -42,6 +42,17 @@
 
   let cloudExtras: Partial<UserProfile> = {};
   let finishError = '';
+
+  // ── Wagwan Auth (Step 0) ──
+  let wagwanPhone = '';
+  let wagwanOtp = '';
+  let wagwanOtpSent = false;
+  let wagwanVerified = false;
+  let wagwanAccessToken = '';
+  let wagwanRefreshToken = '';
+  let wagwanUserId = '';
+  let wagwanError = '';
+  let wagwanLoading = false;
 
   // ── Preferences ──
   let budget: 'low' | 'mid' | 'high' = 'mid';
@@ -103,6 +114,16 @@
 
     // Restore any saved state from previous auth redirects
     try {
+      // Restore wagwan auth state
+      const savedWagwanToken = localStorage.getItem('wagwan_access_token');
+      const savedWagwanUserId = localStorage.getItem('wagwan_user_id');
+      if (savedWagwanToken && savedWagwanUserId) {
+        wagwanVerified = true;
+        wagwanAccessToken = savedWagwanToken;
+        wagwanUserId = savedWagwanUserId;
+        wagwanRefreshToken = localStorage.getItem('wagwan_refresh_token') || '';
+      }
+
       const savedGoogle = localStorage.getItem('onboarding_google');
       if (savedGoogle) {
         const parsed = JSON.parse(savedGoogle);
@@ -297,6 +318,7 @@
       if (igConnected && googleConnected) step = 3;
       else if (igConnected && !googleConnected) step = 3;
       else if (googleConnected) step = 2;
+      else if (wagwanVerified) step = 1;
     }
 
     if (googleConnected || igConnected) void hydrateOnboardingFromCloud();
@@ -315,6 +337,75 @@
   }
   function connectAppleMusic() {
     goto('/auth/applemusic/connect?from=onboarding');
+  }
+
+  async function sendOtp() {
+    wagwanError = '';
+    const phone = wagwanPhone.trim();
+    if (!phone || phone.length !== 13 || !phone.startsWith('+')) {
+      wagwanError = 'Enter a valid phone number (e.g. +919876543210)';
+      return;
+    }
+    wagwanLoading = true;
+    try {
+      const res = await fetch('/api/wagwan/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        wagwanError = data.error || 'Could not send OTP. Try again.';
+      } else {
+        wagwanOtpSent = true;
+      }
+    } catch {
+      wagwanError = 'Network error — check your connection.';
+    } finally {
+      wagwanLoading = false;
+    }
+  }
+
+  async function verifyOtp() {
+    wagwanError = '';
+    const phone = wagwanPhone.trim();
+    const otp = wagwanOtp.trim();
+    if (!otp || otp.length !== 6) {
+      wagwanError = 'Enter the 6-digit code.';
+      return;
+    }
+    wagwanLoading = true;
+    try {
+      const res = await fetch('/api/wagwan/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        wagwanError = data.error || 'Invalid code. Try again.';
+      } else {
+        wagwanAccessToken = data.accessToken;
+        wagwanRefreshToken = data.refreshToken;
+        try {
+          const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
+          wagwanUserId = payload.id || '';
+        } catch {
+          wagwanUserId = '';
+        }
+        try {
+          localStorage.setItem('wagwan_access_token', data.accessToken);
+          localStorage.setItem('wagwan_refresh_token', data.refreshToken);
+          if (wagwanUserId) localStorage.setItem('wagwan_user_id', wagwanUserId);
+        } catch {}
+        wagwanVerified = true;
+        step = 1;
+      }
+    } catch {
+      wagwanError = 'Network error — check your connection.';
+    } finally {
+      wagwanLoading = false;
+    }
   }
 
   async function hydrateOnboardingFromCloud() {
@@ -426,6 +517,20 @@
       body: JSON.stringify({ googleSub: accountSub, profile: fullProfile, tokens }),
     }).catch(() => {});
 
+    // Link wagwan user if authenticated
+    const wToken = wagwanAccessToken || localStorage.getItem('wagwan_access_token') || '';
+    const wSub = accountSub;
+    if (wToken && wSub) {
+      fetch('/api/wagwan/link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${wToken}`,
+        },
+        body: JSON.stringify({ googleSub: wSub }),
+      }).catch(() => {});
+    }
+
     try {
       localStorage.removeItem('onboarding_google');
       localStorage.removeItem('onboarding_ig');
@@ -457,13 +562,85 @@
   <div class="ob-content">
     <!-- Progress -->
     <div class="ob-progress">
-      {#each [1,2,3,4,5] as s}
+      {#each [0,1,2,3,4,5] as s}
         <div class="ob-dot" class:active={step >= s} class:current={step === s}></div>
       {/each}
     </div>
 
+    <!-- ═══ STEP 0: Wagwan Auth (Phone + OTP) ═══ -->
+    {#if step === 0}
+    <div class="ob-step screen-enter">
+      <div class="ob-mark">wagwan</div>
+
+      {#if !wagwanOtpSent}
+        <h1 class="ob-h1">What's your<br>number?</h1>
+        <p class="ob-sub">We'll send you a code to verify your identity.</p>
+
+        {#if wagwanError}
+          <p class="ob-error" role="alert">{wagwanError}</p>
+        {/if}
+
+        <div class="ob-phone-field">
+          <input
+            type="tel"
+            bind:value={wagwanPhone}
+            placeholder="+91 98765 43210"
+            class="ob-input"
+            maxlength="13"
+            on:keydown={(e) => { if (e.key === 'Enter') sendOtp(); }}
+          />
+        </div>
+
+        <div class="ob-bottom">
+          <button
+            type="button"
+            class="ob-cta"
+            on:click={sendOtp}
+            disabled={wagwanLoading || wagwanPhone.trim().length < 13}
+          >
+            {wagwanLoading ? 'Sending...' : 'Send Code'}
+          </button>
+        </div>
+      {:else}
+        <h1 class="ob-h1">Enter the<br>code.</h1>
+        <p class="ob-sub">Sent to {wagwanPhone} &middot; <button type="button" class="ob-change-link" on:click={() => { wagwanOtpSent = false; wagwanOtp = ''; wagwanError = ''; }}>Change</button></p>
+
+        {#if wagwanError}
+          <p class="ob-error" role="alert">{wagwanError}</p>
+        {/if}
+
+        <div class="ob-otp-field">
+          <input
+            type="text"
+            inputmode="numeric"
+            bind:value={wagwanOtp}
+            placeholder="000000"
+            class="ob-input ob-input--otp"
+            maxlength="6"
+            autocomplete="one-time-code"
+            on:input={() => { if (wagwanOtp.length === 6) verifyOtp(); }}
+            on:keydown={(e) => { if (e.key === 'Enter') verifyOtp(); }}
+          />
+        </div>
+
+        <div class="ob-bottom">
+          <button
+            type="button"
+            class="ob-cta"
+            on:click={verifyOtp}
+            disabled={wagwanLoading || wagwanOtp.trim().length !== 6}
+          >
+            {wagwanLoading ? 'Verifying...' : 'Verify'}
+          </button>
+          <button type="button" class="ob-skip-link" on:click={sendOtp} disabled={wagwanLoading}>
+            Resend code
+          </button>
+        </div>
+      {/if}
+    </div>
+
     <!-- ═══ STEP 1: Google or Instagram ═══ -->
-    {#if step === 1}
+    {:else if step === 1}
     <div class="ob-step screen-enter">
       <div class="ob-mark">wagwan</div>
       <h1 class="ob-h1">Let's get to<br>know each other.</h1>
@@ -1099,6 +1276,56 @@
     margin-top: 16px;
   }
   .ob-city-input::placeholder { color: var(--text-muted); }
+
+  /* Phone + OTP inputs (Step 0) */
+  .ob-phone-field,
+  .ob-otp-field {
+    margin-top: 32px;
+  }
+
+  .ob-input {
+    width: 100%;
+    padding: 16px 20px;
+    background: var(--glass-light);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .ob-input:focus {
+    border-color: var(--accent-primary);
+  }
+  .ob-input::placeholder {
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .ob-input--otp {
+    font-size: 28px;
+    text-align: center;
+    letter-spacing: 0.3em;
+    padding: 18px 20px;
+  }
+
+  .ob-change-link {
+    background: none;
+    border: none;
+    color: var(--accent-primary);
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.15s;
+  }
+  .ob-change-link:hover {
+    text-decoration-color: var(--accent-primary);
+  }
 
   /* Ready (Step 5) */
   .ob-ready-glow {
