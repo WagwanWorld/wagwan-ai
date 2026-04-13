@@ -17,6 +17,10 @@
   import type { IdentityMusicContext } from '$lib/types/identityMusicContext';
   import type { InferenceIdentityWrapper, InferenceLifeDomainId } from '$lib/types/inferenceIdentity';
   import { getSpeechRecognition, isSpeechRecognitionSupported } from '$lib/voice/speech';
+  import ResultCard from '$lib/components/ResultCard.svelte';
+  import Microphone from 'phosphor-svelte/lib/Microphone';
+  import PaperPlaneTilt from 'phosphor-svelte/lib/PaperPlaneTilt';
+  import Plus from 'phosphor-svelte/lib/Plus';
   import Lightning from 'phosphor-svelte/lib/Lightning';
   import Scales from 'phosphor-svelte/lib/Scales';
   import TrendUp from 'phosphor-svelte/lib/TrendUp';
@@ -1588,109 +1592,230 @@
 <div class="home-page-root" data-home-surface="dark">
   <PersonaBg photoUrl={photoUrl} dark />
 
-  <div class="home-shell">
-    <HeroIdentity
-      displayName={$profile.name?.trim() || firstName}
-      photoUrl={photoUrl}
-      avatarInitial={avatarInitial}
-      oneLiner={heroOneLiner}
-      archetype={heroArchetype}
-      mode={heroMode}
-      vibeTags={heroVibeTags}
-      city={city}
-      loading={personaLoading && !hasHomeHeaderContent}
-      regenerating={personaRegenerating}
-      on:share={() => (showShareModal = true)}
-      on:refresh={regeneratePersona}
-    />
-
-    {#if insightCards.length > 0}
-      <section class="home-section home-section--insights">
-        <InsightCarousel
-          insights={insightCards}
-          on:select={(e) => { /* TODO: open detail sheet */ }}
+  <div class="home-split">
+    <!-- ── Left: Identity feed ── -->
+    <div class="home-identity-col">
+      <div class="home-identity-scroll">
+        <HeroIdentity
+          displayName={$profile.name?.trim() || firstName}
+          photoUrl={photoUrl}
+          avatarInitial={avatarInitial}
+          oneLiner={heroOneLiner}
+          archetype={heroArchetype}
+          mode={heroMode}
+          vibeTags={heroVibeTags}
+          city={city}
+          loading={personaLoading && !hasHomeHeaderContent}
+          regenerating={personaRegenerating}
+          on:share={() => (showShareModal = true)}
+          on:refresh={regeneratePersona}
         />
-      </section>
-    {/if}
 
-    {#if currentReadLines.length || interpretedSignals.length}
-      <section class="home-section home-section--signals">
-        {#if currentReadLines.length}
-          <div class="signal-read">
-            <span class="signal-read__label">Current read</span>
-            <p class="signal-read__text">{currentReadLines[0]}</p>
-          </div>
-        {/if}
-        {#if interpretedSignals.length}
-          <div class="signal-strip">
-            {#each interpretedSignals as signal}
-              <div class="signal-chip">
-                <span class="signal-chip__src">{signal.source}</span>
-                <span class="signal-chip__read">{signal.read}</span>
-                <div class="signal-chip__bar">
-                  <div class="signal-chip__fill" style="width:{Math.round(signal.confidence * 100)}%"></div>
+        <div class="home-feed-pad">
+          {#if insightCards.length > 0}
+            <section class="home-section home-section--insights">
+              <InsightCarousel
+                insights={insightCards}
+                on:select={(e) => { /* TODO: open detail sheet */ }}
+              />
+            </section>
+          {/if}
+
+          {#if currentReadLines.length || interpretedSignals.length}
+            <section class="home-section home-section--signals">
+              {#if currentReadLines.length}
+                <div class="signal-read">
+                  <span class="signal-read__label">Current read</span>
+                  <p class="signal-read__text">{currentReadLines[0]}</p>
                 </div>
+              {/if}
+              {#if interpretedSignals.length}
+                <div class="signal-strip">
+                  {#each interpretedSignals as signal}
+                    <div class="signal-chip">
+                      <span class="signal-chip__src">{signal.source}</span>
+                      <span class="signal-chip__read">{signal.read}</span>
+                      <div class="signal-chip__bar">
+                        <div class="signal-chip__fill" style="width:{Math.round(signal.confidence * 100)}%"></div>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </section>
+          {/if}
+
+          {#if personaSignalDominantPatterns.length}
+            <div class="home-patterns">
+              {#each personaSignalDominantPatterns.slice(0, 4) as pattern}
+                <span class="pattern-pill">{pattern.replace(/_/g, ' ')}</span>
+              {/each}
+            </div>
+          {/if}
+
+          {#if forYouTabs.length > 0 || recsLoading}
+            <section class="home-section home-section--foryou">
+              <h2 class="home-section__title">For you</h2>
+              <ForYouTabs
+                tabs={forYouTabs}
+                loading={recsLoading}
+                on:feedback={(e) => sendExpressionFeedback(e.detail.title, e.detail.vote)}
+              />
+            </section>
+          {/if}
+
+          {#if completeness < 80}
+            <div class="home-nudge">
+              <p class="home-nudge__text">Your AI knows you <strong>{completeness}%</strong></p>
+              <a href="/profile" class="home-nudge__link">Connect more →</a>
+            </div>
+          {/if}
+
+          <div class="home-bottom-spacer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right: Chat column ── -->
+    <aside class="home-chat-col" aria-label="Ask your system">
+      <div bind:this={homeChatScrollEl} class="home-chat-scroll">
+        <div class="home-chat-meta">
+          <div class="home-chat-mode" role="tablist" aria-label="Composer mode">
+            <button
+              type="button"
+              class="home-chat-mode__btn"
+              class:home-chat-mode__btn--active={homeChatMode === 'ask'}
+              role="tab"
+              aria-selected={homeChatMode === 'ask'}
+              on:click={() => (homeChatMode = 'ask')}
+            >Chat</button>
+            <button
+              type="button"
+              class="home-chat-mode__btn"
+              class:home-chat-mode__btn--active={homeChatMode === 'learn'}
+              role="tab"
+              aria-selected={homeChatMode === 'learn'}
+              on:click={() => (homeChatMode = 'learn')}
+            >Teach portrait</button>
+          </div>
+          <h2 class="home-chat-title">Ask your system</h2>
+          <p class="home-chat-subtitle">{chatColumnSubtitle}</p>
+          {#if homeChatStatus}
+            <p class="home-chat-status">{homeChatStatus}</p>
+          {/if}
+        </div>
+
+        {#if homeChatMessages.length}
+          <div class="home-chat-stack">
+            {#each homeChatMessages as message}
+              <div class="home-chat-turn">
+                <div
+                  class="home-chat-bubble"
+                  class:home-chat-bubble--user={message.role === 'user'}
+                  class:home-chat-bubble--shimmer={message.role === 'ai' && message.loading}
+                >
+                  {message.text}{#if message.loading}<span class="home-chat-caret">▍</span>{/if}
+                </div>
+                {#if message.role === 'ai' && message.cards?.length}
+                  <div class="home-chat-cards">
+                    {#each message.cards as card (card.title + card.url)}
+                      <ResultCard {card} compact />
+                    {/each}
+                  </div>
+                {/if}
               </div>
             {/each}
           </div>
         {/if}
-      </section>
-    {/if}
-
-    {#if personaSignalDominantPatterns.length}
-      <div class="home-patterns">
-        {#each personaSignalDominantPatterns.slice(0, 4) as pattern}
-          <span class="pattern-pill">{pattern.replace(/_/g, ' ')}</span>
-        {/each}
       </div>
-    {/if}
 
-    {#if forYouTabs.length > 0 || recsLoading}
-      <section class="home-section home-section--foryou">
-        <h2 class="home-section__title">For you</h2>
-        <ForYouTabs
-          tabs={forYouTabs}
-          loading={recsLoading}
-          on:feedback={(e) => sendExpressionFeedback(e.detail.title, e.detail.vote)}
-        />
-      </section>
-    {/if}
-
-    {#if completeness < 80}
-      <div class="home-nudge">
-        <p class="home-nudge__text">Your AI knows you <strong>{completeness}%</strong></p>
-        <a href="/profile" class="home-nudge__link">Connect more →</a>
+      <div class="home-composer">
+        <div class="home-composer-inner">
+          {#if isSpeechRecognitionSupported()}
+            <button
+              type="button"
+              class="home-composer-mic"
+              class:home-composer-mic--live={homeListening}
+              title={homeListening ? 'Stop listening' : 'Voice input'}
+              on:click={toggleListenHome}
+            >
+              <Microphone size={20} weight="light" />
+            </button>
+          {/if}
+          <textarea
+            bind:this={paInputEl}
+            bind:value={paQuery}
+            on:keydown={handlePAKey}
+            on:input={autoResizeHomePA}
+            class="home-composer-input"
+            rows="1"
+            placeholder={composerPlaceholder}
+          ></textarea>
+          <button
+            type="button"
+            on:click={submitPA}
+            disabled={!paQuery.trim() || chatBusy}
+            class="home-composer-send"
+            class:home-composer-send--active={!!paQuery.trim()}
+          >
+            <PaperPlaneTilt size={18} weight="fill" />
+          </button>
+        </div>
       </div>
-    {/if}
-
-    <div class="home-bottom-spacer"></div>
-  </div>
-
-  <div class="home-ask-bar">
-    <QuickAskBar
-      placeholder="Ask about yourself..."
-      micSupported={isSpeechRecognitionSupported()}
-      on:submit={() => goto('/ai')}
-      on:mic={toggleListenHome}
-    />
+    </aside>
   </div>
 </div>
 
 <style>
   .home-page-root {
     position: relative;
-    min-height: 100vh;
-    min-height: 100dvh;
-    overflow-y: auto;
-    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  .home-shell {
+  /* ── 2-column split (identity + chat) ── */
+  .home-split {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(240px, auto);
     position: relative;
     z-index: 1;
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 20px;
+    height: 100%;
+    min-height: 0;
+    gap: var(--home-section-gap, 32px);
+  }
+
+  @media (min-width: 1024px) {
+    .home-split {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 35%);
+      grid-template-rows: minmax(0, 1fr);
+      gap: 0 var(--home-layout-gutter);
+      align-items: stretch;
+    }
+  }
+
+  .home-identity-col {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .home-identity-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+
+  .home-identity-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-feed-pad {
+    padding: 0 20px 20px;
   }
 
   .home-section {
@@ -1852,25 +1977,255 @@
   }
 
   .home-bottom-spacer {
-    height: calc(140px + env(safe-area-inset-bottom, 0px));
+    height: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 
-  .home-ask-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    z-index: 60;
-    pointer-events: none;
+  /* ── Chat column ── */
+  .home-chat-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--glass-light) 88%, transparent);
+    backdrop-filter: blur(18px) saturate(1.06);
+    -webkit-backdrop-filter: blur(18px) saturate(1.06);
+    border-top: 1px solid var(--panel-border);
+    border-radius: 20px;
   }
 
-  .home-ask-bar :global(*) {
-    pointer-events: auto;
+  @media (max-width: 1023px) {
+    .home-chat-col {
+      order: 2;
+    }
   }
 
   @media (min-width: 1024px) {
-    .home-shell {
-      padding: 0 40px;
+    .home-chat-col {
+      border-top: none;
+      border: 1px solid var(--panel-border);
+      max-height: none;
     }
+  }
+
+  .home-chat-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: none;
+  }
+
+  .home-chat-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-chat-meta {
+    margin-bottom: 16px;
+  }
+
+  .home-chat-mode {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+
+  .home-chat-mode__btn {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--panel-border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--dur-micro) var(--ease-premium);
+  }
+
+  .home-chat-mode__btn--active {
+    background: var(--accent-soft);
+    border-color: oklch(75% 0.22 130 / 0.25);
+    color: var(--accent-primary);
+  }
+
+  .home-chat-title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+  }
+
+  .home-chat-subtitle {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .home-chat-status {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    color: var(--accent-primary);
+    margin: 6px 0 0;
+  }
+
+  .home-chat-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: auto;
+  }
+
+  .home-chat-turn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .home-chat-bubble {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.55;
+    padding: 10px 14px;
+    border-radius: 4px 16px 16px 16px;
+    background: var(--glass-light);
+    color: var(--text-primary);
+    max-width: 92%;
+    word-break: break-word;
+  }
+
+  .home-chat-bubble--user {
+    align-self: flex-end;
+    border-radius: 16px 4px 16px 16px;
+    background: var(--accent-soft);
+    color: var(--text-primary);
+  }
+
+  .home-chat-bubble--shimmer {
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  .home-chat-caret {
+    color: var(--accent-primary);
+    animation: blink 0.8s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  @keyframes shimmer {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+  }
+
+  .home-chat-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 92%;
+  }
+
+  /* ── Composer ── */
+  .home-composer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--panel-divider);
+  }
+
+  .home-composer-inner {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    background: var(--glass-medium);
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    padding: 6px 6px 6px 14px;
+    transition: border-color var(--dur-micro) var(--ease-premium);
+  }
+
+  .home-composer-inner:focus-within {
+    border-color: var(--accent-glow);
+  }
+
+  .home-composer-mic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color var(--dur-micro) var(--ease-premium);
+  }
+
+  .home-composer-mic:hover {
+    color: var(--text-secondary);
+  }
+
+  .home-composer-mic--live {
+    color: var(--accent-primary);
+    animation: pulse-mic 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-mic {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .home-composer-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    max-height: 100px;
+    padding: 6px 0;
+  }
+
+  .home-composer-input::placeholder {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .home-composer-send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--panel-surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all var(--dur-micro) var(--ease-premium);
+  }
+
+  .home-composer-send--active {
+    background: var(--accent-primary);
+    color: oklch(12% 0.010 260);
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+
+  .home-composer-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 </style>
