@@ -3,6 +3,7 @@
  *
  * Returns personalized news + suggested reads.
  * Cached for 24hr in Redis + Supabase. LLM only on cache miss.
+ * Uses backgroundCompleteJson with Ollama fallback.
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -10,10 +11,7 @@ import { getCached, setCached } from '$lib/server/contentCache';
 import { getProfile } from '$lib/server/supabase';
 import { resolveIdentityGraph } from '$lib/server/resolveGraph';
 import { searchWeb, formatResultsForAI } from '$lib/server/search';
-import Anthropic from '@anthropic-ai/sdk';
-import { ANTHROPIC_API_KEY } from '$env/static/private';
-
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: 60_000 });
+import { backgroundCompleteJson } from '$lib/server/llm/backgroundLlm';
 
 interface NewsItem {
   headline: string;
@@ -60,7 +58,6 @@ export const GET: RequestHandler = async ({ url }) => {
   }
 
   try {
-    // Load profile from Supabase to resolve identity graph
     const profileRow = await getProfile(sub);
     const profileData = (profileRow?.profile_data ?? {}) as Record<string, unknown>;
     const { graph: g, summary } = await resolveIdentityGraph(sub, profileData);
@@ -77,19 +74,15 @@ export const GET: RequestHandler = async ({ url }) => {
     if (genres.length) queries.push(`${genres.join(' ')} new music releases`);
     if (!queries.length) queries.push('technology culture lifestyle news today');
 
-    // Search — searchWeb returns { results, query } objects
     const searchResponses = await Promise.all(
       queries.slice(0, 3).map(q => searchWeb(q, 3))
     );
-    // Extract the results arrays and flatten
     const allResults = searchResponses.flatMap(r =>
       Array.isArray(r) ? r : (r as any)?.results ?? []
     );
     const formatted = formatResultsForAI(allResults);
 
-    const prompt = `You are generating a personalized morning brief for a user.
-
-IDENTITY: ${summary}
+    const userPrompt = `IDENTITY: ${summary}
 CITY: ${city}
 ROLE: ${role}
 INTERESTS: ${interests.join(', ')}
@@ -103,22 +96,11 @@ Generate a JSON response with:
 
 Return ONLY valid JSON: { "news": [...], "reads": [...] }`;
 
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    let payload: MorningBriefPayload = { news: [], reads: [] };
-    try {
-      const text = msg.content[0].type === 'text' ? msg.content[0].text : '';
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        payload = JSON.parse(jsonMatch[0]);
-      }
-    } catch {
-      console.error('[MorningBrief] Failed to parse Claude response');
-    }
+    const payload = await backgroundCompleteJson<MorningBriefPayload>(
+      'You generate personalized morning briefs. Return only valid JSON.',
+      userPrompt,
+      1500,
+    ) ?? { news: [], reads: [] };
 
     await setCached(sub, 'morning_brief', payload);
 
