@@ -158,3 +158,23 @@
     background-size: 100% 100%;
   }
 }
+
+/* ── Animated mesh color shift ── */
+@keyframes mesh-color-shift {
+  0% {
+    filter: blur(calc(72px * var(--mesh-blur-scale, 1))) hue-rotate(0deg);
+  }
+  33% {
+    filter: blur(calc(72px * var(--mesh-blur-scale, 1))) hue-rotate(15deg);
+  }
+  66% {
+    filter: blur(calc(72px * var(--mesh-blur-scale, 1))) hue-rotate(-10deg);
+  }
+  100% {
+    filter: blur(calc(72px * var(--mesh-blur-scale, 1))) hue-rotate(0deg);
+  }
+}
+
+.mesh-animate {
+  animation: mesh-color-shift 20s ease-in-out infinite;
+}
