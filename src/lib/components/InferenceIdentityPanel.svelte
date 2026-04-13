@@ -685,7 +685,7 @@
     border-radius: 999px;
     background: linear-gradient(
       90deg,
-      color-mix(in srgb, var(--home-lime, #b8f24a) 85%, var(--accent-primary)),
+      color-mix(in srgb, var(--home-accent, #FF4D4D) 85%, var(--accent-primary)),
       var(--accent-primary)
     );
   }
@@ -855,7 +855,7 @@
     height: 5px;
     flex-shrink: 0;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--accent-primary) 75%, var(--home-lime, #b8f24a));
+    background: color-mix(in srgb, var(--accent-primary) 75%, var(--home-accent, #FF4D4D));
   }
 
   .inf-home__chips {

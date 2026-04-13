@@ -436,7 +436,7 @@
     height: 5px;
     flex-shrink: 0;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--accent-primary) 80%, var(--home-lime, #b8f24a));
+    background: color-mix(in srgb, var(--accent-primary) 80%, var(--home-accent, #FF4D4D));
   }
 
   .ihp-home__bullet--stop {

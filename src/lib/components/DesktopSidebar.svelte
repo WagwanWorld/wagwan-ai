@@ -213,10 +213,10 @@
   }
 
   .sidebar-rail__link--lime.sidebar-rail__link--active {
-    color: var(--home-lime, #b8f24a);
-    background: color-mix(in srgb, var(--home-lime, #b8f24a) 12%, transparent);
-    border-color: color-mix(in srgb, var(--home-lime, #b8f24a) 22%, transparent);
-    box-shadow: 0 0 20px color-mix(in srgb, var(--home-lime, #b8f24a) 25%, transparent);
+    color: var(--home-accent, #FF4D4D);
+    background: color-mix(in srgb, var(--home-accent, #FF4D4D) 12%, transparent);
+    border-color: color-mix(in srgb, var(--home-accent, #FF4D4D) 22%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--home-accent, #FF4D4D) 25%, transparent);
   }
 
   @media (prefers-reduced-motion: reduce) {

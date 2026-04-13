@@ -174,7 +174,7 @@
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--accent-primary, #c4f24a);
+    color: var(--accent-primary, #FF4D4D);
     margin: 0 0 12px;
   }
 
@@ -220,7 +220,7 @@
     font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
     font-size: 32px;
     font-weight: 700;
-    color: var(--accent-primary, #c4f24a);
+    color: var(--accent-primary, #FF4D4D);
     line-height: 1;
   }
 
@@ -262,7 +262,7 @@
     border-radius: 100px;
     background: var(--accent-soft, rgba(196, 242, 74, 0.08));
     border: 1px solid oklch(75% 0.22 130 / 0.2);
-    color: var(--accent-primary, #c4f24a);
+    color: var(--accent-primary, #FF4D4D);
     white-space: nowrap;
   }
 

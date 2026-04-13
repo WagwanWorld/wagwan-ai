@@ -123,7 +123,7 @@
   .current-read__meter-fill {
     height: 100%;
     border-radius: 99px;
-    background: var(--home-accent-gradient, linear-gradient(90deg, #c4f24a, #22d3ee));
+    background: var(--home-accent-gradient, linear-gradient(90deg, #FF4D4D, #4D7CFF));
     transition: width 0.85s ease;
   }
 </style>
