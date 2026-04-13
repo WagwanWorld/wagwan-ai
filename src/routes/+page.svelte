@@ -7,6 +7,7 @@
     isAppSessionValid,
     maybeRepairIgOnlyAccountKey,
   } from '$lib/auth/sessionGate';
+  import ProductPreviewCard from '$lib/components/onboarding/ProductPreviewCard.svelte';
 
   let visible = false;
   let g1: HTMLDivElement, g2: HTMLDivElement, g3: HTMLDivElement;
@@ -49,11 +50,7 @@
           void fetch('/api/profile/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              googleSub: repaired.googleSub,
-              profile: repaired,
-              tokens: {},
-            }),
+            body: JSON.stringify({ googleSub: repaired.googleSub, profile: repaired, tokens: {} }),
           }).catch(() => {});
         }
         if (isAppSessionValid(get(profile))) {
@@ -72,9 +69,9 @@
 {#if shouldShowLanding}
 <div class="landing-root">
   <div class="landing-grad" class:ready={visible}>
-    <div class="landing-g landing-g--a" bind:this={g1}></div>
-    <div class="landing-g landing-g--b" bind:this={g2}></div>
-    <div class="landing-g landing-g--c" bind:this={g3}></div>
+    <div class="landing-g landing-g--a mesh-animate" bind:this={g1}></div>
+    <div class="landing-g landing-g--b mesh-animate" bind:this={g2}></div>
+    <div class="landing-g landing-g--c mesh-animate" bind:this={g3}></div>
     <div class="landing-vignette" aria-hidden="true"></div>
   </div>
 
@@ -95,28 +92,27 @@
       </button>
     </div>
 
-    <div class="landing-features">
-      <div class="landing-feature">
-        <div class="landing-feature-icon">&#10024;</div>
-        <h3 class="landing-feature-title">Know yourself better</h3>
-        <p class="landing-feature-desc">AI-powered identity graph built from your real digital footprint.</p>
+    <div class="landing-section-label">See what you'll get</div>
+
+    <div class="landing-previews">
+      <div class="landing-preview-item">
+        <ProductPreviewCard variant="identity" />
+        <p class="landing-preview-caption">Your identity, extracted from your real digital footprint</p>
       </div>
-      <div class="landing-feature">
-        <div class="landing-feature-icon">&#9881;</div>
-        <h3 class="landing-feature-title">Personalized everything</h3>
-        <p class="landing-feature-desc">Recommendations for food, music, events, and more — tuned to you.</p>
+      <div class="landing-preview-item">
+        <ProductPreviewCard variant="recommendation" />
+        <p class="landing-preview-caption">Recommendations tuned to who you actually are</p>
       </div>
-      <div class="landing-feature">
-        <div class="landing-feature-icon">&#128274;</div>
-        <h3 class="landing-feature-title">Your data, your control</h3>
-        <p class="landing-feature-desc">You decide what to connect and what stays private. Always.</p>
+      <div class="landing-preview-item">
+        <ProductPreviewCard variant="chat" />
+        <p class="landing-preview-caption">An AI assistant that already knows your taste</p>
       </div>
     </div>
   </div>
 </div>
 {:else}
 <div style="flex:1; display:flex; align-items:center; justify-content:center;">
-  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:22px;" class="pulse-glow">
+  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF4D4D,#FFB84D);display:flex;align-items:center;justify-content:center;font-size:22px;" class="pulse-glow">
     ✦
   </div>
 </div>
@@ -176,7 +172,6 @@
   .landing-content {
     position: relative;
     z-index: 1;
-    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     padding: env(safe-area-inset-top, 0px) 28px env(safe-area-inset-bottom, 28px);
@@ -201,7 +196,7 @@
   }
 
   .landing-hero {
-    flex: 1;
+    min-height: 70dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -231,46 +226,37 @@
     width: fit-content;
     padding: 16px 40px;
     border-radius: 100px;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(135deg, #FF4D4D, #FFB84D);
     border: none;
     color: white;
     font-size: 16px;
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
-    box-shadow: 0 4px 24px var(--accent-glow);
+    box-shadow: 0 4px 24px rgba(255, 77, 77, 0.3);
     transition: transform 0.15s, opacity 0.15s;
   }
   .landing-cta:active { transform: scale(0.97); }
 
-  .landing-features {
+  .landing-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .landing-previews {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 16px;
-    padding-bottom: max(32px, env(safe-area-inset-bottom, 32px));
+    gap: 24px;
+    padding-bottom: max(48px, env(safe-area-inset-bottom, 48px));
   }
 
-  .landing-feature {
-    background: var(--glass-light);
-    border: 1px solid var(--border-subtle);
-    border-radius: 16px;
-    padding: 20px;
-    backdrop-filter: blur(var(--blur-light));
-  }
+  .landing-preview-item { display: flex; flex-direction: column; gap: 10px; }
 
-  .landing-feature-icon {
-    font-size: 24px;
-    margin-bottom: 8px;
-  }
-
-  .landing-feature-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 6px;
-  }
-
-  .landing-feature-desc {
+  .landing-preview-caption {
     font-size: 13px;
     color: var(--text-secondary);
     line-height: 1.5;
@@ -279,11 +265,11 @@
 
   @media (min-width: 768px) {
     .landing-content {
-      max-width: 48rem;
+      max-width: 54rem;
       margin: 0 auto;
       width: 100%;
     }
-    .landing-features {
+    .landing-previews {
       grid-template-columns: repeat(3, 1fr);
     }
   }
