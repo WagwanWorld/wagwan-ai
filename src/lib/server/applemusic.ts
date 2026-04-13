@@ -514,6 +514,9 @@ export async function analyseAppleMusicIdentity(
   latestReleases: AppleMusicLatestRelease[],
   heavyRotationTracks: AppleMusicTrackHint[],
   recentlyPlayed: AppleMusicTrackHint[],
+  libraryArtists: string[],
+  lovedSongs: AppleMusicTrackHint[],
+  recommendedNames: string[],
 ): Promise<AppleMusicIdentity> {
   const trackLine = (xs: AppleMusicTrackHint[]) =>
     xs.slice(0, 8).map(t => (t.artistName ? `${t.artistName} — ${t.title}` : t.title)).join('; ');
@@ -529,6 +532,9 @@ export async function analyseAppleMusicIdentity(
     latestReleases,
     heavyRotationTracks,
     recentlyPlayed,
+    libraryArtists,
+    lovedSongs,
+    recommendedNames,
   });
 
   const hasAnything =
@@ -538,34 +544,45 @@ export async function analyseAppleMusicIdentity(
     libraryPlaylists.length ||
     latestReleases.length ||
     heavyRotationTracks.length ||
-    recentlyPlayed.length;
+    recentlyPlayed.length ||
+    libraryArtists.length ||
+    lovedSongs.length;
   if (!hasAnything) {
     return empty();
   }
 
   const drops = latestReleases.map(r => `${r.artistName}: ${r.title}`).join('; ');
 
-  const prompt = `Analyse this Apple Music listening data and describe the person's music personality in 1-2 sentences.
+  // Show library artists that aren't already in heavy rotation for breadth signal
+  const rotationSet = new Set(artists.map(a => a.toLowerCase()));
+  const extraLibraryArtists = libraryArtists
+    .filter(a => !rotationSet.has(a.toLowerCase()))
+    .slice(0, 15);
+
+  const prompt = `Analyse this Apple Music listening data and describe the person's music personality.
 
 Heavy rotation artists: ${artists.join(', ')}
 Heavy rotation songs: ${trackLine(heavyRotationTracks) || '—'}
 Recently played songs: ${trackLine(recentlyPlayed) || '—'}
+Loved/favorited songs (explicit user preference): ${trackLine(lovedSongs) || '—'}
 Albums in library / rotation: ${albums.join(', ')}
 Genres: ${genres.join(', ')}
 Playlists on repeat (heavy rotation): ${rotationPlaylists.join(', ') || '—'}
 Other library playlists: ${libraryPlaylists.join(', ') || '—'}
+Library artists (beyond rotation): ${extraLibraryArtists.join(', ') || '—'}
+Apple recommendations for this user: ${recommendedNames.join(', ') || '—'}
 Newest catalog drops from those artists: ${drops || '—'}
 
 Return JSON only (no markdown):
 {
-  "musicPersonality": "concise 1-sentence description of their music taste",
+  "musicPersonality": "2-sentence description of their music taste, referencing specific artists/genres",
   "vibeDescription": "one punchy phrase e.g. 'alt-pop with indie edge'"
 }`;
 
   try {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
+      max_tokens: 350,
       messages: [{ role: 'user', content: prompt }],
     });
     const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
@@ -581,6 +598,9 @@ Return JSON only (no markdown):
       recentlyPlayed,
       musicPersonality: parsed.musicPersonality ?? genres.slice(0, 3).join(', '),
       vibeDescription: parsed.vibeDescription ?? '',
+      libraryArtists,
+      lovedSongs,
+      recommendedNames,
     };
   } catch {
     return {
@@ -594,6 +614,9 @@ Return JSON only (no markdown):
       recentlyPlayed,
       musicPersonality: genres.slice(0, 3).join(', '),
       vibeDescription: '',
+      libraryArtists,
+      lovedSongs,
+      recommendedNames,
     };
   }
 }
