@@ -55,6 +55,12 @@ export interface AppleMusicIdentity {
   heavyRotationTracks: AppleMusicTrackHint[];
   /** Recently played from /me/recent/played */
   recentlyPlayed: AppleMusicTrackHint[];
+  /** Full library artist names (broader than heavy rotation) */
+  libraryArtists: string[];
+  /** Songs the user explicitly loved (highest-intent signal) */
+  lovedSongs: AppleMusicTrackHint[];
+  /** Apple's own recommendations — what Apple thinks the user likes */
+  recommendedNames: string[];
 }
 
 /** Merge defaults for identities saved before new Apple Music fields existed */
@@ -66,6 +72,9 @@ export function normalizeAppleMusicIdentity(am: AppleMusicIdentity): AppleMusicI
     latestReleases: am.latestReleases ?? [],
     heavyRotationTracks: (am.heavyRotationTracks ?? []).map(normalizeTrackHint),
     recentlyPlayed: (am.recentlyPlayed ?? []).map(normalizeTrackHint),
+    libraryArtists: am.libraryArtists ?? [],
+    lovedSongs: (am.lovedSongs ?? []).map(normalizeTrackHint),
+    recommendedNames: am.recommendedNames ?? [],
   };
 }
 
