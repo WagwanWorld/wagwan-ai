@@ -26,8 +26,8 @@
 </div>
 
 <style>
-  .bars-wrap { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bars-wrap { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+  .bar-row { display: flex; align-items: center; gap: 8px; }
   .bar-emoji { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
   .bar-info { flex: 1; min-width: 0; }
   .bar-label-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }

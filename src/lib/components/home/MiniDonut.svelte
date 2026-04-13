@@ -54,7 +54,7 @@
 <style>
   .donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .donut-svg { display: block; }
-  .donut-legend { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .donut-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; }
   .donut-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .donut-label { color: var(--text-secondary); flex: 1; }

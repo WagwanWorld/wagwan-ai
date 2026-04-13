@@ -19,6 +19,7 @@
     border: 1px solid var(--border-subtle);
     border-radius: 14px;
     backdrop-filter: blur(var(--blur-light));
+    -webkit-backdrop-filter: blur(var(--blur-light));
     transition: transform 0.2s, border-color 0.2s;
   }
   .trajectory-card:hover {

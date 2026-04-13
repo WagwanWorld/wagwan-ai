@@ -1941,7 +1941,7 @@
   }
 
   .home-feed-pad {
-    padding: 0 20px 20px;
+    padding: 0 0 24px;
   }
 
   .home-section {
@@ -2364,7 +2364,8 @@
     border: 1px solid var(--border-subtle);
     border-radius: 16px;
     padding: 16px;
-    backdrop-filter: blur(var(--blur-light));
+    backdrop-filter: blur(var(--blur-medium));
+    -webkit-backdrop-filter: blur(var(--blur-medium));
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -2403,6 +2404,6 @@
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.4;
-    margin: 0 0 8px;
+    margin: 0;
   }
 </style>

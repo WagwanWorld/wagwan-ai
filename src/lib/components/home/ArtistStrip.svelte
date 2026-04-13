@@ -37,7 +37,8 @@
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    padding-bottom: 4px;
+    padding-bottom: 0;
+    overscroll-behavior-x: contain;
   }
   .artist-strip::-webkit-scrollbar { display: none; }
 
@@ -58,7 +59,7 @@
     transition: border-color 0.2s, transform 0.2s;
   }
   .artist-img:hover {
-    border-color: #FF4D4D;
+    border-color: var(--accent-primary);
     transform: scale(1.08);
   }
 
@@ -73,13 +74,17 @@
     font-weight: 800;
     color: white;
     border: 2px solid var(--border-subtle);
+    transition: transform 0.2s;
+  }
+  .artist-fallback:hover {
+    transform: scale(1.08);
   }
 
   .artist-name {
     font-size: 10px;
     color: var(--text-muted);
     text-align: center;
-    max-width: 60px;
+    max-width: 52px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

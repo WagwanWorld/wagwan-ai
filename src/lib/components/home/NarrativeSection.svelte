@@ -33,6 +33,7 @@
     opacity: 0;
     transform: translateY(16px);
     transition: opacity 0.5s var(--ease-entrance, ease), transform 0.5s var(--ease-entrance, ease);
+    margin-bottom: 32px;
   }
   .narrative.visible {
     opacity: 1;
@@ -44,7 +45,7 @@
     align-items: center;
     gap: 8px;
     padding: 0 24px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
 
   .narrative-emoji { font-size: 16px; }
@@ -59,7 +60,7 @@
 
   .narrative-body {
     display: flex;
-    gap: 14px;
+    gap: 16px;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
@@ -79,6 +80,7 @@
     overflow-x: visible;
     scroll-snap-type: none;
     padding: 0 24px;
+    gap: 16px;
   }
   .narrative-body--vertical > :global(*) {
     flex-shrink: unset;

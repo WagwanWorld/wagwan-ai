@@ -260,7 +260,7 @@
     line-height: 1.6;
     max-width: min(24rem, 100%);
     text-align: center;
-    margin: 0 0 8px;
+    margin: 0 0 20px;
     opacity: 0;
     animation: fadeSlideUp 0.5s ease 0.35s forwards;
   }
@@ -290,9 +290,9 @@
     font-weight: 500;
     padding: 5px 14px;
     border-radius: 100px;
-    background: var(--accent-soft, rgba(196, 242, 74, 0.08));
-    border: 1px solid oklch(75% 0.22 130 / 0.2);
-    color: var(--accent-primary, #FF4D4D);
+    background: var(--glass-light);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
     white-space: nowrap;
   }
 
@@ -359,7 +359,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
   }
 
   .skel {
