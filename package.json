@@ -12,6 +12,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource-variable/geist-mono": "^5.2.7",
+    "@fontsource/bodoni-moda": "^5.2.7",
     "@fontsource/inter": "^5.2.8",
     "@lucide/svelte": "^1.7.0",
     "@supabase/supabase-js": "^2.101.1",

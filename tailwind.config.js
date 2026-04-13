@@ -16,11 +16,14 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'Inter', '-apple-system', 'sans-serif'],
+        sans: ['var(--font-sans)', '-apple-system', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
+        mono: ['var(--font-mono)', 'monospace'],
       },
       borderRadius: {
         card: '16px',
         pill: '100px',
+        bezel: '2rem',
       },
     },
   },

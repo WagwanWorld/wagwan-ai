@@ -1,13 +1,19 @@
-/* Latin subset only — fewer bytes than full family; weights the UI actually uses */
-@import '@fontsource/inter/latin-400.css';
-@import '@fontsource/inter/latin-500.css';
-@import '@fontsource/inter/latin-600.css';
-@import '@fontsource/inter/latin-700.css';
-@import '@fontsource/inter/latin-800.css';
+/* Bodoni Moda — display/editorial serif (identity headlines, AI synthesis) */
+@import '@fontsource/bodoni-moda/400.css';
+@import '@fontsource/bodoni-moda/400-italic.css';
+@import '@fontsource/bodoni-moda/600.css';
+
+/* Geist — UI/body grotesque */
+@import '@fontsource-variable/geist';
+
+/* Geist Mono — data/numbers */
+@import '@fontsource-variable/geist-mono';
 
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: var(--font-sans);
+  --font-sans: 'Geist Variable', 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Bodoni Moda', Georgia, serif;
+  --font-mono: 'Geist Mono Variable', 'Geist Mono', 'Courier New', monospace;
+
   --text-xs: 0.6875rem;
   --text-sm: 0.8125rem;
   --text-base: 0.9375rem;
@@ -15,4 +21,7 @@
   --text-lg: 1.125rem;
   --text-xl: 1.25rem;
   --text-2xl: clamp(1.5rem, 4vw, 2rem);
+  --text-display-sm: clamp(1.75rem, 3.5vw, 2.25rem);
+  --text-display-md: clamp(2rem, 4.5vw, 3rem);
+  --text-display-lg: clamp(2.5rem, 5vw, 3.5rem);
 }
