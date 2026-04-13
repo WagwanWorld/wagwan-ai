@@ -339,6 +339,75 @@ async function fetchLibrarySongHints(
   }
 }
 
+/** Fetch full library artist names — broader than heavy rotation. */
+async function fetchLibraryArtists(
+  developerToken: string,
+  userToken: string,
+): Promise<string[]> {
+  try {
+    const res = await fetch(`${AM_BASE}/me/library/artists?limit=50`, {
+      headers: amHeaders(developerToken, userToken),
+    });
+    if (!res.ok) return [];
+    const j = (await res.json()) as { data?: AMResource[] };
+    return dedupeNames(
+      (j.data ?? []).map(i => i.attributes?.name?.trim()).filter((n): n is string => Boolean(n)),
+      40,
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** Fetch songs the user explicitly "loved" — highest-intent music signal. */
+async function fetchLovedSongs(
+  developerToken: string,
+  userToken: string,
+): Promise<AppleMusicTrackHint[]> {
+  try {
+    const res = await fetch(`${AM_BASE}/me/ratings/songs?limit=40`, {
+      headers: amHeaders(developerToken, userToken),
+    });
+    if (!res.ok) return [];
+    const j = (await res.json()) as { data?: AMResource[] };
+    const tracks: AppleMusicTrackHint[] = [];
+    for (const item of j.data ?? []) {
+      const title = item.attributes?.name?.trim();
+      if (!title) continue;
+      tracks.push({
+        title,
+        artistName: item.attributes?.artistName?.trim() || undefined,
+        appleMusicId: item.id?.trim() || undefined,
+        playAs: 'song',
+        playUrl: item.attributes?.url?.trim() || undefined,
+      });
+    }
+    return dedupeTracks(tracks, 20);
+  } catch {
+    return [];
+  }
+}
+
+/** Fetch Apple's personalized recommendations — Apple's own inference about user taste. */
+async function fetchRecommendations(
+  developerToken: string,
+  userToken: string,
+): Promise<string[]> {
+  try {
+    const res = await fetch(`${AM_BASE}/me/recommendations?limit=10`, {
+      headers: amHeaders(developerToken, userToken),
+    });
+    if (!res.ok) return [];
+    const j = (await res.json()) as { data?: { attributes?: { title?: { stringForDisplay?: string } } }[] };
+    return (j.data ?? [])
+      .map(r => r.attributes?.title?.stringForDisplay?.trim())
+      .filter((n): n is string => Boolean(n))
+      .slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
 export interface AppleMusicFetchedSnapshot {
   artists: string[];
   albums: string[];
@@ -348,6 +417,9 @@ export interface AppleMusicFetchedSnapshot {
   latestReleases: AppleMusicLatestRelease[];
   heavyRotationTracks: AppleMusicTrackHint[];
   recentlyPlayed: AppleMusicTrackHint[];
+  libraryArtists: string[];
+  lovedSongs: AppleMusicTrackHint[];
+  recommendedNames: string[];
 }
 
 export async function fetchAppleMusicData(
@@ -356,13 +428,16 @@ export async function fetchAppleMusicData(
 ): Promise<AppleMusicFetchedSnapshot> {
   const headers = amHeaders(developerToken, userToken);
 
-  const [storefrontRes, heavyRes, albumsRes, playlistsRes, recentRes] = await Promise.all([
+  const [storefrontRes, heavyRes, albumsRes, playlistsRes, recentRes, libraryArtistsRes, lovedSongsRes, recommendationsRes] = await Promise.all([
     fetchStorefront(developerToken, userToken),
     fetch(`${AM_BASE}/me/history/heavy-rotation?limit=25`, { headers }),
     fetch(`${AM_BASE}/me/library/albums?limit=20`, { headers }),
     fetch(`${AM_BASE}/me/library/playlists?limit=20`, { headers }),
     // Correct path per Apple docs — `/me/recent/played` is not the tracks endpoint.
     fetch(`${AM_BASE}/me/recent/played/tracks?limit=20`, { headers }),
+    fetchLibraryArtists(developerToken, userToken),
+    fetchLovedSongs(developerToken, userToken),
+    fetchRecommendations(developerToken, userToken),
   ]);
 
   const heavy: AMResource[] = heavyRes.ok ? ((await heavyRes.json()).data ?? []) : [];
@@ -424,6 +499,9 @@ export async function fetchAppleMusicData(
     latestReleases,
     heavyRotationTracks: heavyOut,
     recentlyPlayed,
+    libraryArtists: libraryArtistsRes,
+    lovedSongs: lovedSongsRes,
+    recommendedNames: recommendationsRes,
   };
 }
 
