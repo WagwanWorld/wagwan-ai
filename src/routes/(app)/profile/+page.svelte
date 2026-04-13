@@ -99,6 +99,39 @@
   $: profilePic = $profile.instagramIdentity?.profilePicture || $profile.googleIdentity?.picture || '';
   $: displayName = $profile.name || 'You';
   $: city = $profile.city || $profile.instagramIdentity?.city || '';
+
+  $: locationLocked = (() => {
+    const updatedAt = $profile.locationUpdatedAt;
+    if (!updatedAt) return false;
+    const diff = Date.now() - new Date(updatedAt).getTime();
+    return diff < 30 * 24 * 60 * 60 * 1000; // 30 days
+  })();
+
+  $: locationUnlockDate = (() => {
+    const updatedAt = $profile.locationUpdatedAt;
+    if (!updatedAt) return '';
+    const unlock = new Date(new Date(updatedAt).getTime() + 30 * 24 * 60 * 60 * 1000);
+    return unlock.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+  })();
+
+  let locationCity = $profile.city || '';
+
+  async function saveLocation() {
+    const prev = $profile.city || '';
+    const next = locationCity.trim();
+    const cityChanged = next !== prev;
+    if (!cityChanged) return;
+    profile.update(p => ({ ...p, city: next }));
+    if (cityChanged) {
+      profile.update(p => ({ ...p, locationUpdatedAt: new Date().toISOString() }));
+      // Fire-and-forget signal refresh
+      fetch('/api/refresh-signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSub: $profile.googleSub, profile: $profile }),
+      }).catch(() => {});
+    }
+  }
   $: ig = $profile.instagramIdentity;
   $: aesthetic = ig?.aesthetic || '';
   $: personalTags = (() => {
@@ -779,6 +812,25 @@
     </section>
   {/if}
 
+  <!-- Location -->
+  <section class="pf-section">
+    <h2 class="pf-label">Location</h2>
+    <p class="pf-desc">Used to personalise your identity graph and improve match relevance.</p>
+    <div class="pf-location-row">
+      <input
+        class="pf-location-input"
+        type="text"
+        placeholder="City or region"
+        bind:value={locationCity}
+        disabled={locationLocked}
+        on:blur={saveLocation}
+      />
+      {#if locationLocked}
+        <span class="profile-lock-msg">You can update your location on {locationUnlockDate}</span>
+      {/if}
+    </div>
+  </section>
+
   <!-- Settings -->
   <section class="pf-section">
     <h2 class="pf-label">Settings</h2>
@@ -1457,6 +1509,43 @@
     color: var(--state-error);
     background: color-mix(in srgb, var(--state-error) 8%, transparent);
     border-color: color-mix(in srgb, var(--state-error) 35%, transparent);
+  }
+
+  /* Location edit */
+  .pf-location-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .pf-location-input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--glass-light) 85%, transparent);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .pf-location-input::placeholder {
+    color: var(--text-muted);
+  }
+  .pf-location-input:focus:not(:disabled) {
+    border-color: var(--accent-primary);
+    background: var(--glass-medium);
+  }
+  .pf-location-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .profile-lock-msg {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 4px;
+    font-style: italic;
   }
 
   .pf-nav-spacer {
