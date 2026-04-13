@@ -1,0 +1,47 @@
+syntax="proto3";
+
+package wagwan.auth.api.v1;
+
+import "wagwan/utils/date.proto";
+
+service AuthService {
+  rpc GenerateOTP(GenerateOTPRequest) returns (GenerateOTPResponse);
+  rpc VerifyLoginOTP(VerifyLoginOTPRequest) returns (VerifyLoginOTPResponse);
+  rpc VerifySignUpOTP(VerifySignUpOTPRequest) returns (VerifySignUpOTPResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+message GenerateOTPRequest {
+  string phone = 1;
+}
+
+message GenerateOTPResponse {
+}
+
+message VerifyLoginOTPRequest {
+  string phone = 1;
+  string otp = 2;
+}
+
+message VerifyLoginOTPResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message VerifySignUpOTPRequest {
+  string name = 1;
+  string bio = 2;
+  wagwan.utils.Date dob = 3;
+  string user_id = 4;
+  bytes profile_pic = 5;
+  string phone = 6;
+  string otp = 7;
+}
+
+message VerifySignUpOTPResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message LogoutRequest {}
+message LogoutResponse {}
