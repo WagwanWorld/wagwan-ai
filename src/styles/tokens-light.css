@@ -17,26 +17,22 @@
     --glass-medium: oklch(99% 0.008 80 / 0.90);
     --glass-strong: oklch(99% 0.008 80 / 0.97);
 
-    /* Accent — same lime as dark mode (highlighter on paper effect) */
-    --accent-primary: #c4f24a;
-    --accent-secondary: #9edb2f;
-    --accent-tertiary: #7cb518;
-    --accent-glow: oklch(75% 0.22 130 / 0.28);
-    --accent-soft: oklch(75% 0.22 130 / 0.10);
+    /* Accent — red / blue / gold */
+    --accent-primary: #FF4D4D;
+    --accent-secondary: #4D7CFF;
+    --accent-tertiary: #FFB84D;
+    --accent-glow: rgba(255, 77, 77, 0.28);
+    --accent-soft: rgba(255, 77, 77, 0.10);
     --brand-red-soft: rgba(220, 38, 38, 0.10);
 
-    /* Ambient blobs — warm amber + lime (no blue, no purple) */
-    --blob-tint-a: oklch(75% 0.22 130 / 0.14);    /* lime */
-    --blob-tint-b: oklch(72% 0.16 80 / 0.12);     /* warm amber */
-    --blob-tint-c: oklch(68% 0.12 70 / 0.10);     /* amber-orange */
-    --blob-glow: oklch(75% 0.22 130 / 0.18);
-    --ambient-lime: oklch(75% 0.22 130 / 0.10);
-    --ambient-teal: oklch(55% 0.14 200 / 0.06);
-    --ambient-amber: oklch(72% 0.16 80 / 0.10);
-    /* Legacy aliases */
-    --ambient-blue: var(--ambient-teal);
-    --ambient-red: oklch(58% 0.18 25 / 0.05);
-    --ambient-gold: var(--ambient-lime);
+    /* Ambient blobs — red / blue / gold */
+    --blob-tint-a: oklch(60% 0.22 25 / 0.10);     /* warm red */
+    --blob-tint-b: oklch(55% 0.18 260 / 0.08);    /* blue */
+    --blob-tint-c: oklch(72% 0.16 80 / 0.08);     /* amber gold */
+    --blob-glow: oklch(60% 0.22 25 / 0.14);
+    --ambient-red: oklch(60% 0.22 25 / 0.08);
+    --ambient-blue: oklch(55% 0.18 260 / 0.06);
+    --ambient-gold: oklch(72% 0.16 80 / 0.08);
 
     --bg: var(--bg-primary);
     --card: var(--glass-light);
@@ -62,10 +58,10 @@
 
     /* Shadows — warm amber-tinted */
     --shadow-tall-card: 0 8px 32px oklch(72% 0.16 80 / 0.14);
-    --shadow-card-hover: 0 8px 28px oklch(75% 0.22 130 / 0.18);
+    --shadow-card-hover: 0 8px 28px rgba(255, 77, 77, 0.14);
 
-    --calendar-today-bg: oklch(75% 0.22 130 / 0.12);
-    --calendar-today-border: oklch(75% 0.22 130 / 0.28);
+    --calendar-today-bg: rgba(77, 124, 255, 0.12);
+    --calendar-today-border: rgba(77, 124, 255, 0.28);
     --calendar-today-label: var(--accent-primary);
     --text-on-media: #ffffff;
     --text-on-media-muted: rgba(255, 255, 255, 0.55);
@@ -82,15 +78,15 @@
 
     --accent-gradient-wash: linear-gradient(
       120deg,
-      oklch(75% 0.22 130 / 0.10) 0%,
-      oklch(72% 0.16 80 / 0.08) 45%,
-      oklch(68% 0.12 70 / 0.07) 100%
+      rgba(255, 77, 77, 0.10) 0%,
+      rgba(77, 124, 255, 0.08) 45%,
+      rgba(255, 184, 77, 0.07) 100%
     );
     --accent-border-mesh: linear-gradient(
       135deg,
-      oklch(75% 0.22 130 / 0.40),
-      oklch(72% 0.16 80 / 0.32),
-      oklch(68% 0.12 70 / 0.28)
+      rgba(255, 77, 77, 0.40),
+      rgba(77, 124, 255, 0.32),
+      rgba(255, 184, 77, 0.28)
     );
 
     --mesh-orb-base-opacity: 0.24;
