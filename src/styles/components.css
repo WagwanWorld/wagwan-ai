@@ -1,17 +1,19 @@
 @layer components {
   /* ── BUTTONS ── */
   .btn-primary {
-    @apply w-full flex items-center justify-center px-6 py-4 rounded-card text-white font-semibold text-base cursor-pointer border-0;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    box-shadow: 0 8px 24px var(--accent-glow);
-    transition:
-      opacity 0.15s,
-      transform 0.15s;
+    @apply w-full flex items-center justify-center gap-2 px-6 py-3 rounded-full text-[oklch(12%_0.010_260)] font-semibold text-base cursor-pointer border-0;
+    background: var(--accent-primary);
+    transition: transform var(--dur-micro) var(--ease-premium),
+                box-shadow var(--dur-micro) var(--ease-premium),
+                background var(--dur-micro) var(--ease-premium);
     min-height: 44px;
   }
+  .btn-primary:hover {
+    background: var(--accent-secondary);
+    box-shadow: 0 4px 20px var(--accent-glow);
+  }
   .btn-primary:active {
-    transform: scale(0.97);
-    opacity: 0.85;
+    transform: scale(0.98) translateY(1px);
   }
   .btn-primary:disabled {
     opacity: 0.4;
@@ -27,18 +29,22 @@
   }
 
   .btn-secondary {
-    @apply w-full flex items-center justify-center px-6 py-4 rounded-card font-semibold text-base cursor-pointer border;
+    @apply w-full flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-base cursor-pointer;
     background: var(--glass-light);
     color: var(--text-secondary);
-    border-color: var(--border-subtle);
+    border: 1px solid var(--border-strong);
     backdrop-filter: blur(var(--blur-medium));
-    transition:
-      opacity 0.15s,
-      transform 0.15s;
+    transition: border-color var(--dur-micro) var(--ease-premium),
+                background var(--dur-micro) var(--ease-premium),
+                transform var(--dur-micro) var(--ease-premium);
     min-height: 44px;
   }
+  .btn-secondary:hover {
+    border-color: var(--accent-glow);
+    background: var(--glass-medium);
+  }
   .btn-secondary:active {
-    transform: scale(0.97);
+    transform: scale(0.98) translateY(1px);
   }
 
   .btn-secondary--sm {
@@ -90,15 +96,34 @@
     border: 1px solid var(--border-subtle);
     border-radius: var(--r);
     overflow: hidden;
-    transition:
-      background 0.2s,
-      border-color 0.2s,
-      box-shadow 0.2s;
+    transition: transform var(--dur-standard) var(--ease-premium),
+                border-color var(--dur-standard) var(--ease-premium),
+                box-shadow var(--dur-standard) var(--ease-premium);
   }
   .w-card:hover {
-    background: var(--glass-strong);
+    transform: translateY(-3px);
     border-color: var(--accent-soft);
-    box-shadow: 0 10px 30px var(--accent-glow);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Double-bezel card: outer shell + inner core for haptic depth */
+  .w-card-bezel {
+    padding: 6px;
+    border-radius: 2rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
+    transition: transform var(--dur-standard) var(--ease-premium),
+                box-shadow var(--dur-standard) var(--ease-premium);
+  }
+  .w-card-bezel:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card-hover);
+  }
+  .w-card-bezel__inner {
+    border-radius: calc(2rem - 6px);
+    background: var(--bg-elevated);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+    overflow: hidden;
   }
 
   /* ── TALL CARD (home scroll) ── */
@@ -149,7 +174,7 @@
     background: var(--glass-light);
     backdrop-filter: blur(var(--blur-medium));
     color: var(--text-secondary);
-    transition: all 0.2s;
+    transition: all var(--dur-standard) var(--ease-premium);
     white-space: nowrap;
   }
   .chip.on {
@@ -206,12 +231,9 @@
     color: var(--text-muted);
   }
 
-  /* ── GRADIENT TEXT ── */
-  .grad-text {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  /* REMOVED: .grad-text (gradient text is banned — use solid accent color) */
+  .text-accent {
+    color: var(--accent-primary);
   }
 
   /* ── HORIZONTAL SCROLL ── */

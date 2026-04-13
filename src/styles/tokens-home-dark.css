@@ -1,7 +1,7 @@
 /**
  * Dark + acid-lime theme: Home surface and/or authenticated app chrome.
  * - `.home-page-root[data-home-surface='dark']` — Home page subtree
- * - `html:has([data-app-chrome='dark'])` — sidebar + all (app) routes share tokens with Home
+ * - `html:has([data-app-chrome='dark'])` — sidebar + all (app) routes
  */
 @layer base {
   .home-page-root[data-home-surface='dark'],
@@ -18,11 +18,12 @@
     --home-section-gap-lg: 48px;
     --home-shell-pad-x: clamp(24px, 5vw, 80px);
     --home-layout-gutter: clamp(16px, 2.4vw, 28px);
-    --home-accent-gradient: linear-gradient(90deg, #c4f24a 0%, #22d3ee 100%);
+    --home-accent-gradient: linear-gradient(90deg, #c4f24a 0%, oklch(55% 0.14 200) 100%);
 
-    --bg-primary: #080a0e;
-    --bg-secondary: #0e1118;
-    --bg-elevated: #141820;
+    /* Backgrounds — blue-tinted blacks for perceptual consistency with lime */
+    --bg-primary: oklch(8% 0.008 260);
+    --bg-secondary: oklch(10% 0.009 255);
+    --bg-elevated: oklch(13% 0.010 258);
 
     --text-primary: #e8ecf3;
     --text-secondary: #9aa3b2;
@@ -35,20 +36,26 @@
     --glass-medium: rgba(255, 255, 255, 0.08);
     --glass-strong: rgba(255, 255, 255, 0.11);
 
+    /* Accent — lime only, no gradient */
     --accent-primary: #c4f24a;
     --accent-secondary: #9edb2f;
     --accent-tertiary: #7cb518;
-    --accent-glow: rgba(196, 242, 74, 0.38);
-    --accent-soft: rgba(196, 242, 74, 0.12);
+    --accent-glow: oklch(75% 0.22 130 / 0.32);
+    --accent-soft: oklch(75% 0.22 130 / 0.12);
     --brand-red-soft: rgba(248, 113, 113, 0.12);
 
-    --blob-tint-a: rgba(99, 102, 241, 0.22);
-    --blob-tint-b: rgba(196, 242, 74, 0.18);
-    --blob-tint-c: rgba(59, 130, 246, 0.2);
-    --blob-glow: rgba(196, 242, 74, 0.2);
-    --ambient-blue: rgba(59, 130, 246, 0.1);
-    --ambient-red: rgba(248, 113, 113, 0.08);
-    --ambient-gold: rgba(196, 242, 74, 0.08);
+    /* Ambient blobs — lime + teal only (purple/indigo removed) */
+    --blob-tint-a: oklch(75% 0.22 130 / 0.18);    /* lime */
+    --blob-tint-b: oklch(55% 0.14 200 / 0.15);    /* deep teal */
+    --blob-tint-c: oklch(65% 0.10 210 / 0.12);    /* teal-blue */
+    --blob-glow: oklch(75% 0.22 130 / 0.20);
+    --ambient-lime: oklch(75% 0.22 130 / 0.10);
+    --ambient-teal: oklch(55% 0.14 200 / 0.10);
+    --ambient-amber: oklch(72% 0.16 80 / 0.08);
+    /* Legacy aliases used by AmbientGradients (updated in Task 6) */
+    --ambient-blue: var(--ambient-teal);
+    --ambient-red: oklch(58% 0.18 25 / 0.06);
+    --ambient-gold: var(--ambient-lime);
 
     --bg: var(--bg-primary);
     --card: var(--glass-light);
@@ -66,14 +73,18 @@
 
     --panel-surface: rgba(255, 255, 255, 0.04);
     --panel-surface-soft: rgba(255, 255, 255, 0.025);
-    --panel-border: rgba(255, 255, 255, 0.1);
+    --panel-border: rgba(255, 255, 255, 0.10);
     --panel-border-strong: rgba(255, 255, 255, 0.16);
     --panel-divider: rgba(255, 255, 255, 0.06);
     --panel-hover: rgba(255, 255, 255, 0.06);
-    --panel-hover-border: rgba(255, 255, 255, 0.2);
-    --shadow-tall-card: 0 12px 40px rgba(0, 0, 0, 0.45);
-    --calendar-today-bg: rgba(196, 242, 74, 0.12);
-    --calendar-today-border: rgba(196, 242, 74, 0.35);
+    --panel-hover-border: rgba(255, 255, 255, 0.20);
+
+    /* Shadows — tinted lime, not pure black */
+    --shadow-tall-card: 0 12px 40px oklch(8% 0.008 260 / 0.6);
+    --shadow-card-hover: 0 8px 28px oklch(75% 0.22 130 / 0.22);
+
+    --calendar-today-bg: oklch(75% 0.22 130 / 0.12);
+    --calendar-today-border: oklch(75% 0.22 130 / 0.35);
     --calendar-today-label: var(--accent-primary);
     --text-on-media: #ffffff;
     --text-on-media-muted: rgba(255, 255, 255, 0.55);
@@ -90,30 +101,30 @@
 
     --accent-gradient-wash: linear-gradient(
       120deg,
-      rgba(196, 242, 74, 0.12) 0%,
-      rgba(59, 130, 246, 0.1) 45%,
-      rgba(168, 85, 247, 0.08) 100%
+      oklch(75% 0.22 130 / 0.12) 0%,
+      oklch(55% 0.14 200 / 0.10) 45%,
+      oklch(65% 0.10 210 / 0.08) 100%
     );
     --accent-border-mesh: linear-gradient(
       135deg,
-      rgba(196, 242, 74, 0.42),
-      rgba(59, 130, 246, 0.35),
-      rgba(168, 85, 247, 0.32)
+      oklch(75% 0.22 130 / 0.42),
+      oklch(55% 0.14 200 / 0.35),
+      oklch(65% 0.10 210 / 0.30)
     );
 
     --mesh-orb-base-opacity: 0.32;
   }
 
-  /* Mobile dock: dark glass on all authenticated routes */
+  /* Mobile dock */
   html[data-app-surface='home'] nav[aria-label='Main navigation'] > div,
   html:has([data-app-chrome='dark']) nav[aria-label='Main navigation'] > div {
     background:
       linear-gradient(rgba(18, 22, 30, 0.92), rgba(12, 14, 20, 0.88)) padding-box,
       linear-gradient(
           125deg,
-          rgba(196, 242, 74, 0.35),
-          rgba(59, 130, 246, 0.22),
-          rgba(168, 85, 247, 0.18)
+          oklch(75% 0.22 130 / 0.35),
+          oklch(55% 0.14 200 / 0.22),
+          oklch(65% 0.10 210 / 0.18)
         )
         border-box;
     box-shadow:

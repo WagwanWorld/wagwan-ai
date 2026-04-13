@@ -1,14 +1,12 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { onMount } from 'svelte';
-  import {
-    ArrowRight,
-    Download,
-    LogOut,
-    Sparkles,
-    StickyNote,
-    X,
-  } from '@lucide/svelte';
+  import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
+  import Download from 'phosphor-svelte/lib/Download';
+  import SignOut from 'phosphor-svelte/lib/SignOut';
+  import Sparkle from 'phosphor-svelte/lib/Sparkle';
+  import Note from 'phosphor-svelte/lib/Note';
+  import X from 'phosphor-svelte/lib/X';
 
   export let data: { brandSessionValid: boolean };
 
@@ -575,7 +573,7 @@
             class="inline-flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-white"
             on:click={() => signOut()}
           >
-            <LogOut size={14} /> Sign out
+            <SignOut size={14} /> Sign out
           </button>
         {:else}
           <a href={loginNext} class="text-zinc-500 underline-offset-4 hover:text-violet-300 hover:underline">
@@ -666,7 +664,7 @@
                 class="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-400 transition-all hover:border-white/20 hover:text-white"
                 on:click={() => signOut()}
               >
-                <LogOut size={14} /> Out
+                <SignOut size={14} /> Out
               </button>
             {/if}
             <button
@@ -687,7 +685,7 @@
               : ''}"
           >
             <div class="flex items-center gap-2 text-violet-300/90">
-              <Sparkles size={18} strokeWidth={1.5} />
+              <Sparkle size={18} weight="light" />
               <span class="text-xs font-medium uppercase tracking-wider">Overview</span>
             </div>
             <div class="mt-4 space-y-4 text-sm">
@@ -889,7 +887,7 @@
                     class="inline-flex items-center gap-1.5 text-xs font-medium text-fuchsia-300/90 transition-colors hover:text-fuchsia-200 disabled:opacity-50"
                     on:click={() => loadMemberBrief(u)}
                   >
-                    <StickyNote size={14} />
+                    <Note size={14} />
                     {memberBriefLoading === u.user_google_sub ? 'Brief…' : 'Member brief'}
                   </button>
                   {#if memberBriefBySub[u.user_google_sub]}

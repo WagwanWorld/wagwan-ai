@@ -1,8 +1,8 @@
-<!-- Full-viewport BRBY mesh; pointer-events none. Opacity/blur from CSS tokens + surface scale. -->
+<!-- Full-viewport ambient mesh; pointer-events none. Opacity/blur from CSS tokens. -->
 <div class="ambient-mesh" aria-hidden="true">
-  <div class="ambient-mesh__orb ambient-mesh__orb--blue"></div>
-  <div class="ambient-mesh__orb ambient-mesh__orb--red"></div>
-  <div class="ambient-mesh__orb ambient-mesh__orb--gold"></div>
+  <div class="ambient-mesh__orb ambient-mesh__orb--lime"></div>
+  <div class="ambient-mesh__orb ambient-mesh__orb--teal"></div>
+  <div class="ambient-mesh__orb ambient-mesh__orb--amber"></div>
 </div>
 
 <style>
@@ -22,50 +22,43 @@
     animation: ambient-mesh-drift 18s ease-in-out infinite;
   }
 
-  .ambient-mesh__orb--red {
+  .ambient-mesh__orb--teal {
     animation-duration: 22s;
     animation-direction: reverse;
   }
 
-  .ambient-mesh__orb--gold {
+  .ambient-mesh__orb--amber {
     animation-duration: 26s;
   }
 
-  .ambient-mesh__orb--blue {
+  .ambient-mesh__orb--lime {
     width: min(55vw, 520px);
     height: min(55vw, 520px);
     left: -8%;
     top: 15%;
-    background: radial-gradient(circle, var(--ambient-blue) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--ambient-lime) 0%, transparent 70%);
   }
 
-  .ambient-mesh__orb--red {
+  .ambient-mesh__orb--teal {
     width: min(45vw, 420px);
     height: min(45vw, 420px);
     right: -5%;
     top: 45%;
-    background: radial-gradient(circle, var(--ambient-red) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--ambient-teal) 0%, transparent 70%);
   }
 
-  .ambient-mesh__orb--gold {
+  .ambient-mesh__orb--amber {
     width: min(40vw, 380px);
     height: min(40vw, 380px);
     left: 35%;
     bottom: -10%;
-    background: radial-gradient(circle, var(--ambient-gold) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--ambient-amber) 0%, transparent 70%);
   }
 
   @keyframes ambient-mesh-drift {
-    0%,
-    100% {
-      transform: translate(0, 0) scale(1);
-    }
-    33% {
-      transform: translate(1.5%, -1%) scale(1.02);
-    }
-    66% {
-      transform: translate(-1%, 1.5%) scale(0.99);
-    }
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%       { transform: translate(1.5%, -1%) scale(1.02); }
+    66%       { transform: translate(-1%, 1.5%) scale(0.99); }
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -5,7 +5,10 @@
   import InferenceIdentityPanel from '$lib/components/InferenceIdentityPanel.svelte';
   import type { IdentityIntelligenceWrapper } from '$lib/types/identityIntelligence';
   import type { InferenceIdentityWrapper } from '$lib/types/inferenceIdentity';
-  import { Wallet, RefreshCw, ExternalLink, Radio } from '@lucide/svelte';
+  import Wallet from 'phosphor-svelte/lib/Wallet';
+  import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
+  import ArrowSquareOut from 'phosphor-svelte/lib/ArrowSquareOut';
+  import Broadcast from 'phosphor-svelte/lib/Broadcast';
 
   let loading = true;
   let err = '';
@@ -266,7 +269,7 @@
   {#if graphStrength}
     <section class="mb-8 rounded-2xl border border-violet-200/80 bg-violet-50/40 p-5 shadow-sm backdrop-blur">
       <h2 class="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-        <Radio size={20} class="text-violet-600" strokeWidth={2} />
+        <Broadcast size={20} class="text-violet-600" weight="light" />
         Identity signal strength
       </h2>
       <p class="mt-2 text-sm text-zinc-600">
@@ -312,7 +315,7 @@
   <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
     <div class="flex items-center justify-between gap-3">
       <h2 class="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-        <Wallet size={20} strokeWidth={2} class="text-emerald-600" />
+        <Wallet size={20} weight="light" class="text-emerald-600" />
  Overview
       </h2>
       <button
@@ -321,7 +324,7 @@
         aria-label="Refresh"
         on:click={() => loadAll()}
       >
-        <RefreshCw size={18} class={loading ? 'animate-spin' : ''} />
+        <ArrowClockwise size={18} class={loading ? 'animate-spin' : ''} />
       </button>
     </div>
     {#if loading}
@@ -359,7 +362,7 @@
       href="/profile"
       class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
     >
-      Manage connections <ExternalLink size={14} />
+      Manage connections <ArrowSquareOut size={14} />
     </a>
   </section>
 
@@ -573,7 +576,7 @@
         class="max-w-sm rounded-2xl border border-zinc-200/90 bg-white/95 p-8 text-center shadow-xl"
       >
         <div class="mb-4 flex justify-center text-violet-600">
-          <RefreshCw size={28} class="animate-spin" aria-hidden="true" />
+          <ArrowClockwise size={28} class="animate-spin" aria-hidden="true" />
         </div>
         <p class="text-lg font-semibold text-zinc-900">Analysing your profile</p>
         <p class="mt-2 text-sm text-zinc-600">

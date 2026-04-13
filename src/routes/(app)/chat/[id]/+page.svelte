@@ -4,7 +4,7 @@
   import { profile } from '$lib/stores/profile';
   import { AGENT_LABELS, type AgentType } from '$lib/chats/agentConstants';
   import AgentChatThread from '$lib/components/chats/AgentChatThread.svelte';
-  import { ArrowLeft } from '@lucide/svelte';
+  import ArrowLeft from 'phosphor-svelte/lib/ArrowLeft';
 
   let agentType: AgentType | null = null;
   let chatId = '';
@@ -65,7 +65,7 @@
       aria-label="Back to chats"
       on:click={() => goto('/chats')}
     >
-      <ArrowLeft size={22} strokeWidth={1.9} />
+      <ArrowLeft size={22} weight="light" />
     </button>
     <div class="chat-top-titles">
       <span class="chat-top-name">{agentLabel}</span>

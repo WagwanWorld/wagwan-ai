@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { Home, MessageCircle, User } from '@lucide/svelte';
+  import House from 'phosphor-svelte/lib/House';
+  import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
+  import UserCircle from 'phosphor-svelte/lib/UserCircle';
 
   /** ISO timestamp of last profile sync, if known */
   export let profileUpdatedAt: string | undefined = undefined;
@@ -35,7 +37,7 @@
       title="Home"
       aria-current={homeActive ? 'page' : undefined}
     >
-      <Home size={20} strokeWidth={homeActive ? 2.25 : 1.85} />
+      <House size={20} weight="light" />
       <span class="context-rail__nav-txt">Home</span>
     </a>
     <a
@@ -46,7 +48,7 @@
       title="Chat"
       aria-current={chatActive ? 'page' : undefined}
     >
-      <MessageCircle size={20} strokeWidth={chatActive ? 2.25 : 1.85} />
+      <ChatCircle size={20} weight="light" />
       <span class="context-rail__nav-txt">Chat</span>
     </a>
     <a
@@ -56,7 +58,7 @@
       title="Profile"
       aria-current={profileActive ? 'page' : undefined}
     >
-      <User size={20} strokeWidth={profileActive ? 2.25 : 1.85} />
+      <UserCircle size={20} weight="light" />
       <span class="context-rail__nav-txt">Profile</span>
     </a>
   </nav>

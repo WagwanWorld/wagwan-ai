@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-  import { Mic, Send } from '@lucide/svelte';
+  import Microphone from 'phosphor-svelte/lib/Microphone';
+  import PaperPlaneTilt from 'phosphor-svelte/lib/PaperPlaneTilt';
   import { isSpeechRecognitionSupported } from '$lib/voice/speech';
 
   export let value = '';
@@ -63,7 +64,7 @@
       {disabled}
       on:click={() => dispatch('togglemic')}
     >
-      <Mic size={22} strokeWidth={2} />
+      <Microphone size={22} weight="light" />
     </button>
   {/if}
   <textarea
@@ -86,7 +87,7 @@
     disabled={disabled || !value.trim()}
     on:click={() => dispatch('submit')}
   >
-    <Send size={20} strokeWidth={2.25} />
+    <PaperPlaneTilt size={20} weight="light" />
   </button>
 </div>
 

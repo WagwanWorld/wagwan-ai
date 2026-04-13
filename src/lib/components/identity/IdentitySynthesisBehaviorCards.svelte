@@ -1,14 +1,17 @@
 <script lang="ts">
   import type { IdentitySynthesisBehavioralPatterns } from '$lib/types/identitySynthesis';
-  import { Brain, Focus, Users, ShieldAlert } from '@lucide/svelte';
+  import Brain from 'phosphor-svelte/lib/Brain';
+  import Crosshair from 'phosphor-svelte/lib/Crosshair';
+  import UsersThree from 'phosphor-svelte/lib/UsersThree';
+  import ShieldWarning from 'phosphor-svelte/lib/ShieldWarning';
 
   export let behavior: IdentitySynthesisBehavioralPatterns;
 
   const rows = [
     { key: 'decision_making' as const, label: 'Decision style', icon: Brain, text: behavior.decision_making },
-    { key: 'attention' as const, label: 'Attention', icon: Focus, text: behavior.attention },
-    { key: 'social_vs_solo' as const, label: 'Social vs solo', icon: Users, text: behavior.social_vs_solo },
-    { key: 'risk_appetite' as const, label: 'Risk appetite', icon: ShieldAlert, text: behavior.risk_appetite },
+    { key: 'attention' as const, label: 'Attention', icon: Crosshair, text: behavior.attention },
+    { key: 'social_vs_solo' as const, label: 'Social vs solo', icon: UsersThree, text: behavior.social_vs_solo },
+    { key: 'risk_appetite' as const, label: 'Risk appetite', icon: ShieldWarning, text: behavior.risk_appetite },
   ];
 </script>
 
@@ -18,7 +21,7 @@
     {#each rows as row}
       <article class="iv-beh-card">
         <div class="iv-beh-card__ico" aria-hidden="true">
-          <svelte:component this={row.icon} size={22} strokeWidth={1.75} />
+          <svelte:component this={row.icon} size={22} weight="light" />
         </div>
         <p class="iv-beh-card__label">{row.label}</p>
         <p class="iv-beh-card__text">{row.text}</p>

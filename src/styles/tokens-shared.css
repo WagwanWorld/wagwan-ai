@@ -12,36 +12,35 @@
     --brand-red: #dc2626;
     --brand-gold: #eab308;
     --brand-gold-mid: #ca8a04;
-    /* Home / app main-column rhythm (gutters, split gap, signal cards) */
+
+    /* ── Layout rhythm ── */
     --home-layout-gutter: clamp(14px, 2.2vw, 28px);
-    /* Mesh tuning — consumed by AmbientGradients + html[data-app-surface] */
+
+    /* ── Mesh tuning ── */
     --mesh-orb-opacity-scale: 1;
     --mesh-blur-scale: 1;
+
+    /* ── Premium easing ── */
+    --ease-premium: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ── Duration scale ── */
+    --dur-micro: 150ms;
+    --dur-standard: 250ms;
+    --dur-entrance: 700ms;
+    --dur-ambient: 12s;
   }
 
-  html[data-app-surface='explore'] {
-    --mesh-orb-opacity-scale: 1.06;
-  }
-
-  html[data-app-surface='home'] {
-    --mesh-orb-opacity-scale: 1.05;
-  }
-
-  html[data-app-surface='ai'] {
-    --mesh-orb-opacity-scale: 1.02;
-  }
-
-  html[data-app-surface='onboarding'] {
-    --mesh-orb-opacity-scale: 1.08;
-  }
+  html[data-app-surface='explore'] { --mesh-orb-opacity-scale: 1.06; }
+  html[data-app-surface='home']    { --mesh-orb-opacity-scale: 1.05; }
+  html[data-app-surface='ai']      { --mesh-orb-opacity-scale: 1.02; }
+  html[data-app-surface='onboarding'] { --mesh-orb-opacity-scale: 1.08; }
+  html[data-app-surface='profile'] { --mesh-orb-opacity-scale: 1.04; }
 
   @media (min-width: 768px) {
     .app-shell--rail {
       --nav-dock-gap: max(24px, env(safe-area-inset-bottom, 0px));
     }
-  }
-
-  html[data-app-surface='profile'] {
-    --mesh-orb-opacity-scale: 1.04;
   }
 }

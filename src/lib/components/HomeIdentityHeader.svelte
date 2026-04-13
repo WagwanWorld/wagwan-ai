@@ -2,7 +2,8 @@
   import type { IdentitySnapshotWrapper } from '$lib/types/identitySnapshot';
   import type { IdentityIntelligenceWrapper } from '$lib/types/identityIntelligence';
   import { createEventDispatcher } from 'svelte';
-  import { User, RefreshCw } from '@lucide/svelte';
+  import UserCircle from 'phosphor-svelte/lib/UserCircle';
+  import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
 
   export let displayName = '';
   export let photoUrl: string | null = null;
@@ -70,6 +71,7 @@
   {@const p = snapshot.payload}
   <section class="id-header id-header--luxury">
     <div class="id-header__card id-header__card--glass">
+      <div class="id-header__card-inner">
       <div class="id-header__actions">
         {#if regenerating}
           <span class="id-header__busy">Updating…</span>
@@ -90,10 +92,10 @@
           title="Regenerate"
           aria-label="Regenerate persona"
         >
-          <RefreshCw size={16} strokeWidth={2} />
+          <ArrowClockwise size={16} weight="light" />
         </button>
         <a href="/profile" class="id-header__ghost id-header__ghost--icon" title="Profile" aria-label="Open profile">
-          <User size={16} strokeWidth={2} />
+          <UserCircle size={16} weight="light" />
         </a>
       </div>
 
@@ -170,11 +172,13 @@
           {/if}
         </div>
       </div>
+      </div>
     </div>
   </section>
 {:else if intelSnap}
   <section class="id-header id-header--luxury">
     <div class="id-header__card id-header__card--glass">
+      <div class="id-header__card-inner">
       <div class="id-header__actions">
         {#if regenerating}
           <span class="id-header__busy">Updating…</span>
@@ -187,10 +191,10 @@
           title="Regenerate"
           aria-label="Regenerate persona"
         >
-          <RefreshCw size={16} strokeWidth={2} />
+          <ArrowClockwise size={16} weight="light" />
         </button>
         <a href="/profile" class="id-header__ghost id-header__ghost--icon" title="Profile" aria-label="Open profile">
-          <User size={16} strokeWidth={2} />
+          <UserCircle size={16} weight="light" />
         </a>
       </div>
       <div class="id-header__body">
@@ -213,11 +217,13 @@
           </p>
         </div>
       </div>
+      </div>
     </div>
   </section>
 {:else if fallbackOneLiner.trim()}
   <section class="id-header id-header--luxury">
     <div class="id-header__card id-header__card--glass">
+      <div class="id-header__card-inner">
       <div class="id-header__actions">
         {#if regenerating}
           <span class="id-header__busy">Updating…</span>
@@ -230,10 +236,10 @@
           title="Regenerate"
           aria-label="Regenerate persona"
         >
-          <RefreshCw size={16} strokeWidth={2} />
+          <ArrowClockwise size={16} weight="light" />
         </button>
         <a href="/profile" class="id-header__ghost id-header__ghost--icon" title="Profile" aria-label="Open profile">
-          <User size={16} strokeWidth={2} />
+          <UserCircle size={16} weight="light" />
         </a>
       </div>
       <div class="id-header__body">
@@ -250,11 +256,13 @@
           <p class="id-header__bio">{fallbackOneLiner.trim()}</p>
         </div>
       </div>
+      </div>
     </div>
   </section>
 {:else}
   <section class="id-header id-header--luxury">
     <div class="id-header__card id-header__card--empty">
+      <div class="id-header__card-inner">
       <div class="id-header__body id-header__body--empty">
         <a href="/profile" class="id-header__avatar-link" aria-label="Open profile">
           {#if photoUrl}
@@ -270,6 +278,7 @@
           </p>
           <a href="/profile" class="id-header__empty-cta">Go to Profile →</a>
         </div>
+      </div>
       </div>
     </div>
   </section>
@@ -292,12 +301,12 @@
 
   .id-header__card {
     position: relative;
-    background: var(--glass-medium);
-    border: 1px solid var(--panel-border);
-    border-radius: 22px;
+    padding: 6px;
+    border-radius: 2rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
     box-shadow: var(--shadow-tall-card);
-    /* Slightly more bottom than top: actions row adds visual weight at top; keeps “All tags” off the rim */
-    padding: 20px 20px 28px;
+    transition: box-shadow var(--dur-standard) var(--ease-premium);
   }
 
   .id-header__card--glass {
@@ -306,10 +315,22 @@
   }
 
   .id-header--luxury .id-header__card {
-    border-radius: 20px;
+    border-radius: 2rem;
   }
 
   .id-header__card--empty {
+    padding: 6px;
+  }
+
+  .id-header__card-inner {
+    border-radius: calc(2rem - 6px);
+    background: var(--bg-elevated);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+    padding: 20px 20px 28px;
+    overflow: hidden;
+  }
+
+  .id-header__card--empty .id-header__card-inner {
     padding: 22px 20px;
   }
 
@@ -419,35 +440,40 @@
   }
 
   .id-header__name {
-    margin: 0 0 6px;
+    margin: 0 0 4px;
+    font-family: var(--font-sans);
     font-size: 1.35rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
     color: var(--text-primary);
-    line-height: 1.2;
+    line-height: 1.1;
   }
 
   .id-header--luxury .id-header__name {
     font-size: var(--home-font-title, clamp(1.45rem, 2.2vw, 1.75rem));
     font-weight: 650;
+    letter-spacing: -0.03em;
   }
 
   .id-header__bio {
     margin: 0 0 10px;
-    font-size: clamp(1.02rem, 3.4vw, 1.2rem);
-    font-weight: 500;
-    line-height: 1.45;
-    color: color-mix(in srgb, var(--text-primary) 85%, var(--accent-secondary));
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 3.8vw, 1.4rem);
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    text-wrap: balance;
   }
 
   .id-header--luxury .id-header__bio {
-    font-size: var(--home-font-body, 13px);
-    line-height: 1.65;
+    font-size: clamp(1.05rem, 3.2vw, 1.3rem);
+    line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    color: var(--text-secondary);
   }
 
   .id-header__meta {
@@ -479,9 +505,9 @@
 
   .id-header__tag-label {
     font-size: var(--home-font-meta, 11px);
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-weight: 600;
+    font-variant-caps: small-caps;
+    letter-spacing: 0.06em;
     color: var(--text-muted);
   }
 
@@ -626,12 +652,8 @@
   }
 
   @keyframes shimmer {
-    0%,
-    100% {
-      opacity: 0.45;
-    }
-    50% {
-      opacity: 0.85;
-    }
+    0% { opacity: 0.35; }
+    50% { opacity: 0.75; }
+    100% { opacity: 0.35; }
   }
 </style>

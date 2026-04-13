@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { ArrowRight } from '@lucide/svelte';
+  import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
 
   let portalSecret = '';
   let err = '';
@@ -78,7 +78,7 @@
         class="group flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-semibold text-[#0B0B0D] transition-all hover:shadow-[0_0_32px_rgba(167,139,250,0.2)] disabled:opacity-50"
       >
         {loading ? 'Signing in…' : 'Continue'}
-        {#if !loading}<ArrowRight size={16} class="transition-transform group-hover:translate-x-0.5" />{/if}
+        {#if !loading}<ArrowRight size={16} weight="light" class="transition-transform group-hover:translate-x-0.5" />{/if}
       </button>
     </form>
 

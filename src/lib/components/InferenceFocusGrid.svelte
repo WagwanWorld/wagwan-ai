@@ -22,7 +22,7 @@
           <div class="inf-focus__body">
             <div class="inf-focus__row">
               <span class="inf-focus__ico" aria-hidden="true">
-                <svelte:component this={Icon} size={18} strokeWidth={1.75} />
+                <svelte:component this={Icon} size={18} weight="light" />
               </span>
               <p class="inf-focus__text">{item.text}</p>
             </div>

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { Home, MessageCircle, User } from '@lucide/svelte';
+  import House from 'phosphor-svelte/lib/House';
+  import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
+  import UserCircle from 'phosphor-svelte/lib/UserCircle';
 
   $: path = $page.url.pathname;
   $: homeActive = path === '/home';
@@ -21,7 +23,7 @@
       aria-current={homeActive ? 'page' : undefined}
       title="Home"
     >
-      <Home size={22} strokeWidth={homeActive ? 2.25 : 1.85} />
+      <House size={22} weight="light" />
       <span class="sidebar-rail__label">Home</span>
     </a>
     <a
@@ -32,7 +34,7 @@
       aria-current={chatActive ? 'page' : undefined}
       title="Chat"
     >
-      <MessageCircle size={22} strokeWidth={chatActive ? 2.25 : 1.85} />
+      <ChatCircle size={22} weight="light" />
       <span class="sidebar-rail__label">Chat</span>
     </a>
     <a
@@ -42,7 +44,7 @@
       aria-current={profileActive ? 'page' : undefined}
       title="Profile"
     >
-      <User size={22} strokeWidth={profileActive ? 2.25 : 1.85} />
+      <UserCircle size={22} weight="light" />
       <span class="sidebar-rail__label">Profile</span>
     </a>
   </nav>

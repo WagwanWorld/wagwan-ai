@@ -19,7 +19,7 @@
     memoryKeyForProfile as twinMemKey,
     loadTwinMemory,
   } from '$lib/stores/twinMemory';
-  import { RefreshCw } from '@lucide/svelte';
+  import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
   import { buildProfileTwinKnows } from '$lib/utils/googleInsightMapper';
   import { twinUiContext } from '$lib/stores/contextStore';
   import { prefetchArtistArtwork } from '$lib/client/itunesArtwork';
@@ -659,7 +659,7 @@
 
     {#if connectedCount > 0 && $profile.googleSub}
       <button class="pf-refresh-btn" on:click={refreshSignals} disabled={refreshing}>
-        <span class="pf-refresh-icon" class:spinning={refreshing}><RefreshCw size={14} /></span>
+        <span class="pf-refresh-icon" class:spinning={refreshing}><ArrowClockwise size={14} /></span>
         {refreshing ? 'Analyzing signals…' : 'Refresh signals'}
       </button>
       {#if refreshResult}
@@ -800,7 +800,7 @@
       aria-busy="true"
     >
       <div class="pf-analyse-card">
-        <span class="pf-analyse-icon spinning" aria-hidden="true"><RefreshCw size={28} /></span>
+        <span class="pf-analyse-icon spinning" aria-hidden="true"><ArrowClockwise size={28} /></span>
         <p class="pf-analyse-title">Analysing your profile</p>
         <p class="pf-analyse-sub">Pulling fresh signals from connected accounts. This can take a little while.</p>
       </div>

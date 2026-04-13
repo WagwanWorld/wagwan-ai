@@ -28,7 +28,14 @@
   import type { IdentityMusicContext } from '$lib/types/identityMusicContext';
   import type { InferenceIdentityWrapper, InferenceLifeDomainId } from '$lib/types/inferenceIdentity';
   import { getSpeechRecognition, isSpeechRecognitionSupported } from '$lib/voice/speech';
-  import { Mic, Send, Plus, Camera, Music, Briefcase, ThumbsUp, ThumbsDown } from '@lucide/svelte';
+  import Microphone from 'phosphor-svelte/lib/Microphone';
+  import PaperPlaneTilt from 'phosphor-svelte/lib/PaperPlaneTilt';
+  import Plus from 'phosphor-svelte/lib/Plus';
+  import Camera from 'phosphor-svelte/lib/Camera';
+  import MusicNote from 'phosphor-svelte/lib/MusicNote';
+  import Briefcase from 'phosphor-svelte/lib/Briefcase';
+  import ThumbsUp from 'phosphor-svelte/lib/ThumbsUp';
+  import ThumbsDown from 'phosphor-svelte/lib/ThumbsDown';
   import { twinUiContext, updateTwinContextFromCalendar, startTwinContextClock } from '$lib/stores/contextStore';
   import { ensureMatchReasons } from '$lib/utils/matchReason';
   import {
@@ -1487,6 +1494,7 @@
     <div class="home-split">
       <div class="home-identity-col">
       <div id="home-persona-scroll" class="home-persona-scroll">
+    <div class="home-enter-hero">
     <HomeIdentityHeader
       displayName={$profile.name?.trim() || firstName}
       photoUrl={photoUrl}
@@ -1500,8 +1508,9 @@
       on:share={() => (showShareModal = true)}
       on:refresh={regeneratePersona}
     />
+    </div>
 
-    <div class="home-feed-pad">
+    <div class="home-feed-pad home-enter-1">
       <div class="home-deep-persona__title">Your day</div>
       {#if currentReadLines.length}
         <section class="home-profile-module home-profile-module--flat">
@@ -1523,11 +1532,11 @@
             <article class="home-signal-mod">
               <div class="home-signal-mod__ico" aria-hidden="true">
                 {#if signal.source === 'Instagram'}
-                  <Camera size={18} strokeWidth={1.85} />
+                  <Camera size={18} weight="light" />
                 {:else if signal.source === 'Music'}
-                  <Music size={18} strokeWidth={1.85} />
+                  <MusicNote size={18} weight="light" />
                 {:else}
-                  <Briefcase size={18} strokeWidth={1.85} />
+                  <Briefcase size={18} weight="light" />
                 {/if}
               </div>
               <p class="home-signal-mod__src">{signal.source}</p>
@@ -2730,7 +2739,7 @@
               aria-pressed={homeListening}
               on:click={toggleListenHome}
             >
-              <Mic size={22} strokeWidth={2} />
+              <Microphone size={22} weight="light" />
             </button>
           {/if}
           <textarea
@@ -2749,7 +2758,7 @@
             on:click={() => void ensureHomeContextLoadedAndScroll()}
             title="Add context from your feed and signals"
           >
-            <Plus size={17} strokeWidth={2.25} />
+            <Plus size={17} weight="light" />
             <span class="home-composer-context__txt">Context</span>
           </button>
           <button
@@ -2761,7 +2770,7 @@
             class="home-composer-send"
             class:home-composer-send--active={!!paQuery.trim()}
           >
-            <Send size={18} strokeWidth={2.5} class="home-composer-send-ico" />
+            <PaperPlaneTilt size={18} weight="light" class="home-composer-send-ico" />
           </button>
         </div>
       </div>
@@ -4281,5 +4290,63 @@
 
   .home-composer-send--active :global(.home-composer-send-ico) {
     color: #0c0e12;
+  }
+
+  /* ── Page load entrance animations ── */
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(32px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes blur-in {
+    from {
+      opacity: 0;
+      filter: blur(8px);
+    }
+    to {
+      opacity: 1;
+      filter: blur(0);
+    }
+  }
+
+  .home-enter-hero {
+    animation: fade-up 800ms var(--ease-entrance, cubic-bezier(0.16, 1, 0.3, 1)) 100ms both;
+  }
+
+  .home-enter-1 {
+    animation: fade-up 600ms var(--ease-entrance, cubic-bezier(0.16, 1, 0.3, 1)) 180ms both;
+  }
+
+  .home-enter-2 {
+    animation: fade-up 600ms var(--ease-entrance, cubic-bezier(0.16, 1, 0.3, 1)) 260ms both;
+  }
+
+  .home-enter-3 {
+    animation: fade-up 600ms var(--ease-entrance, cubic-bezier(0.16, 1, 0.3, 1)) 340ms both;
+  }
+
+  .home-enter-4 {
+    animation: fade-up 600ms var(--ease-entrance, cubic-bezier(0.16, 1, 0.3, 1)) 420ms both;
+  }
+
+  .home-enter-media {
+    animation: blur-in 900ms var(--ease-entrance, cubic-bezier(0.16, 1, 0.3, 1)) 500ms both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-enter-hero,
+    .home-enter-1,
+    .home-enter-2,
+    .home-enter-3,
+    .home-enter-4,
+    .home-enter-media {
+      animation: none;
+    }
   }
 </style>

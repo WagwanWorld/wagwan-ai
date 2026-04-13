@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ArrowRight, Sparkles } from '@lucide/svelte';
+  import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
+  import Sparkle from 'phosphor-svelte/lib/Sparkle';
 
   const trustMarks = ['Culture-led', 'Signal-rich', 'Consent-first', 'Identity-native', 'Feed-native'];
 
@@ -50,7 +51,7 @@
         <ArrowRight
           size={18}
           class="transition-transform duration-300 group-hover:translate-x-0.5"
-          strokeWidth={2}
+          weight="light"
         />
       </a>
       <button
@@ -83,7 +84,7 @@
         <div
           class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all duration-300 hover:border-violet-500/20 hover:shadow-[0_0_32px_rgba(139,92,246,0.08)]"
         >
-          <Sparkles class="text-violet-400/80" size={20} strokeWidth={1.5} />
+          <Sparkle class="text-violet-400/80" size={20} weight="light" />
           <h2 class="mt-4 text-sm font-semibold text-white">Prompt-first</h2>
           <p class="mt-2 text-sm leading-relaxed text-zinc-500">
             Describe who you want in plain language. We map it to identity signals—not checkbox demographics.
@@ -92,7 +93,7 @@
         <div
           class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all duration-300 hover:border-violet-500/20 hover:shadow-[0_0_32px_rgba(139,92,246,0.08)]"
         >
-          <Sparkles class="text-fuchsia-400/70" size={20} strokeWidth={1.5} />
+          <Sparkle class="text-fuchsia-400/70" size={20} weight="light" />
           <h2 class="mt-4 text-sm font-semibold text-white">See the audience</h2>
           <p class="mt-2 text-sm leading-relaxed text-zinc-500">
             Visual, living results—so you feel the match, not just a row of anonymous IDs.
@@ -101,7 +102,7 @@
         <div
           class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all duration-300 hover:border-violet-500/20 hover:shadow-[0_0_32px_rgba(139,92,246,0.08)]"
         >
-          <Sparkles class="text-amber-400/70" size={20} strokeWidth={1.5} />
+          <Sparkle class="text-amber-400/70" size={20} weight="light" />
           <h2 class="mt-4 text-sm font-semibold text-white">Launch with intent</h2>
           <p class="mt-2 text-sm leading-relaxed text-zinc-500">
             When you are ready, sign in and push channels— in-app, email, more to come.

@@ -1,34 +1,42 @@
 @layer base {
   html[data-theme='light'] {
-    --bg-primary: #f4f2ef;
-    --bg-secondary: #ebe8e3;
-    --bg-elevated: #ffffff;
+    /* Backgrounds — warm newsprint, not cold white */
+    --bg-primary: oklch(96% 0.012 80);
+    --bg-secondary: oklch(93% 0.013 78);
+    --bg-elevated: oklch(99% 0.005 80);
 
-    --text-primary: #0f172a;
-    --text-secondary: #5c6570;
-    --text-muted: #7a8490;
+    --text-primary: oklch(12% 0.010 260);
+    --text-secondary: oklch(42% 0.012 250);
+    --text-muted: oklch(58% 0.010 245);
 
     --border-subtle: rgba(20, 24, 32, 0.09);
     --border-strong: rgba(20, 24, 32, 0.16);
 
-    --glass-light: rgba(255, 255, 255, 0.72);
-    --glass-medium: rgba(255, 255, 255, 0.9);
-    --glass-strong: rgba(255, 255, 255, 0.97);
+    /* Glass — warm-tinted */
+    --glass-light: oklch(99% 0.008 80 / 0.72);
+    --glass-medium: oklch(99% 0.008 80 / 0.90);
+    --glass-strong: oklch(99% 0.008 80 / 0.97);
 
-    --accent-primary: #2563eb;
-    --accent-secondary: #1d4ed8;
-    --accent-tertiary: #1e40af;
-    --accent-glow: rgba(37, 99, 235, 0.32);
-    --accent-soft: rgba(37, 99, 235, 0.14);
-    --brand-red-soft: rgba(220, 38, 38, 0.1);
+    /* Accent — same lime as dark mode (highlighter on paper effect) */
+    --accent-primary: #c4f24a;
+    --accent-secondary: #9edb2f;
+    --accent-tertiary: #7cb518;
+    --accent-glow: oklch(75% 0.22 130 / 0.28);
+    --accent-soft: oklch(75% 0.22 130 / 0.10);
+    --brand-red-soft: rgba(220, 38, 38, 0.10);
 
-    --blob-tint-a: rgba(99, 102, 241, 0.42);
-    --blob-tint-b: rgba(236, 72, 153, 0.32);
-    --blob-tint-c: rgba(59, 130, 246, 0.36);
-    --blob-glow: rgba(129, 140, 248, 0.28);
-    --ambient-blue: rgba(59, 130, 246, 0.14);
-    --ambient-red: rgba(220, 38, 38, 0.09);
-    --ambient-gold: rgba(202, 138, 4, 0.1);
+    /* Ambient blobs — warm amber + lime (no blue, no purple) */
+    --blob-tint-a: oklch(75% 0.22 130 / 0.14);    /* lime */
+    --blob-tint-b: oklch(72% 0.16 80 / 0.12);     /* warm amber */
+    --blob-tint-c: oklch(68% 0.12 70 / 0.10);     /* amber-orange */
+    --blob-glow: oklch(75% 0.22 130 / 0.18);
+    --ambient-lime: oklch(75% 0.22 130 / 0.10);
+    --ambient-teal: oklch(55% 0.14 200 / 0.06);
+    --ambient-amber: oklch(72% 0.16 80 / 0.10);
+    /* Legacy aliases */
+    --ambient-blue: var(--ambient-teal);
+    --ambient-red: oklch(58% 0.18 25 / 0.05);
+    --ambient-gold: var(--ambient-lime);
 
     --bg: var(--bg-primary);
     --card: var(--glass-light);
@@ -45,15 +53,19 @@
     --amber: var(--state-warning);
 
     --panel-surface: rgba(20, 24, 32, 0.045);
-    --panel-surface-soft: rgba(20, 24, 32, 0.03);
+    --panel-surface-soft: rgba(20, 24, 32, 0.030);
     --panel-border: rgba(20, 24, 32, 0.12);
     --panel-border-strong: rgba(20, 24, 32, 0.17);
     --panel-divider: rgba(20, 24, 32, 0.08);
     --panel-hover: rgba(20, 24, 32, 0.06);
     --panel-hover-border: rgba(20, 24, 32, 0.18);
-    --shadow-tall-card: 0 8px 32px rgba(20, 24, 32, 0.12);
-    --calendar-today-bg: rgba(37, 99, 235, 0.12);
-    --calendar-today-border: rgba(37, 99, 235, 0.28);
+
+    /* Shadows — warm amber-tinted */
+    --shadow-tall-card: 0 8px 32px oklch(72% 0.16 80 / 0.14);
+    --shadow-card-hover: 0 8px 28px oklch(75% 0.22 130 / 0.18);
+
+    --calendar-today-bg: oklch(75% 0.22 130 / 0.12);
+    --calendar-today-border: oklch(75% 0.22 130 / 0.28);
     --calendar-today-label: var(--accent-primary);
     --text-on-media: #ffffff;
     --text-on-media-muted: rgba(255, 255, 255, 0.55);
@@ -63,22 +75,22 @@
     --score-high-bg: rgba(0, 194, 122, 0.12);
     --score-high-border: rgba(0, 194, 122, 0.28);
     --score-high-text: #059669;
-    --score-low-bg: rgba(229, 0, 26, 0.1);
+    --score-low-bg: rgba(229, 0, 26, 0.10);
     --score-low-border: rgba(229, 0, 26, 0.25);
     --score-low-text: #e11d48;
     --pill-warn-border: rgba(229, 0, 26, 0.22);
 
     --accent-gradient-wash: linear-gradient(
       120deg,
-      rgba(167, 139, 250, 0.18) 0%,
-      rgba(96, 165, 250, 0.16) 45%,
-      rgba(251, 191, 136, 0.14) 100%
+      oklch(75% 0.22 130 / 0.10) 0%,
+      oklch(72% 0.16 80 / 0.08) 45%,
+      oklch(68% 0.12 70 / 0.07) 100%
     );
     --accent-border-mesh: linear-gradient(
       135deg,
-      rgba(167, 139, 250, 0.48),
-      rgba(96, 165, 250, 0.42),
-      rgba(251, 191, 136, 0.38)
+      oklch(75% 0.22 130 / 0.40),
+      oklch(72% 0.16 80 / 0.32),
+      oklch(68% 0.12 70 / 0.28)
     );
 
     --mesh-orb-base-opacity: 0.24;

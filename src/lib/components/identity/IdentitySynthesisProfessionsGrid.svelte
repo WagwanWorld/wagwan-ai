@@ -3,7 +3,9 @@
   import { imageUrlForKeyword } from '$lib/identity/visualIdentity';
   import { createEventDispatcher } from 'svelte';
   import type { Component } from 'svelte';
-  import { Briefcase, Link2, TrendingUp } from '@lucide/svelte';
+  import Briefcase from 'phosphor-svelte/lib/Briefcase';
+  import LinkSimple from 'phosphor-svelte/lib/LinkSimple';
+  import TrendUp from 'phosphor-svelte/lib/TrendUp';
 
   export let roles: IdentitySynthesisProfessionRole[];
   /** Softer label + shorter blurbs when stacked under overview hero */
@@ -12,8 +14,8 @@
   const dispatch = createEventDispatcher<{ detail: { title: string; body: string } }>();
 
   function levelIcon(level: string): Component {
-    if (level === 'aspirational') return TrendingUp;
-    if (level === 'adjacent') return Link2;
+    if (level === 'aspirational') return TrendUp;
+    if (level === 'adjacent') return LinkSimple;
     return Briefcase;
   }
 
@@ -54,7 +56,7 @@
         <div class="iv-prof-card__visual">
           <img src={imageUrlForKeyword(r.title, 'wide')} alt="" class="iv-prof-card__img" />
           <span class="iv-prof-card__lvl-ico" aria-hidden="true">
-            <svelte:component this={LvIcon} size={16} strokeWidth={2} />
+            <svelte:component this={LvIcon} size={16} weight="light" />
           </span>
           <span class="iv-prof-card__badge">{levelLabel(r.level)}</span>
         </div>

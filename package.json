@@ -18,6 +18,7 @@
     "@fontsource/inter": "^5.2.8",
     "@lucide/svelte": "^1.7.0",
     "@supabase/supabase-js": "^2.101.1",
+    "phosphor-svelte": "^3.1.0",
     "redis": "^4.7.1"
   },
   "devDependencies": {

@@ -7,15 +7,13 @@
     FEATURED_AGENT_TYPES,
     type AgentType,
   } from '$lib/chats/agentConstants';
-  import {
-    Mail,
-    Calendar,
-    Camera,
-    Sparkles,
-    Drama,
-    ChevronRight,
-    RefreshCw,
-  } from '@lucide/svelte';
+  import Envelope from 'phosphor-svelte/lib/Envelope';
+  import CalendarBlank from 'phosphor-svelte/lib/CalendarBlank';
+  import Camera from 'phosphor-svelte/lib/Camera';
+  import Sparkle from 'phosphor-svelte/lib/Sparkle';
+  import MaskHappy from 'phosphor-svelte/lib/MaskHappy';
+  import CaretRight from 'phosphor-svelte/lib/CaretRight';
+  import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
 
   interface ChatItem {
     id: string;
@@ -38,17 +36,17 @@
   function iconFor(agent: AgentType) {
     switch (agent) {
       case 'gmail':
-        return Mail;
+        return Envelope;
       case 'calendar':
-        return Calendar;
+        return CalendarBlank;
       case 'instagram':
         return Camera;
       case 'twin':
-        return Sparkles;
+        return Sparkle;
       case 'culture':
-        return Drama;
+        return MaskHappy;
       default:
-        return Sparkles;
+        return Sparkle;
     }
   }
 
@@ -243,7 +241,7 @@
             disabled={loading}
             on:click={() => void setupChats()}
           >
-            <RefreshCw size={20} strokeWidth={1.9} />
+            <ArrowClockwise size={20} weight="light" />
           </button>
         {/if}
       </div>
@@ -271,14 +269,14 @@
               class:ig={agent === 'instagram'}
               class:twin={agent === 'twin'}
             >
-              <Icon size={24} strokeWidth={1.9} />
+              <Icon size={24} weight="light" />
             </div>
             <div class="chats-agent-tile-body">
               <span class="chats-agent-tile-name">{AGENT_LABELS[agent]}</span>
               <span class="chats-agent-tile-tag">{AGENT_TAGLINES[agent]}</span>
             </div>
             <span class="chats-agent-tile-go" aria-hidden="true">
-              <ChevronRight size={18} strokeWidth={1.8} />
+              <CaretRight size={18} weight="light" />
             </span>
           </button>
         {/each}
@@ -347,7 +345,7 @@
               class:twin={c.agent_type === 'twin'}
               class:culture={c.agent_type === 'culture'}
             >
-              <Icon size={22} strokeWidth={1.9} />
+              <Icon size={22} weight="light" />
             </div>
             <div class="chat-row-body">
               <div class="chat-row-top">
@@ -362,7 +360,7 @@
               <span class="chat-unread">{c.unread_count > 9 ? '9+' : c.unread_count}</span>
             {/if}
             <span class="chat-chevron" aria-hidden="true">
-              <ChevronRight size={18} strokeWidth={1.8} />
+              <CaretRight size={18} weight="light" />
             </span>
           </button>
         </li>
