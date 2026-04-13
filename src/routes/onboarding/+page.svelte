@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { profile, type UserProfile } from '$lib/stores/profile';
   import type { InstagramIdentity } from '$lib/server/instagram';
   import type { GoogleIdentity, SpotifyIdentity, LinkedInIdentity, AppleMusicIdentity } from '$lib/utils';
   import { normalizeAppleMusicIdentity } from '$lib/utils';
+  import ProductPreviewCard from '$lib/components/onboarding/ProductPreviewCard.svelte';
   import { primaryAccountKeyFromOAuthState } from '$lib/auth/accountKey';
   import { fetchCloudProfile } from '$lib/auth/profileRemote';
 
@@ -328,6 +330,15 @@
 
   onDestroy(() => { if (raf) cancelAnimationFrame(raf); });
 
+  /** When OTP is unavailable or still being wired: skip phone+OTP and use Google / Instagram onboarding. */
+  $: showSkipPhoneOtp =
+    dev || import.meta.env.PUBLIC_ENABLE_SKIP_PHONE_ONBOARDING === 'true';
+
+  function skipPhoneContinueWithOAuth() {
+    wagwanError = '';
+    step = 1;
+  }
+
   function connectGoogle() { googleConnecting = true; window.location.href = '/auth/google?from=onboarding'; }
   function connectInstagram() { igConnecting = true; window.location.href = '/auth/instagram'; }
   function connectSpotify() { window.location.href = '/auth/spotify?from=onboarding'; }
@@ -553,9 +564,9 @@
 <div class="ob-root">
   <!-- Gradient background -->
   <div class="ob-grad" class:ready={fieldReady}>
-    <div class="ob-g ob-g--a" bind:this={g1}></div>
-    <div class="ob-g ob-g--b" bind:this={g2}></div>
-    <div class="ob-g ob-g--c" bind:this={g3}></div>
+    <div class="ob-g ob-g--a mesh-animate" bind:this={g1}></div>
+    <div class="ob-g ob-g--b mesh-animate" bind:this={g2}></div>
+    <div class="ob-g ob-g--c mesh-animate" bind:this={g3}></div>
     <div class="ob-grad-vignette" aria-hidden="true"></div>
   </div>
 
@@ -591,6 +602,24 @@
           />
         </div>
 
+        <div class="ob-unlock-card">
+          <div class="ob-unlock-title">Here's what you'll unlock</div>
+          <div class="ob-unlock-items">
+            <div class="ob-unlock-item">
+              <span class="ob-unlock-dot ob-unlock-dot--red"></span>
+              <span>Identity insights from your platforms</span>
+            </div>
+            <div class="ob-unlock-item">
+              <span class="ob-unlock-dot ob-unlock-dot--blue"></span>
+              <span>Personalized recommendations</span>
+            </div>
+            <div class="ob-unlock-item">
+              <span class="ob-unlock-dot ob-unlock-dot--gold"></span>
+              <span>AI assistant that knows you</span>
+            </div>
+          </div>
+        </div>
+
         <div class="ob-bottom">
           <button
             type="button"
@@ -600,6 +629,11 @@
           >
             {wagwanLoading ? 'Sending...' : 'Send Code'}
           </button>
+          {#if showSkipPhoneOtp}
+            <button type="button" class="ob-skip-link ob-skip-link--block" on:click={skipPhoneContinueWithOAuth}>
+              Continue with Google or Instagram instead
+            </button>
+          {/if}
         </div>
       {:else}
         <h1 class="ob-h1">Enter the<br>code.</h1>
@@ -635,6 +669,11 @@
           <button type="button" class="ob-skip-link" on:click={sendOtp} disabled={wagwanLoading}>
             Resend code
           </button>
+          {#if showSkipPhoneOtp}
+            <button type="button" class="ob-skip-link ob-skip-link--block" on:click={skipPhoneContinueWithOAuth}>
+              Continue with Google or Instagram instead
+            </button>
+          {/if}
         </div>
       {/if}
     </div>
@@ -645,6 +684,11 @@
       <div class="ob-mark">wagwan</div>
       <h1 class="ob-h1">Let's get to<br>know each other.</h1>
       <p class="ob-sub">Connect Google or Instagram to get started. You can add the other later.</p>
+
+      <div class="ob-explain-card">
+        <ProductPreviewCard variant="calendar" />
+        <p class="ob-explain-text">Your calendar reveals your schedule, inbox shows your priorities, YouTube reflects your interests.</p>
+      </div>
 
       {#if googleError}
         <p class="ob-error">{googleError}</p>
@@ -693,6 +737,11 @@
         {/if}
       </p>
 
+      <div class="ob-explain-card">
+        <ProductPreviewCard variant="instagram" />
+        <p class="ob-explain-text">Your posts reveal your aesthetic, food taste, and lifestyle signals — this is how we really get you.</p>
+      </div>
+
       {#if igError}
         <p class="ob-error">{igError}</p>
       {/if}
@@ -739,6 +788,11 @@
     <div class="ob-step screen-enter">
       <h1 class="ob-h2">The more signals,<br>the sharper I get.</h1>
       <p class="ob-sub">You can always add these later from your profile.</p>
+
+      <div class="ob-explain-card">
+        <ProductPreviewCard variant="match-score" />
+        <p class="ob-explain-text">Every platform you connect sharpens your recommendations and match scores.</p>
+      </div>
 
       <div class="ob-signals">
         <!-- Spotify -->
@@ -1046,11 +1100,17 @@
     padding: 10px 8px;
   }
 
+  .ob-skip-link--block {
+    width: 100%;
+    align-self: stretch;
+    text-align: center;
+  }
+
   .ob-cta {
     width: 100%;
     padding: 16px 24px;
     border-radius: 100px;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(135deg, #FF4D4D, #FFB84D);
     border: none;
     color: white;
     font-size: 15px;
@@ -1061,7 +1121,7 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    box-shadow: 0 4px 20px var(--accent-glow);
+    box-shadow: 0 4px 20px rgba(255, 77, 77, 0.3);
     transition: transform 0.15s, opacity 0.15s;
   }
   .ob-cta:active { transform: scale(0.97); }
@@ -1325,6 +1385,49 @@
   }
   .ob-change-link:hover {
     text-decoration-color: var(--accent-primary);
+  }
+
+  /* Unlock preview card (Step 0) */
+  .ob-unlock-card {
+    margin-top: 24px;
+    background: var(--glass-light);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(var(--blur-light));
+  }
+  .ob-unlock-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .ob-unlock-items { display: flex; flex-direction: column; gap: 10px; }
+  .ob-unlock-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--text-secondary);
+  }
+  .ob-unlock-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .ob-unlock-dot--red { background: #FF4D4D; }
+  .ob-unlock-dot--blue { background: #4D7CFF; }
+  .ob-unlock-dot--gold { background: #FFB84D; }
+
+  /* Explain cards (Steps 1-3) */
+  .ob-explain-card {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ob-explain-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
   }
 
   /* Ready (Step 5) */
