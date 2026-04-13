@@ -1665,21 +1665,57 @@
   $: socialNarrative = socialDomain?.narrative || '';
   $: socialBarData = (() => {
     const ig = $profile.instagramIdentity;
-    const bars = [];
-    if (ig) {
-      bars.push({ label: 'Shipping product', emoji: '🚀', value: 40, color: '#FF4D4D' });
-      bars.push({ label: 'Personal story', emoji: '📝', value: 25, color: '#4D7CFF' });
-      bars.push({ label: 'Celebrating people', emoji: '🤝', value: 20, color: '#FFB84D' });
-      bars.push({ label: 'Showing craft', emoji: '🎨', value: 15, color: '#6B9AFF' });
+    if (!ig) return [];
+
+    // Try to use real content categories from Instagram identity
+    const categories = (ig as any).contentCategories as string[] | undefined;
+    if (categories?.length) {
+      const emojis = ['🚀', '📝', '🤝', '🎨', '🎵', '🌍'];
+      const colors = ['#FF4D4D', '#4D7CFF', '#FFB84D', '#6B9AFF', '#FF6B6B', '#FFC46B'];
+      const total = categories.length;
+      return categories.slice(0, 4).map((cat, i) => ({
+        label: cat,
+        emoji: emojis[i % emojis.length],
+        value: Math.round(((total - i) / (total * (total + 1) / 2)) * 100),
+        color: colors[i % colors.length],
+      }));
     }
-    return bars;
+
+    // Try signals from the social domain
+    const signals = socialDomain?.signals?.slice(0, 4);
+    if (signals?.length) {
+      const emojis = ['🚀', '📝', '🤝', '🎨'];
+      const colors = ['#FF4D4D', '#4D7CFF', '#FFB84D', '#6B9AFF'];
+      return signals.map((s, i) => ({
+        label: s,
+        emoji: emojis[i % emojis.length],
+        value: Math.round(100 / (i + 1.5)),
+        color: colors[i % colors.length],
+      }));
+    }
+
+    // Fallback: use interests as proxy
+    const interests = (ig.interests || []).slice(0, 4);
+    if (interests.length) {
+      const emojis = ['🚀', '📝', '🤝', '🎨'];
+      const colors = ['#FF4D4D', '#4D7CFF', '#FFB84D', '#6B9AFF'];
+      return interests.map((tag: string, i: number) => ({
+        label: tag,
+        emoji: emojis[i % emojis.length],
+        value: Math.round(100 / (i + 1.5)),
+        color: colors[i % colors.length],
+      }));
+    }
+
+    return [];
   })();
   $: socialReachText = (() => {
     const ig = $profile.instagramIdentity;
     if (!ig) return '';
-    const parts = [];
+    const parts: string[] = [];
     if (typeof ig.followersCount === 'number') parts.push(`${ig.followersCount.toLocaleString()} followers`);
-    if ((ig as any).engagement) parts.push(`${(ig as any).engagement} engagement`);
+    if (typeof ig.followingCount === 'number') parts.push(`${ig.followingCount.toLocaleString()} following`);
+    if (typeof ig.mediaCount === 'number') parts.push(`${ig.mediaCount} posts`);
     return parts.join(' · ') || '';
   })();
 
