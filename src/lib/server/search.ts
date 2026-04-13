@@ -124,26 +124,59 @@ const CIRCUIT_OPEN_DURATION_MS = 60_000;
 /**
  * Web search via Brave (cached + deduped + retry + circuit breaker).
  */
+/**
+ * Claude web search fallback — uses the Anthropic messages API with the
+ * built-in web_search tool. Costs ~haiku tokens but no separate search API.
+ */
+async function claudeWebSearch(query: string, count: number): Promise<SearchWebResponse> {
+  const key = (env.ANTHROPIC_API_KEY ?? '').trim();
+  if (!key) return { results: [], images: [] };
+
+  try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey: key, timeout: 30_000 });
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      tools: [{ type: 'web_search' as any, name: 'web_search' } as any],
+      messages: [{ role: 'user', content: `Search the web for: ${query}. Return the top ${count} results.` }],
+    });
+
+    const results: SearchResult[] = [];
+    for (const block of msg.content) {
+      if ((block as any).type === 'web_search_tool_result') {
+        const searchResults = (block as any).content ?? [];
+        for (const sr of searchResults) {
+          if (sr.type === 'web_search_result' && sr.url) {
+            results.push({
+              title: sr.title || '',
+              url: sr.url,
+              description: sr.snippet || sr.description || '',
+            });
+          }
+        }
+      }
+    }
+    console.log(`[search] Claude web search for "${query.slice(0, 50)}" → ${results.length} results`);
+    return { results: results.slice(0, count), images: [] };
+  } catch (e) {
+    console.error('[search] Claude web search failed:', e instanceof Error ? e.message : e);
+    return { results: [], images: [] };
+  }
+}
+
 export async function searchWeb(
   query: string,
   count = 6,
   includeDomains?: string[],
 ): Promise<SearchWebResponse> {
-  const token = normalizeBraveToken(BRAVE_API_KEY ?? '');
-  if (!token) {
-    console.warn('BRAVE_API_KEY not set — skipping web search');
-    return { results: [], images: [] };
-  }
-
-  if (Date.now() < circuitOpenUntil) {
-    console.warn('Brave circuit breaker open — returning empty results');
-    return { results: [], images: [] };
-  }
-
-  const q = buildBraveQuery(query, includeDomains);
+  const q = includeDomains?.length
+    ? buildBraveQuery(query, includeDomains)
+    : query.trim();
   const n = Math.min(Math.max(count, 1), 20);
   const key = searchDedupeKey(q, n, includeDomains);
 
+  // Check caches first (shared by both Brave and Claude search)
   const now = Date.now();
   pruneSearchCache();
   const hit = searchCache.get(key);
@@ -164,7 +197,16 @@ export async function searchWeb(
 
   const promise = (async (): Promise<SearchWebResponse> => {
     try {
-      return await executeBraveSearchWithRetry(token, q, n);
+      // Try Brave first
+      const token = normalizeBraveToken(BRAVE_API_KEY ?? '');
+      if (token && Date.now() >= circuitOpenUntil) {
+        const braveResult = await executeBraveSearchWithRetry(token, q, n);
+        if (braveResult.results.length > 0) return braveResult;
+      }
+
+      // Fallback to Claude web search
+      console.log('[search] Brave unavailable or empty — trying Claude web search');
+      return await claudeWebSearch(query, n);
     } finally {
       searchInflight.delete(key);
     }
