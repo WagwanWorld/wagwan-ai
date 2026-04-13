@@ -52,6 +52,18 @@
     box-shadow: 0 8px 28px oklch(75% 0.22 130 / 0.12);
   }
 
+  .insight-card:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .insight-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px oklch(75% 0.22 130 / 0.10);
+    }
+  }
+
   .insight-card__inner {
     border-radius: calc(1.5rem - 6px);
     background: var(--bg-elevated);

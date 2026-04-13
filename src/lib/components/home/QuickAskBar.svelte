@@ -102,6 +102,11 @@
     transition: box-shadow 200ms var(--ease-premium, ease);
   }
 
+  .quickask__bar:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+
   .quickask__bar:hover {
     box-shadow:
       0 -4px 20px oklch(8% 0.008 260 / 0.3),

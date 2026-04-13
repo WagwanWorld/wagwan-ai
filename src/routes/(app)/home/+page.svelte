@@ -1555,15 +1555,15 @@
       image_url: c.image_url,
     });
 
-    if (musicCards.length) tabs.push({ id: 'music', label: 'Music', emoji: '🎵', cards: musicCards.slice(0, 4).map(mapCard) });
+    if (musicCards.length) tabs.push({ id: 'music', label: 'Music', emoji: '', cards: musicCards.slice(0, 4).map(mapCard) });
     if (recsShopCards.length || shopCards.length) {
       const style = recsShopCards.length ? recsShopCards : shopCards;
-      tabs.push({ id: 'style', label: 'Style', emoji: '👗', cards: style.slice(0, 4).map(mapCard) });
+      tabs.push({ id: 'style', label: 'Style', emoji: '', cards: style.slice(0, 4).map(mapCard) });
     }
-    if (foodCards.length) tabs.push({ id: 'eat', label: 'Eat', emoji: '🍜', cards: foodCards.slice(0, 4).map(mapCard) });
+    if (foodCards.length) tabs.push({ id: 'eat', label: 'Eat', emoji: '', cards: foodCards.slice(0, 4).map(mapCard) });
     const doCards = [...eventCards, ...eventListCards].filter((c, i, a) => a.findIndex(x => x.url === c.url) === i);
-    if (doCards.length) tabs.push({ id: 'do', label: 'Do', emoji: '🎟️', cards: doCards.slice(0, 4).map(mapCard) });
-    if (videoCards.length) tabs.push({ id: 'watch', label: 'Watch', emoji: '📺', cards: videoCards.slice(0, 4).map(mapCard) });
+    if (doCards.length) tabs.push({ id: 'do', label: 'Do', emoji: '', cards: doCards.slice(0, 4).map(mapCard) });
+    if (videoCards.length) tabs.push({ id: 'watch', label: 'Watch', emoji: '', cards: videoCards.slice(0, 4).map(mapCard) });
 
     return tabs;
   })();
@@ -1714,7 +1714,7 @@
                   class:home-chat-bubble--user={message.role === 'user'}
                   class:home-chat-bubble--shimmer={message.role === 'ai' && message.loading}
                 >
-                  {message.text}{#if message.loading}<span class="home-chat-caret">▍</span>{/if}
+                  {message.text}{#if message.loading}<span class="home-chat-caret"></span>{/if}
                 </div>
                 {#if message.role === 'ai' && message.cards?.length}
                   <div class="home-chat-cards">
@@ -2112,7 +2112,12 @@
   }
 
   .home-chat-caret {
-    color: var(--accent-primary);
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent-primary);
+    margin-left: 2px;
+    vertical-align: text-bottom;
     animation: blink 0.8s steps(1) infinite;
   }
 
@@ -2220,7 +2225,7 @@
 
   .home-composer-send--active {
     background: var(--accent-primary);
-    color: oklch(12% 0.010 260);
+    color: var(--bg-primary);
     box-shadow: 0 4px 16px var(--accent-glow);
   }
 
