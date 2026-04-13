@@ -27,6 +27,7 @@ export interface UserProfileRow {
   identity_graph: Record<string, unknown>;
   identity_summary: string;
   updated_at: string;
+  wagwan_user_id: string | null;
 }
 
 export interface PlatformTokens {
@@ -232,6 +233,48 @@ export async function getIdentityGraph(
   if (!summary || Object.keys(graph).length === 0) return null;
 
   return { graph, summary };
+}
+
+/**
+ * Link a wagwan-ai profile to a wagwan main platform user.
+ * Sets wagwan_user_id on the user_profiles row identified by google_sub.
+ */
+export async function linkWagwanUser(
+  googleSub: string,
+  wagwanUserId: string,
+): Promise<boolean> {
+  const { error } = await getClient()
+    .from('user_profiles')
+    .update({
+      wagwan_user_id: wagwanUserId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('google_sub', googleSub);
+
+  if (error) {
+    console.error('[Supabase] linkWagwanUser error:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Look up a wagwan-ai profile by wagwan main platform user UUID.
+ * Returns null if no profile is linked to this wagwan user.
+ */
+export async function getProfileByWagwanId(
+  wagwanUserId: string,
+): Promise<UserProfileRow | null> {
+  const { data, error } = await getClient()
+    .from('user_profiles')
+    .select('*')
+    .eq('wagwan_user_id', wagwanUserId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('[Supabase] getProfileByWagwanId error:', error.message);
+  }
+  return data ?? null;
 }
 
 export function isSupabaseConfigured(): boolean {
