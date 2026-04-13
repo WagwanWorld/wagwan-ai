@@ -13,6 +13,7 @@
   export let city = '';
   export let loading = false;
   export let regenerating = false;
+  export let contradiction = '';  // core_contradiction from identitySnapshot
 
   const dispatch = createEventDispatcher();
 
@@ -22,7 +23,7 @@
     mounted = true;
   });
 
-  $: kickerText = [archetype, mode].filter(Boolean).join(' ').toUpperCase();
+  $: kickerText = [archetype, mode].filter(Boolean).join(' · ');
   $: formattedDate = new Date().toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -76,15 +77,22 @@
       <h1 class="headline anim anim-1">{oneLiner}</h1>
     {/if}
 
-    <!-- Profile photo -->
+    <!-- Contradiction / reframe -->
+    {#if contradiction}
+      <p class="contradiction anim anim-1b">{contradiction}</p>
+    {/if}
+
+    <!-- Profile photo with gradient ring -->
     <div class="avatar-wrap anim anim-2">
-      {#if photoUrl}
-        <img class="avatar" src={photoUrl} alt={displayName || 'Profile'} />
-      {:else}
-        <div class="avatar avatar-fallback">
-          <span>{avatarInitial}</span>
-        </div>
-      {/if}
+      <div class="avatar-ring">
+        {#if photoUrl}
+          <img class="avatar" src={photoUrl} alt={displayName || 'Profile'} />
+        {:else}
+          <div class="avatar avatar-fallback">
+            <span>{avatarInitial}</span>
+          </div>
+        {/if}
+      </div>
     </div>
 
     <!-- Display name -->
@@ -95,8 +103,8 @@
     <!-- Vibe pills -->
     {#if displayedTags.length > 0}
       <div class="pills anim anim-4">
-        {#each displayedTags as tag}
-          <span class="pill">{tag}</span>
+        {#each displayedTags as tag, i}
+          <span class="pill" class:pill--red={i % 3 === 0} class:pill--blue={i % 3 === 1} class:pill--gold={i % 3 === 2}>{tag}</span>
         {/each}
       </div>
     {/if}
@@ -170,11 +178,10 @@
   /* ---------- Kicker ---------- */
   .kicker {
     font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent-primary, #FF4D4D);
+    letter-spacing: 0.02em;
+    color: var(--text-muted, rgba(255, 255, 255, 0.45));
     margin: 0 0 12px;
   }
 
@@ -195,6 +202,17 @@
   /* ---------- Avatar ---------- */
   .avatar-wrap {
     margin-bottom: 14px;
+  }
+
+  .avatar-ring {
+    padding: 3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF4D4D, #4D7CFF, #FFB84D);
+    display: inline-block;
+  }
+
+  .avatar-ring .avatar {
+    border: 3px solid var(--bg-primary, #0f1118);
   }
 
   .avatar {
@@ -235,6 +253,18 @@
     }
   }
 
+  /* ---------- Contradiction ---------- */
+  .contradiction {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: min(24rem, 100%);
+    text-align: center;
+    margin: 0 0 8px;
+    opacity: 0;
+    animation: fadeSlideUp 0.5s ease 0.35s forwards;
+  }
+
   /* ---------- Name ---------- */
   .name {
     font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
@@ -266,6 +296,10 @@
     white-space: nowrap;
   }
 
+  .pill--red { background: rgba(255,77,77,0.12); color: #FF6B6B; border-color: rgba(255,77,77,0.25); }
+  .pill--blue { background: rgba(77,124,255,0.12); color: #6B9AFF; border-color: rgba(77,124,255,0.25); }
+  .pill--gold { background: rgba(255,184,77,0.12); color: #FFC46B; border-color: rgba(255,184,77,0.25); }
+
   /* ---------- City + date ---------- */
   .meta {
     font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
@@ -287,6 +321,7 @@
 
   .mounted .anim-0 { animation-delay: 0ms; }
   .mounted .anim-1 { animation-delay: 80ms; }
+  .mounted .anim-1b { animation-delay: 120ms; }
   .mounted .anim-2 { animation-delay: 160ms; }
   .mounted .anim-3 { animation-delay: 240ms; }
   .mounted .anim-4 { animation-delay: 320ms; }
@@ -297,6 +332,11 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @media (prefers-reduced-motion: reduce) {
