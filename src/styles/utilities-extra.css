@@ -1,0 +1,160 @@
+@layer utilities {
+  .rounded-card {
+    border-radius: var(--r);
+  }
+  .rounded-pill {
+    border-radius: 100px;
+  }
+
+  /* ── AMBIENT PAGE WASH (single stack; drift is subtle) ── */
+  .ambient-bg {
+    background:
+      radial-gradient(circle at 18% 22%, var(--accent-soft), transparent 55%),
+      radial-gradient(circle at 82% 78%, var(--brand-red-soft), transparent 50%),
+      radial-gradient(circle at 50% 100%, rgba(202, 138, 4, 0.055), transparent 46%),
+      var(--bg-primary);
+    animation: ambient-bg-drift 14s ease-in-out infinite;
+  }
+
+  /* ── CARD GRADIENTS ── */
+  .grad-fitness {
+    background: linear-gradient(145deg, #065f46, #10b981);
+  }
+  .grad-food {
+    background: linear-gradient(145deg, #991b1b, #ef4444);
+  }
+  .grad-night {
+    background: linear-gradient(145deg, #3b0764, #a855f7);
+  }
+  .grad-tech {
+    background: linear-gradient(145deg, #0c4a6e, #38bdf8);
+  }
+  .grad-fashion {
+    background: linear-gradient(145deg, #701a75, #e879f9);
+  }
+  .grad-travel {
+    background: linear-gradient(145deg, #14532d, #4ade80);
+  }
+  .grad-music {
+    background: linear-gradient(145deg, #4c1d95, #818cf8);
+  }
+  .grad-sports {
+    background: linear-gradient(145deg, #1e3a8a, #60a5fa);
+  }
+  .grad-deal {
+    background: linear-gradient(145deg, #92400e, #fbbf24);
+  }
+  .grad-default {
+    background: linear-gradient(145deg, #312e81, #818cf8);
+  }
+  .grad-job {
+    background: linear-gradient(145deg, #1e3a8a, #3b82f6);
+  }
+  .grad-video {
+    background: linear-gradient(145deg, #7f1d1d, #f87171);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.12s ease-out both;
+}
+.fade-up-1,
+.fade-up-2,
+.fade-up-3,
+.fade-up-4,
+.fade-up-5 {
+  animation-delay: 0s;
+}
+
+@keyframes bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+}
+.bounce-dot {
+  animation: bounce 0.9s ease-in-out infinite;
+}
+.bounce-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.bounce-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes pulse-accent {
+  0%,
+  100% {
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--accent-glow);
+  }
+}
+.pulse-glow {
+  animation: pulse-accent 2s ease-in-out infinite;
+}
+
+@keyframes thinking-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+.thinking-glow {
+  background: linear-gradient(120deg, #3b82f6, #dc2626, #eab308, #2563eb);
+  background-size: 300% 300%;
+  animation: thinking-gradient 4s ease infinite;
+}
+
+.screen-enter {
+  animation: fadeUp 0.14s ease-out both;
+}
+
+@keyframes ambient-bg-drift {
+  0%,
+  100% {
+    filter: hue-rotate(0deg) saturate(1);
+  }
+  50% {
+    filter: hue-rotate(6deg) saturate(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .screen-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .ambient-bg {
+    animation: none;
+  }
+
+  .thinking-glow {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}

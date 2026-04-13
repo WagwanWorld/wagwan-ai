@@ -1,0 +1,10 @@
+.DS_Store
+node_modules
+/build
+/.svelte-kit
+.env
+.env.*
+!.env.example
+
+# Vendored OrioSearch clone (use `npm run orio` to fetch + start)
+orio-search/

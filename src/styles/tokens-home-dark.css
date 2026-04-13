@@ -1,0 +1,123 @@
+/**
+ * Dark + acid-lime theme: Home surface and/or authenticated app chrome.
+ * - `.home-page-root[data-home-surface='dark']` — Home page subtree
+ * - `html:has([data-app-chrome='dark'])` — sidebar + all (app) routes share tokens with Home
+ */
+@layer base {
+  .home-page-root[data-home-surface='dark'],
+  html:has([data-app-chrome='dark']) {
+    --home-lime: #c4f24a;
+    --home-lime-soft: rgba(196, 242, 74, 0.14);
+    --home-lime-glow: rgba(196, 242, 74, 0.32);
+
+    --home-font-title: clamp(1.45rem, 2.2vw, 1.75rem);
+    --home-font-section: clamp(0.875rem, 1.1vw, 1rem);
+    --home-font-body: 13px;
+    --home-font-meta: 11px;
+    --home-section-gap: 32px;
+    --home-section-gap-lg: 48px;
+    --home-shell-pad-x: clamp(24px, 5vw, 80px);
+    --home-layout-gutter: clamp(16px, 2.4vw, 28px);
+    --home-accent-gradient: linear-gradient(90deg, #c4f24a 0%, #22d3ee 100%);
+
+    --bg-primary: #080a0e;
+    --bg-secondary: #0e1118;
+    --bg-elevated: #141820;
+
+    --text-primary: #e8ecf3;
+    --text-secondary: #9aa3b2;
+    --text-muted: #6d7684;
+
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+
+    --glass-light: rgba(255, 255, 255, 0.055);
+    --glass-medium: rgba(255, 255, 255, 0.08);
+    --glass-strong: rgba(255, 255, 255, 0.11);
+
+    --accent-primary: #c4f24a;
+    --accent-secondary: #9edb2f;
+    --accent-tertiary: #7cb518;
+    --accent-glow: rgba(196, 242, 74, 0.38);
+    --accent-soft: rgba(196, 242, 74, 0.12);
+    --brand-red-soft: rgba(248, 113, 113, 0.12);
+
+    --blob-tint-a: rgba(99, 102, 241, 0.22);
+    --blob-tint-b: rgba(196, 242, 74, 0.18);
+    --blob-tint-c: rgba(59, 130, 246, 0.2);
+    --blob-glow: rgba(196, 242, 74, 0.2);
+    --ambient-blue: rgba(59, 130, 246, 0.1);
+    --ambient-red: rgba(248, 113, 113, 0.08);
+    --ambient-gold: rgba(196, 242, 74, 0.08);
+
+    --bg: var(--bg-primary);
+    --card: var(--glass-light);
+    --card2: var(--glass-medium);
+    --border: var(--border-subtle);
+    --border-glow: var(--accent-glow);
+    --text: var(--text-primary);
+    --text2: var(--text-secondary);
+    --text3: var(--text-muted);
+    --accent: var(--accent-primary);
+    --accent2: var(--accent-secondary);
+    --accent3: var(--accent-tertiary);
+    --green: var(--state-success);
+    --amber: var(--state-warning);
+
+    --panel-surface: rgba(255, 255, 255, 0.04);
+    --panel-surface-soft: rgba(255, 255, 255, 0.025);
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --panel-border-strong: rgba(255, 255, 255, 0.16);
+    --panel-divider: rgba(255, 255, 255, 0.06);
+    --panel-hover: rgba(255, 255, 255, 0.06);
+    --panel-hover-border: rgba(255, 255, 255, 0.2);
+    --shadow-tall-card: 0 12px 40px rgba(0, 0, 0, 0.45);
+    --calendar-today-bg: rgba(196, 242, 74, 0.12);
+    --calendar-today-border: rgba(196, 242, 74, 0.35);
+    --calendar-today-label: var(--accent-primary);
+    --text-on-media: #ffffff;
+    --text-on-media-muted: rgba(255, 255, 255, 0.55);
+    --scrim-media: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, transparent 55%);
+    --gmail-icon-bg: rgba(234, 67, 53, 0.14);
+    --gmail-icon-border: rgba(234, 67, 53, 0.28);
+    --score-high-bg: rgba(34, 197, 94, 0.14);
+    --score-high-border: rgba(34, 197, 94, 0.32);
+    --score-high-text: #4ade80;
+    --score-low-bg: rgba(248, 113, 113, 0.12);
+    --score-low-border: rgba(248, 113, 113, 0.28);
+    --score-low-text: #fb7185;
+    --pill-warn-border: rgba(248, 113, 113, 0.28);
+
+    --accent-gradient-wash: linear-gradient(
+      120deg,
+      rgba(196, 242, 74, 0.12) 0%,
+      rgba(59, 130, 246, 0.1) 45%,
+      rgba(168, 85, 247, 0.08) 100%
+    );
+    --accent-border-mesh: linear-gradient(
+      135deg,
+      rgba(196, 242, 74, 0.42),
+      rgba(59, 130, 246, 0.35),
+      rgba(168, 85, 247, 0.32)
+    );
+
+    --mesh-orb-base-opacity: 0.32;
+  }
+
+  /* Mobile dock: dark glass on all authenticated routes */
+  html[data-app-surface='home'] nav[aria-label='Main navigation'] > div,
+  html:has([data-app-chrome='dark']) nav[aria-label='Main navigation'] > div {
+    background:
+      linear-gradient(rgba(18, 22, 30, 0.92), rgba(12, 14, 20, 0.88)) padding-box,
+      linear-gradient(
+          125deg,
+          rgba(196, 242, 74, 0.35),
+          rgba(59, 130, 246, 0.22),
+          rgba(168, 85, 247, 0.18)
+        )
+        border-box;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.5),
+      0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  }
+}

@@ -1,0 +1,86 @@
+@layer base {
+  html[data-theme='light'] {
+    --bg-primary: #f4f2ef;
+    --bg-secondary: #ebe8e3;
+    --bg-elevated: #ffffff;
+
+    --text-primary: #0f172a;
+    --text-secondary: #5c6570;
+    --text-muted: #7a8490;
+
+    --border-subtle: rgba(20, 24, 32, 0.09);
+    --border-strong: rgba(20, 24, 32, 0.16);
+
+    --glass-light: rgba(255, 255, 255, 0.72);
+    --glass-medium: rgba(255, 255, 255, 0.9);
+    --glass-strong: rgba(255, 255, 255, 0.97);
+
+    --accent-primary: #2563eb;
+    --accent-secondary: #1d4ed8;
+    --accent-tertiary: #1e40af;
+    --accent-glow: rgba(37, 99, 235, 0.32);
+    --accent-soft: rgba(37, 99, 235, 0.14);
+    --brand-red-soft: rgba(220, 38, 38, 0.1);
+
+    --blob-tint-a: rgba(99, 102, 241, 0.42);
+    --blob-tint-b: rgba(236, 72, 153, 0.32);
+    --blob-tint-c: rgba(59, 130, 246, 0.36);
+    --blob-glow: rgba(129, 140, 248, 0.28);
+    --ambient-blue: rgba(59, 130, 246, 0.14);
+    --ambient-red: rgba(220, 38, 38, 0.09);
+    --ambient-gold: rgba(202, 138, 4, 0.1);
+
+    --bg: var(--bg-primary);
+    --card: var(--glass-light);
+    --card2: var(--glass-medium);
+    --border: var(--border-subtle);
+    --border-glow: var(--accent-glow);
+    --text: var(--text-primary);
+    --text2: var(--text-secondary);
+    --text3: var(--text-muted);
+    --accent: var(--accent-primary);
+    --accent2: var(--accent-secondary);
+    --accent3: var(--accent-tertiary);
+    --green: var(--state-success);
+    --amber: var(--state-warning);
+
+    --panel-surface: rgba(20, 24, 32, 0.045);
+    --panel-surface-soft: rgba(20, 24, 32, 0.03);
+    --panel-border: rgba(20, 24, 32, 0.12);
+    --panel-border-strong: rgba(20, 24, 32, 0.17);
+    --panel-divider: rgba(20, 24, 32, 0.08);
+    --panel-hover: rgba(20, 24, 32, 0.06);
+    --panel-hover-border: rgba(20, 24, 32, 0.18);
+    --shadow-tall-card: 0 8px 32px rgba(20, 24, 32, 0.12);
+    --calendar-today-bg: rgba(37, 99, 235, 0.12);
+    --calendar-today-border: rgba(37, 99, 235, 0.28);
+    --calendar-today-label: var(--accent-primary);
+    --text-on-media: #ffffff;
+    --text-on-media-muted: rgba(255, 255, 255, 0.55);
+    --scrim-media: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, transparent 55%);
+    --gmail-icon-bg: rgba(234, 67, 53, 0.12);
+    --gmail-icon-border: rgba(234, 67, 53, 0.22);
+    --score-high-bg: rgba(0, 194, 122, 0.12);
+    --score-high-border: rgba(0, 194, 122, 0.28);
+    --score-high-text: #059669;
+    --score-low-bg: rgba(229, 0, 26, 0.1);
+    --score-low-border: rgba(229, 0, 26, 0.25);
+    --score-low-text: #e11d48;
+    --pill-warn-border: rgba(229, 0, 26, 0.22);
+
+    --accent-gradient-wash: linear-gradient(
+      120deg,
+      rgba(167, 139, 250, 0.18) 0%,
+      rgba(96, 165, 250, 0.16) 45%,
+      rgba(251, 191, 136, 0.14) 100%
+    );
+    --accent-border-mesh: linear-gradient(
+      135deg,
+      rgba(167, 139, 250, 0.48),
+      rgba(96, 165, 250, 0.42),
+      rgba(251, 191, 136, 0.38)
+    );
+
+    --mesh-orb-base-opacity: 0.24;
+  }
+}

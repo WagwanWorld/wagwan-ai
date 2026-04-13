@@ -1,0 +1,54 @@
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  :where(a, button, input, textarea, select, summary, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+
+  :where(.float-nav-hit, .sidebar-rail__link):focus-visible {
+    outline-offset: 3px;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    scrollbar-width: none;
+  }
+
+  @media (min-width: 1024px) {
+    .app-scroll-region::-webkit-scrollbar {
+      display: block;
+      width: 8px;
+      height: 8px;
+    }
+
+    .app-scroll-region::-webkit-scrollbar-thumb {
+      border-radius: 8px;
+      background: rgba(15, 20, 25, 0.15);
+    }
+
+    .app-scroll-region::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .app-scroll-region {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(15, 20, 25, 0.2) transparent;
+    }
+  }
+}

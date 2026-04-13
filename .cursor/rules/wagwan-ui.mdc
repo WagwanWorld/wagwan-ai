@@ -1,0 +1,14 @@
+---
+description: Wagwan UI tokens and patterns for Svelte/Tailwind work
+globs: src/**/*.svelte,src/**/*.css
+---
+
+# Wagwan UI conventions
+
+- **Docs**: Operator map in [`docs/THEME.md`](docs/THEME.md); vision in [`docs/PRODUCT_UI_VISION.md`](docs/PRODUCT_UI_VISION.md); scroll contract in [`docs/LAYOUT.md`](docs/LAYOUT.md).
+- **Theme**: The app is **light-only**. `html[data-theme='light']` drives CSS variables from [`src/styles/tokens-light.css`](src/styles/tokens-light.css) plus [`tokens-shared.css`](src/styles/tokens-shared.css). Entry: [`src/app.css`](src/app.css). [`applyThemeToDocument`](src/lib/stores/theme.ts) keeps the document in sync. Prefer semantic tokens over raw hex in components.
+- **Panels**: Use global classes from `app.css` — `ui-panel`, `ui-panel--solid`, `ui-panel--r12|r14|r16`, `ui-panel--clip`, `ui-divider-top`, `ui-link-row`, `ui-interactive-panel`, `btn-pill-warn` (+ `--md` / `--lg`), `ui-badge-pill`, `ui-icon-btn-ghost`. Inset surfaces also use `--panel-surface`, `--panel-border`, `--panel-divider`.
+- **Chrome**: [`DesktopSidebar.svelte`](src/lib/components/DesktopSidebar.svelte) and [`FloatingNav.svelte`](src/lib/components/FloatingNav.svelte) target the light surface directly (glass pill, token-based hits).
+- **Wrapper**: [`GlassPanel.svelte`](src/lib/components/GlassPanel.svelte) applies the standard inset panel for repeated framed blocks.
+- **Focus**: Interactive elements should be keyboard reachable; global `:focus-visible` uses `var(--accent-primary)` in `app.css`.
+- **Brand gradients** on media (category strips, YouTube) may stay literal; app chrome and copy should use tokens.

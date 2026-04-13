@@ -1,0 +1,47 @@
+@layer base {
+  :root {
+    --r: 16px;
+    --floating-nav-dock-gap: calc(76px + env(safe-area-inset-bottom, 0px));
+    --nav-dock-gap: var(--floating-nav-dock-gap);
+    --blur-light: 6px;
+    --blur-medium: 12px;
+    --blur-heavy: 16px;
+    --state-success: #22c55e;
+    --state-warning: #ca8a04;
+    --state-error: #ef4444;
+    --brand-red: #dc2626;
+    --brand-gold: #eab308;
+    --brand-gold-mid: #ca8a04;
+    /* Home / app main-column rhythm (gutters, split gap, signal cards) */
+    --home-layout-gutter: clamp(14px, 2.2vw, 28px);
+    /* Mesh tuning — consumed by AmbientGradients + html[data-app-surface] */
+    --mesh-orb-opacity-scale: 1;
+    --mesh-blur-scale: 1;
+  }
+
+  html[data-app-surface='explore'] {
+    --mesh-orb-opacity-scale: 1.06;
+  }
+
+  html[data-app-surface='home'] {
+    --mesh-orb-opacity-scale: 1.05;
+  }
+
+  html[data-app-surface='ai'] {
+    --mesh-orb-opacity-scale: 1.02;
+  }
+
+  html[data-app-surface='onboarding'] {
+    --mesh-orb-opacity-scale: 1.08;
+  }
+
+  @media (min-width: 768px) {
+    .app-shell--rail {
+      --nav-dock-gap: max(24px, env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  html[data-app-surface='profile'] {
+    --mesh-orb-opacity-scale: 1.04;
+  }
+}

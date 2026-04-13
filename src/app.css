@@ -1,0 +1,11 @@
+@import './styles/typography.css';
+@import './styles/tokens-shared.css';
+@import './styles/tokens-light.css';
+@import './styles/tokens-home-dark.css';
+@import './styles/base-layout.css';
+@import './styles/components.css';
+@import './styles/utilities-extra.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
