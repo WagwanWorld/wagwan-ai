@@ -160,37 +160,46 @@ export const POST: RequestHandler = async ({ request }) => {
 
           controller.enqueue(sse('status', { text: statusMsg }));
 
-          let searchResponses;
-          if (useEventDomains) {
-            const [broadResponses, platformResponse] = await Promise.all([
-              Promise.all(queries.slice(0, 2).map(q => searchWeb(q, 4))),
-              searchWeb(`${message} ${city}`, 4, ['in.bookmyshow.com', 'district.in']),
-            ]);
-            searchResponses = [...broadResponses, platformResponse];
-          } else {
-            searchResponses = await Promise.all(queries.map(q => searchWeb(q, 4)));
+          try {
+            let searchResponses;
+            if (useEventDomains) {
+              const [broadResponses, platformResponse] = await Promise.all([
+                Promise.all(queries.slice(0, 2).map(q => searchWeb(q, 4))),
+                searchWeb(`${message} ${city}`, 4, ['in.bookmyshow.com', 'district.in']),
+              ]);
+              searchResponses = [...broadResponses, platformResponse];
+            } else {
+              searchResponses = await Promise.all(queries.map(q => searchWeb(q, 4)));
+            }
+
+            const seenUrls = new Set<string>();
+            allResults = searchResponses.flatMap(r => r.results).filter(r => {
+              if (seenUrls.has(r.url)) return false;
+              seenUrls.add(r.url);
+              return true;
+            });
+
+            const seenImages = new Set<string>();
+            allImages = searchResponses.flatMap(r => r.images).filter(img => {
+              if (seenImages.has(img)) return false;
+              seenImages.add(img);
+              return true;
+            });
+
+            searchContext = formatResultsForAI(allResults, allImages, { maxResults: 6 });
+            hadSearch = true;
+            searchResultCount = allResults.length;
+            searchContextChars = searchContext.length;
+            timer.mark('afterSearch');
+            controller.enqueue(sse('status', { text: 'Curating picks for you…' }));
+          } catch (searchErr) {
+            // Brave Search failed (quota, network, etc.) — fall back to profile-only
+            console.error('[Chat] Web search failed, falling back to profile-only:', searchErr instanceof Error ? searchErr.message : searchErr);
+            searchTier = 'profile_only';
+            searchContext = '';
+            searchContextChars = 0;
+            controller.enqueue(sse('status', { text: 'Thinking from your profile…' }));
           }
-
-          const seenUrls = new Set<string>();
-          allResults = searchResponses.flatMap(r => r.results).filter(r => {
-            if (seenUrls.has(r.url)) return false;
-            seenUrls.add(r.url);
-            return true;
-          });
-
-          const seenImages = new Set<string>();
-          allImages = searchResponses.flatMap(r => r.images).filter(img => {
-            if (seenImages.has(img)) return false;
-            seenImages.add(img);
-            return true;
-          });
-
-          searchContext = formatResultsForAI(allResults, allImages, { maxResults: 6 });
-          hadSearch = true;
-          searchResultCount = allResults.length;
-          searchContextChars = searchContext.length;
-          timer.mark('afterSearch');
-          controller.enqueue(sse('status', { text: 'Curating picks for you…' }));
         }
 
         controller.enqueue(sse('meta', { useEventDomains: false, intent }));
