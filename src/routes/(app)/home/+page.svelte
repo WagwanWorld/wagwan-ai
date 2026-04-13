@@ -62,7 +62,14 @@
     const n = $profile.name;
     firstName = n.startsWith('@') ? n : (n.split(' ')[0] || 'there');
   }
-  $: city = $profile.city || $profile.instagramIdentity?.city || '';
+  $: city = (() => {
+    // Cross-reference location from Instagram, LinkedIn, and Google
+    const igCity = $profile.instagramIdentity?.city?.trim();
+    const liLocation = $profile.linkedinIdentity?.location?.trim();
+    const profileCity = $profile.city?.trim();
+    // Prefer Instagram (most recent place), then LinkedIn, then manual profile
+    return igCity || liLocation || profileCity || '';
+  })();
 
   $: identityMusicContext = ((): IdentityMusicContext => {
     const am = $profile.appleMusicIdentity;
@@ -1606,6 +1613,38 @@
       </section>
     {/if}
 
+    {#if currentReadLines.length || interpretedSignals.length}
+      <section class="home-section home-section--signals">
+        {#if currentReadLines.length}
+          <div class="signal-read">
+            <span class="signal-read__label">Current read</span>
+            <p class="signal-read__text">{currentReadLines[0]}</p>
+          </div>
+        {/if}
+        {#if interpretedSignals.length}
+          <div class="signal-strip">
+            {#each interpretedSignals as signal}
+              <div class="signal-chip">
+                <span class="signal-chip__src">{signal.source}</span>
+                <span class="signal-chip__read">{signal.read}</span>
+                <div class="signal-chip__bar">
+                  <div class="signal-chip__fill" style="width:{Math.round(signal.confidence * 100)}%"></div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </section>
+    {/if}
+
+    {#if personaSignalDominantPatterns.length}
+      <div class="home-patterns">
+        {#each personaSignalDominantPatterns.slice(0, 4) as pattern}
+          <span class="pattern-pill">{pattern.replace(/_/g, ' ')}</span>
+        {/each}
+      </div>
+    {/if}
+
     {#if forYouTabs.length > 0 || recsLoading}
       <section class="home-section home-section--foryou">
         <h2 class="home-section__title">For you</h2>
@@ -1615,6 +1654,13 @@
           on:feedback={(e) => sendExpressionFeedback(e.detail.title, e.detail.vote)}
         />
       </section>
+    {/if}
+
+    {#if completeness < 80}
+      <div class="home-nudge">
+        <p class="home-nudge__text">Your AI knows you <strong>{completeness}%</strong></p>
+        <a href="/profile" class="home-nudge__link">Connect more →</a>
+      </div>
     {/if}
 
     <div class="home-bottom-spacer"></div>
@@ -1664,6 +1710,145 @@
     color: var(--text-muted);
     margin: 0 0 16px;
     padding: 0 4px;
+  }
+
+  /* ── Signals section ── */
+  .home-section--signals {
+    margin-top: 28px;
+  }
+
+  .signal-read {
+    margin-bottom: 20px;
+  }
+
+  .signal-read__label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-primary);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .signal-read__text {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(0.95rem, 3vw, 1.1rem);
+    line-height: 1.5;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .signal-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .signal-chip {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    grid-template-rows: auto auto;
+    gap: 2px 12px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: var(--glass-light);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .signal-chip__src {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .signal-chip__read {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    grid-row: 1;
+    grid-column: 2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .signal-chip__bar {
+    grid-row: 2;
+    grid-column: 2;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--panel-surface);
+    margin-top: 4px;
+  }
+
+  .signal-chip__fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent-primary);
+    opacity: 0.6;
+    transition: width 600ms var(--ease-premium);
+  }
+
+  /* ── Dominant patterns ── */
+  .home-patterns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 16px;
+    padding: 0 4px;
+  }
+
+  .pattern-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: var(--panel-surface);
+    border: 1px solid var(--panel-border);
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ── Nudge ── */
+  .home-nudge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    margin-top: 32px;
+    border-radius: 16px;
+    background: var(--glass-light);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .home-nudge__text {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .home-nudge__text strong {
+    color: var(--accent-primary);
+    font-weight: 700;
+  }
+
+  .home-nudge__link {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-primary);
+    text-decoration: none;
+    white-space: nowrap;
   }
 
   .home-bottom-spacer {

@@ -190,10 +190,6 @@
     text-wrap: balance;
     margin: 0 0 28px;
     max-width: 640px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   /* ---------- Avatar ---------- */

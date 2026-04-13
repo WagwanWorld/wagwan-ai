@@ -41,7 +41,7 @@
     border-radius: 1.5rem;
     border: 1px solid var(--border-subtle);
     background: var(--glass-light);
-    height: 150px;
+    min-height: 140px;
     cursor: pointer;
     transition:
       box-shadow 200ms var(--ease-premium, ease),
@@ -98,7 +98,7 @@
     line-height: 1.4;
     color: var(--text-primary);
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
