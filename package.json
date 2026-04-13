@@ -16,6 +16,8 @@
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@fontsource/bodoni-moda": "^5.2.7",
     "@fontsource/inter": "^5.2.8",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "@lucide/svelte": "^1.7.0",
     "@supabase/supabase-js": "^2.101.1",
     "jsonwebtoken": "^9.0.3",
