@@ -82,7 +82,7 @@
           aria-selected={tab.id === activeTabId}
           on:click={() => switchTab(tab.id)}
         >
-          {tab.emoji} {tab.label}
+          {tab.label}
         </button>
       {/each}
     </div>

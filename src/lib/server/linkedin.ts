@@ -140,6 +140,62 @@ export async function fetchLinkedInProfile(token: string): Promise<{
   };
 }
 
+/** Deterministic signals from email domain — no LLM needed. */
+export function inferEmailDomainSignals(email: string): {
+  companyFromDomain: string;
+  domainType: 'big_tech' | 'startup' | 'agency' | 'corporate' | 'education' | 'personal' | 'unknown';
+  domainSignal: string;
+} {
+  const domain = (email.split('@')[1] ?? '').toLowerCase().trim();
+  if (!domain || domain === 'gmail.com' || domain === 'yahoo.com' || domain === 'hotmail.com' || domain === 'outlook.com' || domain === 'icloud.com' || domain === 'protonmail.com') {
+    return { companyFromDomain: '', domainType: 'personal', domainSignal: '' };
+  }
+
+  const bigTech: Record<string, string> = {
+    'google.com': 'Google', 'apple.com': 'Apple', 'meta.com': 'Meta', 'facebook.com': 'Meta',
+    'amazon.com': 'Amazon', 'microsoft.com': 'Microsoft', 'netflix.com': 'Netflix',
+    'uber.com': 'Uber', 'airbnb.com': 'Airbnb', 'stripe.com': 'Stripe',
+    'salesforce.com': 'Salesforce', 'twitter.com': 'X', 'x.com': 'X',
+    'linkedin.com': 'LinkedIn', 'spotify.com': 'Spotify', 'snap.com': 'Snap',
+    'bytedance.com': 'ByteDance', 'tiktok.com': 'TikTok',
+    'adobe.com': 'Adobe', 'nvidia.com': 'NVIDIA', 'intel.com': 'Intel',
+    'swiggy.com': 'Swiggy', 'zomato.com': 'Zomato', 'flipkart.com': 'Flipkart',
+    'razorpay.com': 'Razorpay', 'cred.club': 'CRED', 'phonepe.com': 'PhonePe',
+  };
+
+  if (bigTech[domain]) {
+    return {
+      companyFromDomain: bigTech[domain],
+      domainType: 'big_tech',
+      domainSignal: `Works at ${bigTech[domain]} (verified via email domain)`,
+    };
+  }
+
+  if (domain.endsWith('.edu') || domain.endsWith('.ac.in') || domain.endsWith('.ac.uk')) {
+    return {
+      companyFromDomain: domain.split('.')[0],
+      domainType: 'education',
+      domainSignal: `Education-affiliated (${domain})`,
+    };
+  }
+
+  if (domain.endsWith('.gov') || domain.endsWith('.gov.in')) {
+    return {
+      companyFromDomain: domain.split('.')[0],
+      domainType: 'corporate',
+      domainSignal: `Government-affiliated (${domain})`,
+    };
+  }
+
+  const name = domain.split('.')[0];
+  const isShortDomain = domain.split('.').length <= 2 && name.length <= 12;
+  return {
+    companyFromDomain: name,
+    domainType: isShortDomain ? 'startup' : 'corporate',
+    domainSignal: `Custom work email (${domain}) — likely ${isShortDomain ? 'startup/small company' : 'established company'}`,
+  };
+}
+
 export async function analyseLinkedInIdentity(
   name: string,
   headline: string,
@@ -149,6 +205,7 @@ export async function analyseLinkedInIdentity(
   email?: string,
 ): Promise<LinkedInIdentity> {
   const loc = [city?.trim(), country?.trim()].filter(Boolean).join(', ');
+  const domainSignals = email ? inferEmailDomainSignals(email) : null;
 
   const contextLines = [
     name?.trim() && `Name: ${name.trim()}`,
@@ -157,6 +214,8 @@ export async function analyseLinkedInIdentity(
     city?.trim() && `City: ${city.trim()}`,
     country?.trim() && `Country: ${country.trim()}`,
     email?.trim() && `Email: ${email.trim()}`,
+    domainSignals?.domainSignal && `Email domain signal: ${domainSignals.domainSignal}`,
+    domainSignals?.domainType && `Organization type: ${domainSignals.domainType}`,
   ].filter(Boolean) as string[];
 
   const context = contextLines.join('\n');
@@ -211,7 +270,7 @@ Return JSON only (no markdown):
   try {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
+      max_tokens: 600,
       messages: [{ role: 'user', content: prompt }],
     });
     const text = response.content[0].type === 'text' ? response.content[0].text : '{}';

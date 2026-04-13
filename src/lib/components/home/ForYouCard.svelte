@@ -53,10 +53,7 @@
   <!-- Bottom scrim + content -->
   <div class="foryou-card__scrim">
     <div class="foryou-card__content">
-      <p class="foryou-card__title">
-        {#if emoji}<span class="foryou-card__emoji">{emoji}</span>{/if}
-        {title}
-      </p>
+      <p class="foryou-card__title">{title}</p>
       {#if price}
         <span class="foryou-card__price">{price}</span>
       {/if}
@@ -109,7 +106,7 @@
   }
 
   .foryou-card__score--high {
-    background: rgba(34, 197, 94, 0.85);
+    background: color-mix(in srgb, var(--state-success, #22c55e) 85%, transparent);
   }
 
   .foryou-card__scrim {
@@ -144,9 +141,9 @@
     overflow: hidden;
   }
 
-  .foryou-card__emoji {
-    font-size: 13px;
-    margin-right: 4px;
+  .foryou-card:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
   }
 
   .foryou-card__price {

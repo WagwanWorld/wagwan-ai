@@ -233,6 +233,9 @@ export const POST: RequestHandler = async ({ request }) => {
             snap.latestReleases,
             snap.heavyRotationTracks,
             snap.recentlyPlayed,
+            snap.libraryArtists,
+            snap.lovedSongs,
+            snap.recommendedNames,
           );
           updated.appleMusicIdentity = identity;
         } catch (e: unknown) {
