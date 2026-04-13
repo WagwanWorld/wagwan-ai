@@ -10,5 +10,4 @@ CREATE TABLE IF NOT EXISTS cached_content (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cached_content_lookup
-  ON cached_content (google_sub, content_type)
-  WHERE expires_at > NOW();
+  ON cached_content (google_sub, content_type, expires_at);
