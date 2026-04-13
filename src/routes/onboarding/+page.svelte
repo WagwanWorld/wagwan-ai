@@ -511,6 +511,7 @@
       savingsTotal: cloudExtras.savingsTotal ?? 0,
       lastVisit: '',
       profileUpdatedAt: new Date().toISOString(),
+      locationUpdatedAt: manualCity ? new Date().toISOString() : '',
     };
 
     profile.set(fullProfile);
@@ -618,6 +619,17 @@
               <span>AI assistant that knows you</span>
             </div>
           </div>
+        </div>
+
+        <div class="ob-location-field">
+          <input
+            type="text"
+            bind:value={manualCity}
+            placeholder="Your city (e.g. Mumbai, New York)"
+            class="ob-input"
+            style="font-family: var(--font-sans); font-size: 14px; letter-spacing: 0;"
+          />
+          <span class="ob-location-hint">Used for local recommendations. Optional.</span>
         </div>
 
         <div class="ob-bottom">
@@ -1415,6 +1427,16 @@
   .ob-unlock-dot--red { background: #FF4D4D; }
   .ob-unlock-dot--blue { background: #4D7CFF; }
   .ob-unlock-dot--gold { background: #FFB84D; }
+
+  .ob-location-field {
+    margin-top: 16px;
+  }
+  .ob-location-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 6px;
+  }
 
   /* Explain cards (Steps 1-3) */
   .ob-explain-card {

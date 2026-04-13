@@ -41,6 +41,7 @@ export interface UserProfile {
   savingsTotal: number;
   lastVisit: string;
   profileUpdatedAt: string;
+  locationUpdatedAt: string;
 }
 
 export interface SavedItem {
@@ -79,6 +80,7 @@ const DEFAULT_PROFILE: UserProfile = {
   savingsTotal: 0,
   lastVisit: '',
   profileUpdatedAt: '',
+  locationUpdatedAt: '',
 };
 
 const STORAGE_KEY = 'wagwan_profile_v2';
