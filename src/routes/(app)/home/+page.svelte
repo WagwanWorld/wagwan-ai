@@ -1646,7 +1646,7 @@
     if (!ig) return '';
     const parts = [];
     if (typeof ig.followersCount === 'number') parts.push(`${ig.followersCount.toLocaleString()} followers`);
-    if (ig.engagementRate) parts.push(`${ig.engagementRate} engagement`);
+    if ((ig as any).engagement) parts.push(`${(ig as any).engagement} engagement`);
     return parts.join(' · ') || '';
   })();
 

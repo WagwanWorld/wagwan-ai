@@ -20,9 +20,21 @@ import {
   formatCompressedContextForPrompt,
 } from '$lib/server/identityContext/formatContextPrompt';
 import { ANTHROPIC_API_KEY } from '$env/static/private';
+import { env as privateEnv } from '$env/dynamic/private';
 import type { InstagramIdentity } from './instagram';
 import type { ResultCard, ChatResponse, TwinChatAction } from '$lib/utils';
-import { buildIdentityGraph, identitySummary, type IdentityGraph } from './identity';
+import {
+  buildIdentityGraph,
+  formatSignalPackForChat,
+  identitySummary,
+  SIGNAL_PACK_MAX_CHARS_DEFAULT,
+  type IdentityGraph,
+} from './identity';
+import {
+  getAnthropicChatModel,
+  getChatLlmProvider,
+  streamChatLlmText,
+} from '$lib/server/llm/chatProviders';
 import {
   attachResultThumbnails,
   sanitizeCardsToSearchResults,
@@ -352,7 +364,7 @@ Return ONE JSON object (no markdown, pure JSON):
       "title": "Exact name (artist, venue, product, place)",
       "description": "1 sentence. Why this fits THEM specifically.",
       "price": "Exact price, 'Free', 'From ₹X', or 'Tickets from ₹X'",
-      "url": "Real URL from search results — use actual links",
+      "url": "Real URL from Tier C live web results when present — use actual links",
       "category": "music|food|nightlife|fitness|fashion|travel|experience|deal|tech|wellness|culture|product|other",
       "match_score": 88,
       "match_reason": "One sentence referencing their specific interests/aesthetic",
@@ -376,7 +388,7 @@ Rules:
 - mood: match tone of the reply.
 - PRIORITISE lifestyle over deals. Only use category "deal" if the query is explicitly about saving money.
 - match_score 65–98; match_reason must cite concrete identity facts when data exists.
-- Use REAL URLs from search results for cards.
+- Use REAL URLs from Tier C live web results for cards when web search ran; otherwise cards: [].
 - For results tagged [EVENT LISTING]: extract event name, venue, date; bookable links; category "nightlife" or "experience".
 - Never start with "Here are" or "I found" — give your pick directly, like a friend would.`;
 }
@@ -432,7 +444,7 @@ Return the JSON response.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: getAnthropicChatModel(),
       max_tokens: 2400,
       system: systemAugmented,
       messages: [{ role: 'user', content: userContent }],
@@ -546,7 +558,7 @@ For any result tagged [EVENT LISTING]: extract event name, venue, and date into 
             : ({ type: 'auto' } as const);
 
         const toolResponse = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
+          model: getAnthropicChatModel(),
           max_tokens: 1200,
           system: systemPrompt + identityNote,
           tools,
@@ -612,7 +624,7 @@ For any result tagged [EVENT LISTING]: extract event name, venue, and date into 
     }
 
     const toolResponse = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: getAnthropicChatModel(),
       max_tokens: 1200,
       system: systemPrompt,
       tools: [EMIT_HOME_RECS_TOOL],
@@ -668,6 +680,19 @@ export type ChatStreamEvent =
 
 const CHAT_JSON_DIVIDER = '|||JSON|||';
 
+/** How Tier C (web vs profile-only) is framed for the model. */
+export type ChatSearchTier = 'live_web' | 'profile_only' | 'probe';
+
+function formatSearchTierSection(tier: ChatSearchTier, body: string): string {
+  if (tier === 'live_web') {
+    return `--- Tier C: Live web results (for links and freshness only; prefer identity match from Tier A) ---\n${body}`;
+  }
+  if (tier === 'profile_only') {
+    return `--- Tier C: No live web search ---\nAnswer from Tier A signal pack, thread memory above, and the user message. Use cards: [] unless the user clearly asked for specific places, links, or things to buy.`;
+  }
+  return `--- Tier C: Greeting / probe mode ---\n${body}`;
+}
+
 export async function* streamChatResponse(
   message: string,
   searchContext: string,
@@ -698,11 +723,13 @@ export async function* streamChatResponse(
     browseIntent?: BrowseIntent;
     learnedMemory?: LearnedMemory;
     precomputed?: { graph?: IdentityGraph | null; summary?: string | null; googleSub?: string | null };
+    /** Tier C labelling: live Brave results, profile-only, or probe greeting. */
+    searchTier?: ChatSearchTier;
   },
 ): AsyncGenerator<ChatStreamEvent> {
   const systemPrompt = buildSystemPrompt(profile, opts?.learnedMemory, opts?.precomputed);
   const summaryBlock = opts?.threadSummary?.trim()
-    ? `Prior thread memory (compressed):\n${opts.threadSummary.trim()}\n\n`
+    ? `--- Tier B: Thread memory (compressed) ---\nPrior thread memory:\n${opts.threadSummary.trim()}\n\n`
     : '';
   const intentBlock = opts?.intentHint?.trim() ? `Intent hint: ${opts.intentHint}\n\n` : '';
 
@@ -720,16 +747,29 @@ export async function* streamChatResponse(
     ? `${systemPrompt}\n\n${CONTEXT_PACK_SYSTEM_ADDENDUM}`
     : systemPrompt;
 
+  const graphForPack =
+    opts?.precomputed?.graph ??
+    buildIdentityGraph(profile as Parameters<typeof buildIdentityGraph>[0]);
+  const summaryForPack = opts?.precomputed?.summary ?? identitySummary(graphForPack);
+  const packMaxRaw = (privateEnv.CHAT_SIGNAL_PACK_MAX_CHARS ?? '').trim();
+  const packMaxParsed = parseInt(packMaxRaw, 10);
+  const packMax =
+    Number.isFinite(packMaxParsed) && packMaxParsed >= 800 ? packMaxParsed : SIGNAL_PACK_MAX_CHARS_DEFAULT;
+  const signalPack = formatSignalPackForChat(graphForPack, summaryForPack, packMax);
+
   const resultCount = sourceResults?.length ?? 0;
   const browseCardMode =
     Boolean(opts?.browseIntent) &&
     resultCount >= BROWSE_CARD_MIN_RESULTS &&
     !opts?.intentHint?.trim();
 
+  const tier = opts?.searchTier ?? 'live_web';
+  const tierCSection = formatSearchTierSection(tier, searchContext);
+
   const browseStrictBlock = browseCardMode
     ? `BROWSE MODE (${opts!.browseIntent}):
-- Return 1–2 cards (your best picks). Each "url" MUST be copied verbatim from the "Real web search results" lines below — no invented or guessed URLs.
-- Do not return "cards": [] unless search results are empty or wholly unusable.
+- Return 1–2 cards (your best picks). Each "url" MUST be copied verbatim from the Tier C live web lines below — no invented or guessed URLs.
+- Do not return "cards": [] unless Tier C results are empty or wholly unusable.
 - Your "message" is the main value: give a direct verdict on your top pick in 2–3 sentences. Cards support the message, not replace it.
 
 `
@@ -741,30 +781,37 @@ export async function* streamChatResponse(
 2) On its own line, exactly: ${CHAT_JSON_DIVIDER}
 3) Then one JSON object with keys "message", "mood", "suggested_followups", "actions", "cards" exactly as in your instructions. The "message" string must match your plain text reply.`;
 
-  const userContent = `${summaryBlock}${intentBlock}${contextPackBlock}${browseStrictBlock}Query: "${message}"\n\nReal web search results:\n${searchContext}\n${formatBlock}`;
+  const userContent = `${signalPack}
+
+${summaryBlock}${intentBlock}${contextPackBlock}${browseStrictBlock}User message (includes recent conversation when present):\n${message}
+
+${tierCSection}
+${formatBlock}`;
 
   const systemWithFormat = `${systemAugmented}\n\nThe user message ends with "--- Output format ---". Obey it: plain text, then a line ${CHAT_JSON_DIVIDER}, then JSON.`;
-
-  const stream = anthropic.messages.stream({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 3000,
-    system: systemWithFormat,
-    messages: [{ role: 'user', content: userContent }],
-  });
 
   let buffer = '';
   let emittedPlain = 0;
 
-  for await (const ev of stream) {
-    if (ev.type !== 'content_block_delta') continue;
-    if (ev.delta.type !== 'text_delta') continue;
-    buffer += ev.delta.text;
-    const div = buffer.indexOf(CHAT_JSON_DIVIDER);
-    const plainEnd = div === -1 ? buffer.length : div;
-    if (plainEnd > emittedPlain) {
-      yield { type: 'text_delta', delta: buffer.slice(emittedPlain, plainEnd) };
-      emittedPlain = plainEnd;
+  try {
+    for await (const delta of streamChatLlmText({
+      system: systemWithFormat,
+      user: userContent,
+    })) {
+      buffer += delta;
+      const div = buffer.indexOf(CHAT_JSON_DIVIDER);
+      const plainEnd = div === -1 ? buffer.length : div;
+      if (plainEnd > emittedPlain) {
+        yield { type: 'text_delta', delta: buffer.slice(emittedPlain, plainEnd) };
+        emittedPlain = plainEnd;
+      }
     }
+  } catch (e) {
+    const prov = getChatLlmProvider();
+    const msg = e instanceof Error ? e.message : String(e);
+    const modelHint = prov === 'anthropic' ? getAnthropicChatModel() : prov;
+    console.error(`[streamChatResponse] provider=${prov} model=${modelHint}`, msg);
+    throw e;
   }
 
   const div = buffer.indexOf(CHAT_JSON_DIVIDER);

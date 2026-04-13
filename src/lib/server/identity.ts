@@ -1284,3 +1284,21 @@ export function identitySummary(g: IdentityGraph): string {
 
   return lines.filter(Boolean).join(' | ');
 }
+
+/** Default max chars for the Tier A block in chat (identity match over token bloat). */
+export const SIGNAL_PACK_MAX_CHARS_DEFAULT = 4000;
+
+/**
+ * Bounded Tier A block for chat: graph-derived signals the twin must ground on
+ * before any web results (see streamChatResponse).
+ */
+export function formatSignalPackForChat(
+  graph: IdentityGraph,
+  summary: string | null | undefined,
+  maxChars: number = SIGNAL_PACK_MAX_CHARS_DEFAULT,
+): string {
+  const raw = (summary?.trim() || identitySummary(graph)).trim();
+  const body =
+    raw.length <= maxChars ? raw : `${raw.slice(0, Math.max(0, maxChars - 3))}...`;
+  return `--- Tier A: Signal pack (ground every reply here; identity match beats SERP noise) ---\n${body}`;
+}

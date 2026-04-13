@@ -30,6 +30,20 @@ let client: InstanceType<typeof AuthService> | null = null;
 function getClient(): InstanceType<typeof AuthService> {
   if (client) return client;
   const url = env.WAGWAN_GRPC_URL?.trim() || '127.0.0.1:50051';
+  // #region agent log
+  fetch('http://127.0.0.1:7721/ingest/6ef978aa-320b-4ec5-8158-741a3200d0f2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '30df21' },
+    body: JSON.stringify({
+      sessionId: '30df21',
+      location: 'wagwanGrpc.ts:getClient',
+      message: 'gRPC AuthService dial target',
+      data: { target: url, hypothesisId: 'H5' },
+      timestamp: Date.now(),
+      hypothesisId: 'H5',
+    }),
+  }).catch(() => {});
+  // #endregion
   client = new AuthService(url, grpc.credentials.createInsecure());
   return client;
 }
@@ -43,6 +57,24 @@ export function generateOTP(phone: string): Promise<void> {
     getClient().generateOTP({ phone }, (err: grpc.ServiceError | null) => {
       if (err) {
         console.error('[WagwanGrpc] GenerateOTP error:', err.message);
+        // #region agent log
+        fetch('http://127.0.0.1:7721/ingest/6ef978aa-320b-4ec5-8158-741a3200d0f2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '30df21' },
+          body: JSON.stringify({
+            sessionId: '30df21',
+            location: 'wagwanGrpc.ts:generateOTP_cb',
+            message: 'GenerateOTP grpc error',
+            data: {
+              code: err.code,
+              details: typeof err.details === 'string' ? err.details.slice(0, 120) : '',
+              hypothesisId: 'H2',
+            },
+            timestamp: Date.now(),
+            hypothesisId: 'H2',
+          }),
+        }).catch(() => {});
+        // #endregion
         reject(err);
       } else {
         resolve();

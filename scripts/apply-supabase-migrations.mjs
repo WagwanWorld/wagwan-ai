@@ -20,7 +20,9 @@ if (!url || url.trim() === '') {
       '  supabase/002_identity_graph.sql\n' +
       '  supabase/003_multi_agent_chats.sql\n' +
       '  supabase/004_marketplace_mvp.sql\n' +
-      '  supabase/005_identity_inference_snapshots.sql'
+      '  supabase/005_identity_inference_snapshots.sql\n' +
+      '  supabase/006_identity_claims.sql\n' +
+      '  supabase/007_wagwan_user_link.sql'
   );
   process.exit(1);
 }
@@ -31,6 +33,8 @@ const files = [
   'supabase/003_multi_agent_chats.sql',
   'supabase/004_marketplace_mvp.sql',
   'supabase/005_identity_inference_snapshots.sql',
+  'supabase/006_identity_claims.sql',
+  'supabase/007_wagwan_user_link.sql',
 ];
 
 const client = new pg.Client({

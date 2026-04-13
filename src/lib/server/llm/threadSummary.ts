@@ -115,7 +115,7 @@ export async function summarizeThread(
 ): Promise<string> {
   const provider = getProvider();
   const ollamaBase = (env.OLLAMA_BASE_URL ?? '').trim();
-  const ollamaModel = (env.OLLAMA_MODEL ?? 'llama3.2').trim() || 'llama3.2';
+  const ollamaModel = (env.OLLAMA_MODEL ?? 'llama3.2:1b').trim() || 'llama3.2:1b';
 
   const tryAnthropic = () => summarizeWithAnthropic(transcript);
   const tryOllama = () =>

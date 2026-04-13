@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { streamChatResponse, type LearnedMemory } from '$lib/server/ai';
+import { streamChatResponse, type ChatSearchTier, type LearnedMemory } from '$lib/server/ai';
 import {
   searchWeb,
   buildSearchQueries,
@@ -135,17 +135,20 @@ export const POST: RequestHandler = async ({ request }) => {
         let allResults: SearchResult[] = [];
         let allImages: string[] = [];
         let searchContext: string;
+        let searchTier: ChatSearchTier;
 
         if (isProbe) {
           // Probe/greeting mode: no search needed (early status already sent)
+          searchTier = 'probe';
           searchContext = '(Greeting mode — no web search. Introduce yourself as their digital twin, acknowledge what you know from their profile, and ask ONE natural question about a gap in your knowledge. No cards. Keep it to 2-3 warm sentences.)';
           searchContextChars = searchContext.length;
         } else if (!runSearch) {
-          controller.enqueue(sse('status', { text: 'Thinking…' }));
-          searchContext =
-            '(No web search for this message — answer from the user profile, learned memory, and conversation only. Use cards: [] unless the user clearly asked for specific places, links, or things to buy.)';
-          searchContextChars = searchContext.length;
+          searchTier = 'profile_only';
+          controller.enqueue(sse('status', { text: 'Thinking from your profile…' }));
+          searchContext = '';
+          searchContextChars = 0;
         } else {
+          searchTier = 'live_web';
           const { queries, useEventDomains } = buildSearchQueries(message, profileArg, learnedHints, resolved.graph);
           const statusMsg = useEventDomains
             ? 'Searching BookMyShow, District, Urbanaut...'
@@ -210,6 +213,7 @@ export const POST: RequestHandler = async ({ request }) => {
             intentHint: intentHint || undefined,
             browseIntent: intent,
             learnedMemory,
+            searchTier,
             precomputed: {
               graph: resolved.graph,
               summary: resolved.summary,
@@ -239,7 +243,8 @@ export const POST: RequestHandler = async ({ request }) => {
         }
         timer.mark('afterStream');
       } catch (e) {
-        console.error('Chat stream error:', e);
+        const detail = e instanceof Error ? e.message : String(e);
+        console.error('Chat stream error:', detail, e);
         controller.enqueue(sse('error', { text: 'Something went wrong — please try again.' }));
       } finally {
         timer.finish({
