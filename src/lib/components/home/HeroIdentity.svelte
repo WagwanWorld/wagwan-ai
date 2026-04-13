@@ -14,6 +14,7 @@
   export let loading = false;
   export let regenerating = false;
   export let contradiction = '';  // core_contradiction from identitySnapshot
+  export let greeting = '';
 
   const dispatch = createEventDispatcher();
 
@@ -67,6 +68,10 @@
       </div>
     </div>
   {:else}
+    {#if greeting}
+      <p class="greeting anim anim-0">{greeting}</p>
+    {/if}
+
     <!-- Kicker -->
     {#if kickerText}
       <p class="kicker anim anim-0">{kickerText}</p>
@@ -173,6 +178,15 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  /* ---------- Greeting ---------- */
+  .greeting {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    margin: 0 0 8px;
   }
 
   /* ---------- Kicker ---------- */
