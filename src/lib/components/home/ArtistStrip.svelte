@@ -1,5 +1,9 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   export let artists: { name: string; image?: string }[] = [];
+
+  let artworkMap: Record<string, string> = {};
 
   function initial(name: string): string {
     return name.charAt(0).toUpperCase();
@@ -13,13 +17,30 @@
     'linear-gradient(135deg, #4D7CFF, #FFB84D)',
     'linear-gradient(135deg, #FFB84D, #FF4D4D)',
   ];
+
+  onMount(async () => {
+    const names = artists.map(a => a.name).filter(Boolean);
+    if (!names.length) return;
+    try {
+      const res = await fetch(`/api/home/artist-artwork?artists=${encodeURIComponent(names.join(','))}`);
+      const data = await res.json();
+      if (data.artwork) artworkMap = data.artwork;
+    } catch {
+      // Fallback to gradient avatars
+    }
+  });
+
+  $: resolvedArtists = artists.slice(0, 8).map(a => ({
+    ...a,
+    resolvedImage: a.image || artworkMap[a.name] || '',
+  }));
 </script>
 
 <div class="artist-strip">
-  {#each artists.slice(0, 8) as artist, i}
+  {#each resolvedArtists as artist, i}
     <div class="artist-item">
-      {#if artist.image}
-        <img class="artist-img" src={artist.image} alt={artist.name} />
+      {#if artist.resolvedImage}
+        <img class="artist-img" src={artist.resolvedImage} alt={artist.name} />
       {:else}
         <div class="artist-fallback" style="background:{gradients[i % gradients.length]}">
           <span>{initial(artist.name)}</span>
