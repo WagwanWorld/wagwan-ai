@@ -17,6 +17,9 @@
   import MiniBarChart from '$lib/components/home/MiniBarChart.svelte';
   import ScoreRings from '$lib/components/home/ScoreRings.svelte';
   import TrajectoryCard from '$lib/components/home/TrajectoryCard.svelte';
+  import CalendarToday from '$lib/components/home/CalendarToday.svelte';
+  import MorningBrief from '$lib/components/home/MorningBrief.svelte';
+  import SuggestedReads from '$lib/components/home/SuggestedReads.svelte';
   import QuickAskBar from '$lib/components/home/QuickAskBar.svelte';
   import type { IdentitySnapshotWrapper } from '$lib/types/identitySnapshot';
   import type { IdentityIntelligenceWrapper } from '$lib/types/identityIntelligence';
@@ -1066,6 +1069,21 @@
       void loadCalendar();
       startTwinContextClock();
     }
+
+    // Fetch morning brief
+    const briefSub = $profile.googleSub?.trim();
+    if (briefSub) {
+      briefLoading = true;
+      fetch(`/api/home/morning-brief?sub=${encodeURIComponent(briefSub)}&name=${encodeURIComponent(firstName)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.news) morningNews = data.news;
+          if (data.reads) morningReads = data.reads;
+        })
+        .catch(() => {})
+        .finally(() => { briefLoading = false; });
+    }
+
     homePromptTimer = setInterval(() => {
       if (homeChatMode !== 'learn') return;
       homePromptIndex = (homePromptIndex + 1) % HOME_PROMPTS_LEARN.length;
@@ -1589,6 +1607,21 @@
   // ── Contradiction for hero ──
   $: heroContradiction = personaSnapshot?.payload?.core_contradiction?.trim() || '';
 
+  // ── Morning page data ──
+  let morningNews: { headline: string; summary: string; source: string; url: string; relevance: string }[] = [];
+  let morningReads: { title: string; author: string; type: string; why: string; url: string }[] = [];
+  let morningGreeting = '';
+  let briefLoading = false;
+
+  $: {
+    const h = new Date().getHours();
+    const name = firstName || 'there';
+    if (h >= 5 && h < 12) morningGreeting = `Good morning, ${name}`;
+    else if (h >= 12 && h < 17) morningGreeting = `Good afternoon, ${name}`;
+    else if (h >= 17 && h < 21) morningGreeting = `Good evening, ${name}`;
+    else morningGreeting = `Hey ${name}`;
+  }
+
   // ── Music narrative section data ──
   $: musicDomain = personaInference?.current?.life_domains?.find(d => d.id === 'music');
   $: musicNarrative = musicDomain?.narrative || '';
@@ -1702,6 +1735,7 @@
           mode={heroMode}
           vibeTags={heroVibeTags}
           contradiction={heroContradiction}
+          greeting={morningGreeting}
           city={city}
           loading={personaLoading && !hasHomeHeaderContent}
           regenerating={personaRegenerating}
@@ -1710,6 +1744,15 @@
         />
 
         <div class="home-feed-pad">
+          <!-- ── 📅 Today ── -->
+          {#if calEvents.length || $profile.googleConnected}
+            <NarrativeSection emoji="📅" label="Today">
+              <div class="narrative-card" style="width:100%;">
+                <CalendarToday events={calEvents} />
+              </div>
+            </NarrativeSection>
+          {/if}
+
           <!-- ── 🎵 How You Listen ── -->
           {#if musicNarrative || musicArtists.length || musicGenreSegments.length}
             <NarrativeSection emoji="🎵" label="How You Listen">
@@ -1734,6 +1777,20 @@
                   <p class="narrative-text">{musicNarrative}</p>
                 </div>
               {/if}
+            </NarrativeSection>
+          {/if}
+
+          <!-- ── 📰 Your Brief ── -->
+          {#if morningNews.length}
+            <NarrativeSection emoji="📰" label="Your Brief" vertical>
+              <MorningBrief news={morningNews} />
+            </NarrativeSection>
+          {/if}
+
+          <!-- ── 📚 Reads For You ── -->
+          {#if morningReads.length}
+            <NarrativeSection emoji="📚" label="Reads For You">
+              <SuggestedReads reads={morningReads} />
             </NarrativeSection>
           {/if}
 
