@@ -7,6 +7,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getCached, setCached } from '$lib/server/contentCache';
+import { getProfile } from '$lib/server/supabase';
 import { resolveIdentityGraph } from '$lib/server/resolveGraph';
 import { searchWeb, formatResultsForAI } from '$lib/server/search';
 import Anthropic from '@anthropic-ai/sdk';
@@ -59,13 +60,15 @@ export const GET: RequestHandler = async ({ url }) => {
   }
 
   try {
-    const graph = await resolveIdentityGraph(sub);
-    if (!graph) return json({ ok: true, greeting: timeGreeting('there'), news: [], reads: [], cached: false });
+    // Load profile from Supabase to resolve identity graph
+    const profileRow = await getProfile(sub);
+    const profileData = (profileRow?.profile_data ?? {}) as Record<string, unknown>;
+    const { graph: g, summary } = await resolveIdentityGraph(sub, profileData);
 
-    const interests = (graph.activities || []).slice(0, 3);
-    const city = graph.city || '';
-    const role = graph.role || '';
-    const genres = (graph.topGenres || []).slice(0, 2);
+    const interests = (g.activities || []).slice(0, 3);
+    const city = g.city || '';
+    const role = g.role || '';
+    const genres = (g.topGenres || []).slice(0, 2);
 
     const queries: string[] = [];
     if (role) queries.push(`${role} industry news ${new Date().toISOString().slice(0, 10)}`);
@@ -74,19 +77,19 @@ export const GET: RequestHandler = async ({ url }) => {
     if (genres.length) queries.push(`${genres.join(' ')} new music releases`);
     if (!queries.length) queries.push('technology culture lifestyle news today');
 
-    const searchResults = await Promise.all(
+    // Search — searchWeb returns { results, query } objects
+    const searchResponses = await Promise.all(
       queries.slice(0, 3).map(q => searchWeb(q, 3))
     );
-    const allResults = searchResults.flat();
+    // Extract the results arrays and flatten
+    const allResults = searchResponses.flatMap(r =>
+      Array.isArray(r) ? r : (r as any)?.results ?? []
+    );
     const formatted = formatResultsForAI(allResults);
-
-    const identitySummary = graph.identitySummary || '';
-    const archetype = (graph as any).archetype || '';
 
     const prompt = `You are generating a personalized morning brief for a user.
 
-IDENTITY: ${identitySummary}
-ARCHETYPE: ${archetype}
+IDENTITY: ${summary}
 CITY: ${city}
 ROLE: ${role}
 INTERESTS: ${interests.join(', ')}
@@ -96,7 +99,7 @@ ${formatted}
 
 Generate a JSON response with:
 1. "news": 3-4 most relevant news items from the search results. For each: headline, summary (1 sentence), source, url (copy verbatim from results), relevance (why this matters to THIS specific user based on their identity).
-2. "reads": 2-3 book or article suggestions that would resonate with this person's archetype and interests. For each: title, author, type (book/article/podcast), why (1 sentence connecting to their identity), url (search result url or empty string).
+2. "reads": 2-3 book or article suggestions that would resonate with this person's interests. For each: title, author, type (book/article/podcast), why (1 sentence connecting to their identity), url (search result url or empty string).
 
 Return ONLY valid JSON: { "news": [...], "reads": [...] }`;
 
