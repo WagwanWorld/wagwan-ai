@@ -1,7 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
 
   let portalSecret = '';
   let err = '';
@@ -25,7 +24,7 @@
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        err = (j as { message?: string }).message || (j as { error?: string }).error || 'Sign in failed';
+        err = (j as { message?: string }).message || (j as { error?: string }).error || 'Authentication failed';
         return;
       }
       const next = safeNextPath($page.url.searchParams.get('next'));
@@ -36,56 +35,200 @@
   }
 </script>
 
-<div
-  class="relative flex min-h-[calc(100vh-56px)] flex-col items-center justify-center px-4 py-16"
->
-  <div
-    class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(139,92,246,0.12),transparent)]"
-    aria-hidden="true"
-  ></div>
+<div class="login-page">
+  <div class="login-bg" aria-hidden="true"></div>
 
-  <div
-    class="relative z-10 w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#111113]/90 p-8 shadow-[0_0_80px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-  >
-    <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">Operator</p>
-    <h1 class="mt-3 text-2xl font-semibold text-white">Brand sign in</h1>
-    <p class="mt-2 text-sm leading-relaxed text-zinc-500">
-      Portal secret unlocks campaign launch and channels. Exploring audiences on
-      <a href="/brands/portal" class="text-violet-300/90 underline-offset-2 hover:underline">/brands/portal</a>
-      stays open.
+  <div class="login-card">
+    <p class="overline">Operator</p>
+    <h1 class="title">Brand access</h1>
+    <p class="description">
+      Enter your portal key to launch campaigns. Audience exploration is free.
     </p>
 
-    <form class="mt-8 space-y-4" on:submit|preventDefault={() => submit()}>
-      <div>
-        <label for="portal-secret" class="block text-xs font-medium uppercase tracking-wider text-zinc-500"
-          >Portal secret</label
-        >
+    <form class="login-form" on:submit|preventDefault={() => submit()}>
+      <div class="field">
+        <label for="portal-key" class="label">Portal key</label>
         <input
-          id="portal-secret"
+          id="portal-key"
           type="password"
           autocomplete="current-password"
-          class="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-violet-500/45"
+          class="input"
           bind:value={portalSecret}
           required
         />
       </div>
+
       {#if err}
-        <p class="text-sm text-red-400/90">{err}</p>
+        <p class="error">{err}</p>
       {/if}
-      <button
-        type="submit"
-        disabled={loading}
-        class="group flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-semibold text-[#0B0B0D] transition-all hover:shadow-[0_0_32px_rgba(167,139,250,0.2)] disabled:opacity-50"
-      >
-        {loading ? 'Signing in…' : 'Continue'}
-        {#if !loading}<ArrowRight size={16} weight="light" class="transition-transform group-hover:translate-x-0.5" />{/if}
+
+      <button type="submit" disabled={loading} class="submit-btn">
+        {loading ? 'Connecting...' : 'Continue'}
+        {#if !loading}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        {/if}
       </button>
     </form>
 
-    <p class="mt-8 text-center text-xs text-zinc-600">
-      <a href="/brands" class="text-zinc-400 no-underline hover:text-white">← Studio home</a>
-      <span class="mx-2 text-zinc-700">·</span>
-      <a href="/" class="text-zinc-400 no-underline hover:text-white">User app</a>
-    </p>
+    <div class="footer-links">
+      <a href="/brands" class="footer-link">&larr; Brand home</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="/" class="footer-link">Creator app</a>
+    </div>
   </div>
 </div>
+
+<style>
+  .login-page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 56px);
+    padding: 2rem 1rem;
+  }
+
+  .login-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 70% 45% at 50% 0%,
+      rgba(77, 124, 255, 0.06),
+      transparent 70%
+    );
+  }
+
+  .login-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 26rem;
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: var(--bg-elevated, oklch(13% 0.010 258));
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  }
+
+  .overline {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--text-muted, #6d7684);
+    margin: 0;
+  }
+
+  .title {
+    margin: 0.75rem 0 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary, #e8ecf3);
+  }
+
+  .description {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text-muted, #6d7684);
+  }
+
+  .login-form {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #6d7684);
+  }
+
+  .input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: var(--bg-primary, oklch(8% 0.008 260));
+    color: var(--text-primary, #e8ecf3);
+    font-size: 0.875rem;
+    font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+  }
+
+  .input:focus {
+    border-color: var(--accent-secondary, #4D7CFF);
+    box-shadow: 0 0 0 3px rgba(77, 124, 255, 0.15);
+  }
+
+  .error {
+    font-size: 0.875rem;
+    color: var(--state-error, var(--accent-primary, #FF4D4D));
+    margin: 0;
+  }
+
+  .submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent-primary, #FF4D4D), var(--accent-tertiary, #FFB84D));
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .submit-btn:hover:not(:disabled) {
+    box-shadow: 0 0 32px rgba(255, 77, 77, 0.25);
+    transform: translateY(-1px);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .footer-links {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.75rem;
+  }
+
+  .footer-link {
+    color: var(--text-muted, #6d7684);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-link:hover {
+    color: var(--text-primary, #e8ecf3);
+  }
+
+  .footer-sep {
+    margin: 0 0.5rem;
+    color: var(--border-strong, rgba(255, 255, 255, 0.14));
+  }
+</style>

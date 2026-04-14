@@ -1,114 +1,247 @@
 <script lang="ts">
-  import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
-  import Sparkle from 'phosphor-svelte/lib/Sparkle';
-
-  const trustMarks = ['Culture-led', 'Signal-rich', 'Consent-first', 'Identity-native', 'Feed-native'];
-
-  function smoothScrollStudio(el: HTMLElement | null) {
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  let trustSection: HTMLElement | null = null;
 </script>
 
-<div class="relative">
+<div class="landing">
   <!-- Hero -->
-  <section
-    class="relative flex min-h-[calc(100vh-56px)] flex-col items-center justify-center px-4 pb-24 pt-12 md:pt-8"
-  >
-    <div
-      class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(139,92,246,0.18),transparent),radial-gradient(ellipse_60%_50%_at_100%_50%,rgba(236,72,153,0.08),transparent),radial-gradient(ellipse_50%_40%_at_0%_80%,rgba(59,130,246,0.06),transparent)]"
-      aria-hidden="true"
-    ></div>
-    <div
-      class="pointer-events-none absolute inset-0 opacity-[0.12] mix-blend-soft-light"
-      style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E')"
-      aria-hidden="true"
-    ></div>
-
-    <p
-      class="relative z-[1] mb-6 text-center text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500"
-    >
-      Brand intelligence
-    </p>
-    <h1
-      class="relative z-[1] max-w-4xl text-center text-4xl font-semibold leading-[1.05] tracking-tight text-white md:text-6xl md:leading-[1.02]"
-    >
-      Direct your audience.
-      <span class="block bg-gradient-to-r from-zinc-200 via-white to-zinc-400 bg-clip-text text-transparent">
-        Not just target them.
-      </span>
+  <section class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <p class="overline">Audience-first matching</p>
+    <h1 class="headline">
+      Find your exact audience.<br />
+      <span class="headline-accent">Not just followers.</span>
     </h1>
-    <p class="relative z-[1] mt-6 max-w-xl text-center text-base leading-relaxed text-zinc-500 md:text-lg">
-      One prompt becomes real people, real signals, real campaigns—built for culture, not spreadsheets.
+    <p class="subline">
+      Describe who you need in plain language. We match you to portrait-verified creators whose audiences actually align — by signal, not spreadsheet.
     </p>
-    <div class="relative z-[1] mt-12 flex flex-wrap items-center justify-center gap-4">
-      <a
-        href="/brands/portal"
-        class="group inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-[#0B0B0D] no-underline shadow-[0_0_40px_rgba(255,255,255,0.12)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_48px_rgba(167,139,250,0.25)]"
-      >
-        Enter studio
-        <ArrowRight
-          size={18}
-          class="transition-transform duration-300 group-hover:translate-x-0.5"
-          weight="light"
-        />
+    <div class="hero-actions">
+      <a href="/brands/portal" class="cta-primary">
+        Start matching
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
       </a>
-      <button
-        type="button"
-        class="rounded-full border border-white/10 bg-white/[0.03] px-6 py-3.5 text-sm font-medium text-zinc-300 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
-        on:click={() => smoothScrollStudio(trustSection)}
-      >
-        Why Wagwan
-      </button>
     </div>
   </section>
 
-  <!-- Trust strip -->
-  <section
-    bind:this={trustSection}
-    class="border-t border-white/[0.06] bg-[#111113] px-4 py-16"
-  >
-    <div class="mx-auto max-w-5xl">
-      <p class="text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-600">
-        Built for brands who live in culture
-      </p>
-      <div
-        class="mt-10 flex flex-wrap items-center justify-center gap-x-12 gap-y-8 opacity-40 grayscale transition-opacity duration-500 hover:opacity-70 hover:grayscale-0"
-      >
-        {#each trustMarks as mark}
-          <span class="text-sm font-medium tracking-[0.2em] text-zinc-400">{mark}</span>
-        {/each}
+  <!-- Features -->
+  <section class="features">
+    <div class="features-inner">
+      <div class="feature-card">
+        <div class="feature-icon feature-icon--red" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5" />
+            <path d="M10 2v3m0 10v3M2 10h3m10 0h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h2 class="feature-title">Audience-first matching</h2>
+        <p class="feature-desc">
+          Describe your ideal audience in a sentence. We map it to real identity signals — not checkbox demographics.
+        </p>
       </div>
-      <div class="mx-auto mt-16 grid max-w-3xl gap-6 md:grid-cols-3">
-        <div
-          class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all duration-300 hover:border-violet-500/20 hover:shadow-[0_0_32px_rgba(139,92,246,0.08)]"
-        >
-          <Sparkle class="text-violet-400/80" size={20} weight="light" />
-          <h2 class="mt-4 text-sm font-semibold text-white">Prompt-first</h2>
-          <p class="mt-2 text-sm leading-relaxed text-zinc-500">
-            Describe who you want in plain language. We map it to identity signals—not checkbox demographics.
-          </p>
+
+      <div class="feature-card">
+        <div class="feature-icon feature-icon--blue" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <rect x="3" y="5" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5" />
+            <circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.5" />
+          </svg>
         </div>
-        <div
-          class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all duration-300 hover:border-violet-500/20 hover:shadow-[0_0_32px_rgba(139,92,246,0.08)]"
-        >
-          <Sparkle class="text-fuchsia-400/70" size={20} weight="light" />
-          <h2 class="mt-4 text-sm font-semibold text-white">See the audience</h2>
-          <p class="mt-2 text-sm leading-relaxed text-zinc-500">
-            Visual, living results—so you feel the match, not just a row of anonymous IDs.
-          </p>
+        <h2 class="feature-title">Portrait-verified creators</h2>
+        <p class="feature-desc">
+          Every match is a real person with verified identity. See the creator, not just a row of anonymous IDs.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon feature-icon--gold" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M4 16l2-6L10 4l4 6 2 6H4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+            <circle cx="10" cy="12" r="1.5" fill="currentColor" />
+          </svg>
         </div>
-        <div
-          class="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all duration-300 hover:border-violet-500/20 hover:shadow-[0_0_32px_rgba(139,92,246,0.08)]"
-        >
-          <Sparkle class="text-amber-400/70" size={20} weight="light" />
-          <h2 class="mt-4 text-sm font-semibold text-white">Launch with intent</h2>
-          <p class="mt-2 text-sm leading-relaxed text-zinc-500">
-            When you are ready, sign in and push channels— in-app, email, more to come.
-          </p>
-        </div>
+        <h2 class="feature-title">Conversational briefs</h2>
+        <p class="feature-desc">
+          Build campaign briefs through conversation, not forms. When you are ready, push to channels — in-app, email, more to come.
+        </p>
       </div>
     </div>
   </section>
 </div>
+
+<style>
+  .landing {
+    position: relative;
+  }
+
+  /* ---- Hero ---- */
+  .hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 56px);
+    padding: 3rem 1rem 6rem;
+    text-align: center;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 70% 50% at 50% 0%,
+      rgba(255, 77, 77, 0.06),
+      transparent 70%
+    );
+  }
+
+  .overline {
+    position: relative;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--text-muted, #6d7684);
+    margin-bottom: 1.5rem;
+  }
+
+  .headline {
+    position: relative;
+    max-width: 48rem;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--text-primary, #e8ecf3);
+  }
+
+  .headline-accent {
+    display: block;
+    background: linear-gradient(
+      to right,
+      var(--text-secondary, #9aa3b2),
+      var(--text-primary, #e8ecf3),
+      var(--text-secondary, #9aa3b2)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subline {
+    position: relative;
+    max-width: 36rem;
+    margin-top: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-muted, #6d7684);
+  }
+
+  @media (min-width: 768px) {
+    .subline {
+      font-size: 1.125rem;
+    }
+  }
+
+  .hero-actions {
+    position: relative;
+    margin-top: 3rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .cta-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    text-decoration: none;
+    background: linear-gradient(135deg, var(--accent-primary, #FF4D4D), var(--accent-tertiary, #FFB84D));
+    box-shadow: 0 0 32px rgba(255, 77, 77, 0.2);
+    transition: all 0.25s;
+  }
+
+  .cta-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 48px rgba(255, 77, 77, 0.3);
+  }
+
+  /* ---- Features ---- */
+  .features {
+    border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: var(--bg-secondary, oklch(10% 0.009 255));
+    padding: 4rem 1rem;
+  }
+
+  .features-inner {
+    max-width: 60rem;
+    margin: 0 auto;
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .features-inner {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .feature-card {
+    padding: 1.75rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: var(--glass-light, rgba(255, 255, 255, 0.055));
+    transition: border-color 0.25s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
+  }
+
+  .feature-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .feature-icon--red {
+    color: var(--accent-primary, #FF4D4D);
+    background: rgba(255, 77, 77, 0.1);
+  }
+
+  .feature-icon--blue {
+    color: var(--accent-secondary, #4D7CFF);
+    background: rgba(77, 124, 255, 0.1);
+  }
+
+  .feature-icon--gold {
+    color: var(--accent-tertiary, #FFB84D);
+    background: rgba(255, 184, 77, 0.1);
+  }
+
+  .feature-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary, #e8ecf3);
+    margin: 0;
+  }
+
+  .feature-desc {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: var(--text-muted, #6d7684);
+  }
+</style>
