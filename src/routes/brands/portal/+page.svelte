@@ -1,7 +1,10 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { onMount } from 'svelte';
-  import MatchAgentChat from '$lib/components/brands/MatchAgentChat.svelte';
+  import BrandIntakeCard from '$lib/components/brands/BrandIntakeCard.svelte';
+  import GuidedQuestions from '$lib/components/brands/GuidedQuestions.svelte';
+  import ThinkingStepper from '$lib/components/brands/ThinkingStepper.svelte';
+  import ResultsDashboard from '$lib/components/brands/ResultsDashboard.svelte';
   import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
   import Download from 'phosphor-svelte/lib/Download';
   import SignOut from 'phosphor-svelte/lib/SignOut';
@@ -10,6 +13,69 @@
   import X from 'phosphor-svelte/lib/X';
 
   export let data: { brandSessionValid: boolean };
+
+  // ── Step machine ──
+  type Step = 'intake' | 'questions' | 'thinking' | 'results';
+  let currentStep: Step = 'intake';
+
+  let brandContext = { brandName: '', website: '', instagram: '', description: '' };
+
+  // Thinking stepper state
+  let thinkingActiveStep = '';
+  let thinkingCompleted = new Set<string>();
+
+  // Results from match agent
+  let matchResults: Array<{
+    creator: {
+      google_sub: string;
+      name: string;
+      handle: string;
+      follower_count: number;
+      content_themes: string[];
+      location: string;
+      rates: { ig_post_rate_inr: number; ig_story_rate_inr: number; ig_reel_rate_inr: number; available: boolean } | null;
+      graph_strength: number;
+    };
+    score: number;
+    reasoning: string;
+    watch_out: string;
+  }> = [];
+
+  function handleIntakeSubmit(e: CustomEvent<typeof brandContext>) {
+    brandContext = e.detail;
+    brandName = brandContext.brandName || 'Your brand';
+    currentStep = 'questions';
+  }
+
+  function handleThinking(e: CustomEvent<{ step: string; text: string }>) {
+    if (currentStep !== 'thinking') {
+      currentStep = 'thinking';
+    }
+    if (thinkingActiveStep) {
+      thinkingCompleted = new Set([...thinkingCompleted, thinkingActiveStep]);
+    }
+    thinkingActiveStep = e.detail.step;
+
+    if (e.detail.step === 'done') {
+      thinkingCompleted = new Set([...thinkingCompleted, 'done']);
+      setTimeout(() => {
+        currentStep = 'results';
+      }, 800);
+    }
+  }
+
+  function handleMatches(e: CustomEvent<{ results: unknown }>) {
+    const payload = e.detail as { results?: { matches?: typeof matchResults } };
+    matchResults = payload?.results?.matches ?? [];
+  }
+
+  function handleStartOver() {
+    currentStep = 'intake';
+    brandContext = { brandName: '', website: '', instagram: '', description: '' };
+    thinkingActiveStep = '';
+    thinkingCompleted = new Set();
+    matchResults = [];
+  }
 
   const loginNext = '/brands/login?next=/brands/portal';
 
@@ -71,17 +137,6 @@
   let selected = new Set<string>();
 
   let showManualSearch = false;
-
-  let chatMatches: any[] = [];
-  let chatBrief: any = null;
-
-  function handleChatMatches(e: CustomEvent) {
-    chatMatches = e.detail.matches ?? e.detail ?? [];
-  }
-
-  function handleChatBrief(e: CustomEvent) {
-    chatBrief = e.detail;
-  }
 
   let rewardInr = 50;
   let campaignTitle = '';
@@ -1102,55 +1157,34 @@
 
   {:else}
     <div class="agent-full">
-      <MatchAgentChat on:matches={handleChatMatches} on:brief={handleChatBrief} />
+      {#if currentStep === 'intake'}
+        <BrandIntakeCard on:submit={handleIntakeSubmit} />
+      {:else if currentStep === 'questions'}
+        <GuidedQuestions
+          {brandContext}
+          on:thinking={handleThinking}
+          on:matches={handleMatches}
+        />
+      {:else if currentStep === 'thinking'}
+        <ThinkingStepper
+          activeStep={thinkingActiveStep}
+          completedSteps={thinkingCompleted}
+        />
+      {:else if currentStep === 'results'}
+        <ResultsDashboard
+          matches={matchResults}
+          brandName={brandContext.brandName}
+          on:startOver={handleStartOver}
+        />
+      {/if}
     </div>
-    {#if chatMatches.length > 0}
-      <div class="chat-results">
-        <div class="chat-results-inner">
-          <h3 class="chat-results-title">Matched Creators</h3>
-          <div class="chat-results-grid">
-            {#each chatMatches as match}
-              <div class="chat-match-card">
-                <div class="chat-match-header">
-                  <div class="chat-match-avatar">
-                    {match.creator?.name?.charAt(0) || '?'}
-                  </div>
-                  <div>
-                    <div class="chat-match-name">{match.creator?.name || 'Unknown'}</div>
-                    {#if match.creator?.handle}
-                      <div class="chat-match-handle">@{match.creator.handle}</div>
-                    {/if}
-                  </div>
-                  <div class="chat-match-score">{match.score}</div>
-                </div>
-                {#if match.creator?.location}
-                  <div class="chat-match-location">{match.creator.location}</div>
-                {/if}
-                <p class="chat-match-reason">{match.reasoning}</p>
-                {#if match.watch_out}
-                  <p class="chat-match-watch">{match.watch_out}</p>
-                {/if}
-                {#if match.creator?.rates?.available}
-                  <div class="chat-match-rates">
-                    {#if match.creator.rates.ig_post_rate_inr}
-                      <span>Post: ₹{match.creator.rates.ig_post_rate_inr}</span>
-                    {/if}
-                    {#if match.creator.rates.ig_story_rate_inr}
-                      <span>Story: ₹{match.creator.rates.ig_story_rate_inr}</span>
-                    {/if}
-                  </div>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        </div>
+    {#if currentStep === 'intake' || currentStep === 'questions'}
+      <div class="manual-link">
+        <button class="switch-link" on:click={() => showManualSearch = true}>
+          Switch to manual search
+        </button>
       </div>
     {/if}
-    <div class="manual-link">
-      <button class="switch-link" on:click={() => showManualSearch = true}>
-        Switch to manual search
-      </button>
-    </div>
   {/if}
 </div>
 
