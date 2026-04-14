@@ -37,6 +37,14 @@ export interface AppleMusicTrackHint {
   playAs?: 'song' | 'album';
   /** Apple Music web URL when available */
   playUrl?: string;
+  /** Album artwork URL template (replace {w}x{h} for size) */
+  artworkUrl?: string;
+  /** Album name for context */
+  albumName?: string;
+  /** Track duration in milliseconds */
+  durationMs?: number;
+  /** Release date (ISO) */
+  releaseDate?: string;
 }
 
 export interface AppleMusicIdentity {
@@ -61,6 +69,18 @@ export interface AppleMusicIdentity {
   lovedSongs: AppleMusicTrackHint[];
   /** Apple's own recommendations — what Apple thinks the user likes */
   recommendedNames: string[];
+  /** User's Apple Music storefront (e.g. "us", "in") */
+  storefront?: string;
+  /** Artist name → artwork URL mapping */
+  artworkMap?: Record<string, string>;
+  /** Top playlist contents with track lists */
+  playlistContents?: { name: string; trackCount: number; tracks: AppleMusicTrackHint[] }[];
+  /** Genre frequency map (genre → count of tracks) */
+  genreFrequency?: Record<string, number>;
+  /** Duration stats: average track length, % short (<3min), % long (>5min) */
+  durationStats?: { avgMs: number; pctShort: number; pctLong: number };
+  /** Release year distribution: year → count */
+  releaseYearDist?: Record<string, number>;
 }
 
 /** Merge defaults for identities saved before new Apple Music fields existed */
@@ -75,6 +95,12 @@ export function normalizeAppleMusicIdentity(am: AppleMusicIdentity): AppleMusicI
     libraryArtists: am.libraryArtists ?? [],
     lovedSongs: (am.lovedSongs ?? []).map(normalizeTrackHint),
     recommendedNames: am.recommendedNames ?? [],
+    storefront: am.storefront ?? '',
+    artworkMap: am.artworkMap ?? {},
+    playlistContents: am.playlistContents ?? [],
+    genreFrequency: am.genreFrequency ?? {},
+    durationStats: am.durationStats ?? undefined,
+    releaseYearDist: am.releaseYearDist ?? {},
   };
 }
 
@@ -85,6 +111,10 @@ function normalizeTrackHint(t: AppleMusicTrackHint): AppleMusicTrackHint {
     appleMusicId: t.appleMusicId,
     playAs: t.playAs,
     playUrl: t.playUrl,
+    artworkUrl: t.artworkUrl,
+    albumName: t.albumName,
+    durationMs: t.durationMs,
+    releaseDate: t.releaseDate,
   };
 }
 
