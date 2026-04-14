@@ -2,7 +2,49 @@
   import { onMount } from 'svelte';
 
   let visible = false;
-  onMount(() => { setTimeout(() => { visible = true; }, 60); });
+  let statsVisible = false;
+  let statsEl: HTMLElement;
+  let countedValues = { conversion: 0, creators: 0, acceptance: 0 };
+
+  const TARGETS = { conversion: 3.2, creators: 847, acceptance: 92 };
+
+  const creators = [
+    { initial: 'A', name: 'Arjun Mehta', type: 'Design-led builder', followers: '8.2k', tags: ['SaaS', 'Product'], gradient: '#FF4D4D, #FFB84D' },
+    { initial: 'P', name: 'Priya Nair', type: 'Cultural storyteller', followers: '12.4k', tags: ['Fashion', 'Culture'], gradient: '#4D7CFF, #FF4D4D' },
+    { initial: 'R', name: 'Rohan Desai', type: 'Fintech evangelist', followers: '6.1k', tags: ['Fintech', 'Startups'], gradient: '#FFB84D, #4D7CFF' },
+    { initial: 'S', name: 'Shreya Kapoor', type: 'Wellness advocate', followers: '15.7k', tags: ['Wellness', 'Lifestyle'], gradient: '#FF4D4D, #4D7CFF' },
+    { initial: 'V', name: 'Vikram Singh', type: 'Tech reviewer', followers: '9.8k', tags: ['Tech', 'Reviews'], gradient: '#4D7CFF, #FFB84D' },
+    { initial: 'M', name: 'Maya Iyer', type: 'Food & travel creator', followers: '22.1k', tags: ['Food', 'Travel'], gradient: '#FFB84D, #FF4D4D' },
+  ];
+
+  function animateCounters() {
+    const duration = 1500;
+    const start = performance.now();
+    function tick(now: number) {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      countedValues = {
+        conversion: +(TARGETS.conversion * ease).toFixed(1),
+        creators: Math.round(TARGETS.creators * ease),
+        acceptance: Math.round(TARGETS.acceptance * ease),
+      };
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  onMount(() => {
+    setTimeout(() => { visible = true; }, 60);
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !statsVisible) {
+        statsVisible = true;
+        animateCounters();
+        observer.disconnect();
+      }
+    }, { threshold: 0.3 });
+    if (statsEl) observer.observe(statsEl);
+  });
 </script>
 
 <div class="landing" class:visible>
@@ -43,11 +85,11 @@
               <span class="preview-dot"></span>
             </div>
             <div class="preview-chat">
-              <p class="preview-msg preview-msg--agent">Tell me about what you're trying to sell and who buys it.</p>
-              <p class="preview-msg preview-msg--user">We make developer tools for early-stage founders building their first SaaS.</p>
-              <p class="preview-msg preview-msg--agent">Got it. What makes a founder choose you over just hacking something together?</p>
+              <p class="preview-msg preview-msg--agent preview-msg--animated" style="animation-delay: 600ms;">Tell me about what you're building and who it's for.</p>
+              <p class="preview-msg preview-msg--user preview-msg--animated" style="animation-delay: 1200ms;">Developer tools for early-stage founders building their first SaaS.</p>
+              <p class="preview-msg preview-msg--agent preview-msg--animated" style="animation-delay: 1800ms;">Nice. What does your ideal customer care about most?</p>
             </div>
-            <div class="preview-result">
+            <div class="preview-result preview-result--animated" style="animation-delay: 2400ms;">
               <div class="preview-result-header">
                 <span class="preview-result-badge">92</span>
                 <span class="preview-result-name">Arjun Mehta</span>
@@ -73,22 +115,47 @@
   </section>
 
   <!-- ═══ STATS ═══ -->
-  <section class="stats">
+  <section class="stats" bind:this={statsEl}>
     <div class="stats-inner">
       <div class="stat">
-        <span class="stat-num">3.2x</span>
+        <span class="stat-num">{countedValues.conversion}x</span>
         <span class="stat-label">Higher conversion vs. traditional influencer outreach</span>
       </div>
       <div class="stat-divider"></div>
       <div class="stat">
-        <span class="stat-num">847</span>
+        <span class="stat-num">{countedValues.creators}</span>
         <span class="stat-label">Portrait-verified creators in the network</span>
       </div>
       <div class="stat-divider"></div>
       <div class="stat">
-        <span class="stat-num">92%</span>
+        <span class="stat-num">{countedValues.acceptance}%</span>
         <span class="stat-label">Brand brief acceptance rate from matched creators</span>
       </div>
+    </div>
+  </section>
+
+  <!-- ═══ CREATOR SHOWCASE ═══ -->
+  <section class="creator-showcase">
+    <div class="creator-showcase-header">
+      <div class="eyebrow-pill">The Network</div>
+      <h2 class="h2">Portrait-verified creators ready to match.</h2>
+    </div>
+    <div class="creator-strip">
+      {#each creators as c}
+        <div class="creator-card">
+          <div class="creator-avatar" style="background: linear-gradient(135deg, {c.gradient});">
+            <span class="creator-initial">{c.initial}</span>
+          </div>
+          <span class="creator-name">{c.name}</span>
+          <span class="creator-type">{c.type}</span>
+          <span class="creator-followers">{c.followers}</span>
+          <div class="creator-tags">
+            {#each c.tags as tag}
+              <span class="creator-tag">{tag}</span>
+            {/each}
+          </div>
+        </div>
+      {/each}
     </div>
   </section>
 
@@ -140,6 +207,24 @@
             <span class="bento-tag bento-tag--blue">SaaS</span>
             <span class="bento-tag bento-tag--gold">Fintech</span>
             <span class="bento-tag bento-tag--blue">Builder</span>
+          </div>
+          <div class="campaign-brief">
+            <span class="campaign-brief-title">Campaign Brief</span>
+            <div class="campaign-brief-divider"></div>
+            <div class="campaign-brief-row">
+              <span class="campaign-brief-label">Brand</span>
+              <span class="campaign-brief-value">Tooljet</span>
+            </div>
+            <div class="campaign-brief-row">
+              <span class="campaign-brief-label">Goal</span>
+              <span class="campaign-brief-value">Awareness</span>
+            </div>
+            <div class="campaign-brief-row">
+              <span class="campaign-brief-label">Budget</span>
+              <span class="campaign-brief-value">&#8377;15k</span>
+            </div>
+            <p class="campaign-brief-prompt">"Share how you build..."</p>
+            <span class="campaign-brief-badge">Accepted</span>
           </div>
         </div>
         <h3 class="bento-title">Portrait-level precision</h3>
@@ -419,6 +504,41 @@
     align-self: flex-end;
   }
 
+  /* ── Animated hero messages ── */
+  .preview-msg--animated {
+    opacity: 0;
+    animation: msgFadeUp 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation-fill-mode: both;
+  }
+
+  .preview-result--animated {
+    opacity: 0;
+    animation: resultSlideIn 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation-fill-mode: both;
+  }
+
+  @keyframes msgFadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes resultSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .preview-result {
     margin: 0 16px 16px;
     padding: 12px;
@@ -550,6 +670,108 @@
     flex-shrink: 0;
   }
 
+  /* ═══ CREATOR SHOWCASE ═══ */
+  .creator-showcase {
+    padding: 5rem 1.5rem;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .creator-showcase-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .creator-strip {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 0.5rem 0 1.5rem;
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    max-width: 72rem;
+    margin: 0 auto;
+  }
+
+  .creator-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .creator-card {
+    flex: 0 0 200px;
+    scroll-snap-align: start;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    transition: border-color 0.4s cubic-bezier(0.32, 0.72, 0, 1), transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .creator-card:hover {
+    border-color: rgba(77, 124, 255, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .creator-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .creator-initial {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .creator-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .creator-type {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+
+  .creator-followers {
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+  }
+
+  .creator-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .creator-tag {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    background: var(--glass-light);
+  }
+
   /* ═══ BENTO ═══ */
   .bento {
     padding: 6rem 1.5rem;
@@ -657,6 +879,77 @@
   .bento-tag--red { color: #FF6B6B; border-color: rgba(255,77,77,0.25); background: rgba(255,77,77,0.08); }
   .bento-tag--blue { color: #6B9AFF; border-color: rgba(77,124,255,0.25); background: rgba(77,124,255,0.08); }
   .bento-tag--gold { color: #FFC46B; border-color: rgba(255,184,77,0.25); background: rgba(255,184,77,0.08); }
+
+  /* ── Campaign brief mock ── */
+  .campaign-brief {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 180px;
+  }
+
+  .campaign-brief-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .campaign-brief-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: 0.125rem 0;
+  }
+
+  .campaign-brief-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .campaign-brief-label {
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .campaign-brief-value {
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-family: var(--font-mono);
+  }
+
+  .campaign-brief-prompt {
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0.25rem 0 0;
+    line-height: 1.4;
+  }
+
+  .campaign-brief-badge {
+    display: inline-flex;
+    align-self: flex-start;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    color: #34D399;
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    background: rgba(52, 211, 153, 0.08);
+    margin-top: 0.25rem;
+  }
 
   /* ═══ TESTIMONIALS ═══ */
   .testimonials {
