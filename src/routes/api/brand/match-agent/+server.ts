@@ -18,6 +18,22 @@ import { loadCreatorPortraits, scoreCreators } from '$lib/server/marketplace/cre
 
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: 90_000 });
 
+type Choice = { label: string; value: string };
+
+function parseChoices(text: string): { cleanText: string; choices: Choice[] | null } {
+  const choicesRegex = /```choices\n(\[[\s\S]*?\])\n```/;
+  const match = text.match(choicesRegex);
+  if (!match) return { cleanText: text, choices: null };
+
+  const cleanText = text.replace(choicesRegex, '').trimEnd();
+  try {
+    const choices = JSON.parse(match[1]) as Choice[];
+    return { cleanText, choices };
+  } catch {
+    return { cleanText: text, choices: null };
+  }
+}
+
 export const POST: RequestHandler = async ({ request }) => {
   let body: {
     message: string;
@@ -71,14 +87,19 @@ export const POST: RequestHandler = async ({ request }) => {
 
         for (const block of response.content) {
           if (block.type === 'text') {
-            agentText += block.text;
-            controller.enqueue(sse('text_delta', { delta: block.text }));
+            const { cleanText, choices } = parseChoices(block.text);
+            agentText += cleanText;
+            controller.enqueue(sse('text_delta', { delta: cleanText }));
+            if (choices) {
+              controller.enqueue(sse('choices', { choices }));
+            }
           } else if (block.type === 'tool_use') {
             const toolName = block.name;
             const toolInput = block.input as Record<string, unknown>;
 
             if (toolName === 'extract_brand_brief') {
               extractedBrief = toolInput as unknown as BrandBrief;
+              controller.enqueue(sse('status', { step: 'brief', text: 'Understanding your brand...' }));
               controller.enqueue(sse('brief', { brief: extractedBrief }));
 
               // Continue conversation — Claude needs the tool result to proceed
@@ -96,18 +117,24 @@ export const POST: RequestHandler = async ({ request }) => {
 
               for (const fb of followUp.content) {
                 if (fb.type === 'text') {
-                  agentText += fb.text;
-                  controller.enqueue(sse('text_delta', { delta: fb.text }));
+                  const { cleanText, choices } = parseChoices(fb.text);
+                  agentText += cleanText;
+                  controller.enqueue(sse('text_delta', { delta: cleanText }));
+                  if (choices) {
+                    controller.enqueue(sse('choices', { choices }));
+                  }
                 }
               }
             } else if (toolName === 'run_creator_match') {
-              controller.enqueue(sse('status', { text: 'Scoring creators...' }));
+              controller.enqueue(sse('status', { step: 'scoring', text: 'Analyzing creator signals...' }));
+              controller.enqueue(sse('status', { step: 'matching', text: 'Matching to your audience...' }));
 
               const portraits = await loadCreatorPortraits();
               const limit = (toolInput.limit as number) || 5;
               const results = scoreCreators(portraits, extractedBrief!, limit);
 
               controller.enqueue(sse('matches', { results }));
+              controller.enqueue(sse('status', { step: 'done', text: 'Building your campaign plan...' }));
 
               // Continue conversation with match results
               const matchSummary = results.matches.map(m =>
@@ -128,8 +155,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
               for (const fb of followUp.content) {
                 if (fb.type === 'text') {
-                  agentText += fb.text;
-                  controller.enqueue(sse('text_delta', { delta: fb.text }));
+                  const { cleanText, choices } = parseChoices(fb.text);
+                  agentText += cleanText;
+                  controller.enqueue(sse('text_delta', { delta: cleanText }));
+                  if (choices) {
+                    controller.enqueue(sse('choices', { choices }));
+                  }
                 }
               }
             } else if (toolName === 'generate_outreach_brief') {
@@ -152,8 +183,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
               for (const fb of followUp.content) {
                 if (fb.type === 'text') {
-                  agentText += fb.text;
-                  controller.enqueue(sse('text_delta', { delta: fb.text }));
+                  const { cleanText, choices } = parseChoices(fb.text);
+                  agentText += cleanText;
+                  controller.enqueue(sse('text_delta', { delta: cleanText }));
+                  if (choices) {
+                    controller.enqueue(sse('choices', { choices }));
+                  }
                 }
               }
             }
