@@ -103,6 +103,9 @@ interface AMAttributes {
   artistName?: string;
   url?: string;
   artwork?: { url?: string };
+  albumName?: string;
+  durationInMillis?: number;
+  releaseDate?: string;
 }
 interface AMResource {
   id?: string;
@@ -228,6 +231,10 @@ function dedupeTracks(tracks: AppleMusicTrackHint[], cap: number): AppleMusicTra
       appleMusicId: tr.appleMusicId,
       playAs: tr.playAs,
       playUrl: tr.playUrl?.trim() || undefined,
+      artworkUrl: tr.artworkUrl,
+      albumName: tr.albumName,
+      durationMs: tr.durationMs,
+      releaseDate: tr.releaseDate,
     });
     if (out.length >= cap) break;
   }
@@ -246,6 +253,10 @@ function trackHintFromSongOrLibraryItem(item: AMResource): AppleMusicTrackHint |
     appleMusicId: id || undefined,
     playAs: 'song',
     playUrl: item.attributes?.url?.trim() || undefined,
+    artworkUrl: item.attributes?.artwork?.url?.replace('{w}', '300').replace('{h}', '300') ?? undefined,
+    albumName: item.attributes?.albumName ?? undefined,
+    durationMs: typeof item.attributes?.durationInMillis === 'number' ? item.attributes.durationInMillis : undefined,
+    releaseDate: typeof item.attributes?.releaseDate === 'string' ? item.attributes.releaseDate : undefined,
   };
 }
 
@@ -275,6 +286,10 @@ function parseHeavyRotation(items: AMResource[]): {
         appleMusicId: item.id?.trim() || undefined,
         playAs: 'song',
         playUrl: item.attributes?.url?.trim() || undefined,
+        artworkUrl: item.attributes?.artwork?.url?.replace('{w}', '300').replace('{h}', '300') ?? undefined,
+        albumName: item.attributes?.albumName ?? undefined,
+        durationMs: typeof item.attributes?.durationInMillis === 'number' ? item.attributes.durationInMillis : undefined,
+        releaseDate: typeof item.attributes?.releaseDate === 'string' ? item.attributes.releaseDate : undefined,
       });
       continue;
     }
@@ -299,6 +314,8 @@ function parseHeavyRotation(items: AMResource[]): {
         appleMusicId: item.id?.trim() || undefined,
         playAs: 'album',
         playUrl: item.attributes?.url?.trim() || undefined,
+        artworkUrl: item.attributes?.artwork?.url?.replace('{w}', '300').replace('{h}', '300') ?? undefined,
+        releaseDate: typeof item.attributes?.releaseDate === 'string' ? item.attributes.releaseDate : undefined,
       });
     } else if ((t === 'music-videos' || t === 'music-movies') && name) {
       heavyRotationTracks.push({
@@ -307,6 +324,7 @@ function parseHeavyRotation(items: AMResource[]): {
         appleMusicId: item.id?.trim() || undefined,
         playAs: 'song',
         playUrl: item.attributes?.url?.trim() || undefined,
+        artworkUrl: item.attributes?.artwork?.url?.replace('{w}', '300').replace('{h}', '300') ?? undefined,
       });
     }
   }
@@ -328,7 +346,7 @@ async function fetchLibrarySongHints(
   userToken: string,
 ): Promise<AppleMusicTrackHint[]> {
   try {
-    const res = await fetch(`${AM_BASE}/me/library/songs?limit=30`, {
+    const res = await fetch(`${AM_BASE}/me/library/songs?limit=100`, {
       headers: amHeaders(developerToken, userToken),
     });
     if (!res.ok) return [];
@@ -345,7 +363,7 @@ async function fetchLibraryArtists(
   userToken: string,
 ): Promise<string[]> {
   try {
-    const res = await fetch(`${AM_BASE}/me/library/artists?limit=50`, {
+    const res = await fetch(`${AM_BASE}/me/library/artists?limit=100`, {
       headers: amHeaders(developerToken, userToken),
     });
     if (!res.ok) return [];
@@ -365,7 +383,7 @@ async function fetchLovedSongs(
   userToken: string,
 ): Promise<AppleMusicTrackHint[]> {
   try {
-    const res = await fetch(`${AM_BASE}/me/ratings/songs?limit=40`, {
+    const res = await fetch(`${AM_BASE}/me/ratings/songs?limit=100`, {
       headers: amHeaders(developerToken, userToken),
     });
     if (!res.ok) return [];
@@ -380,6 +398,10 @@ async function fetchLovedSongs(
         appleMusicId: item.id?.trim() || undefined,
         playAs: 'song',
         playUrl: item.attributes?.url?.trim() || undefined,
+        artworkUrl: item.attributes?.artwork?.url?.replace('{w}', '300').replace('{h}', '300') ?? undefined,
+        albumName: item.attributes?.albumName ?? undefined,
+        durationMs: typeof item.attributes?.durationInMillis === 'number' ? item.attributes.durationInMillis : undefined,
+        releaseDate: typeof item.attributes?.releaseDate === 'string' ? item.attributes.releaseDate : undefined,
       });
     }
     return dedupeTracks(tracks, 20);
@@ -394,7 +416,7 @@ async function fetchRecommendations(
   userToken: string,
 ): Promise<string[]> {
   try {
-    const res = await fetch(`${AM_BASE}/me/recommendations?limit=10`, {
+    const res = await fetch(`${AM_BASE}/me/recommendations?limit=30`, {
       headers: amHeaders(developerToken, userToken),
     });
     if (!res.ok) return [];
@@ -420,6 +442,11 @@ export interface AppleMusicFetchedSnapshot {
   libraryArtists: string[];
   lovedSongs: AppleMusicTrackHint[];
   recommendedNames: string[];
+  artworkMap: Record<string, string>;
+  genreFrequency: Record<string, number>;
+  durationStats?: { avgMs: number; pctShort: number; pctLong: number };
+  releaseYearDist: Record<string, number>;
+  storefront: string;
 }
 
 export async function fetchAppleMusicData(
@@ -430,11 +457,11 @@ export async function fetchAppleMusicData(
 
   const [storefrontRes, heavyRes, albumsRes, playlistsRes, recentRes, libraryArtistsRes, lovedSongsRes, recommendationsRes] = await Promise.all([
     fetchStorefront(developerToken, userToken),
-    fetch(`${AM_BASE}/me/history/heavy-rotation?limit=25`, { headers }),
-    fetch(`${AM_BASE}/me/library/albums?limit=20`, { headers }),
-    fetch(`${AM_BASE}/me/library/playlists?limit=20`, { headers }),
+    fetch(`${AM_BASE}/me/history/heavy-rotation?limit=100`, { headers }),
+    fetch(`${AM_BASE}/me/library/albums?limit=100`, { headers }),
+    fetch(`${AM_BASE}/me/library/playlists?limit=100`, { headers }),
     // Correct path per Apple docs — `/me/recent/played` is not the tracks endpoint.
-    fetch(`${AM_BASE}/me/recent/played/tracks?limit=20`, { headers }),
+    fetch(`${AM_BASE}/me/recent/played/tracks?limit=30`, { headers }),
     fetchLibraryArtists(developerToken, userToken),
     fetchLovedSongs(developerToken, userToken),
     fetchRecommendations(developerToken, userToken),
@@ -450,13 +477,13 @@ export async function fetchAppleMusicData(
   let recentlyPlayed: AppleMusicTrackHint[] = [];
   if (recentRes.ok) {
     const j = (await recentRes.json()) as { data?: AMResource[] };
-    recentlyPlayed = tracksFromResourceList(j.data).slice(0, 10);
+    recentlyPlayed = tracksFromResourceList(j.data).slice(0, 20);
   }
 
-  let heavyOut = dedupeTracks(heavyRotationTracks, 12);
+  let heavyOut = dedupeTracks(heavyRotationTracks, 25);
   if (!recentlyPlayed.length && !heavyOut.length) {
     const lib = await fetchLibrarySongHints(developerToken, userToken);
-    if (lib.length) heavyOut = dedupeTracks([...heavyOut, ...lib], 12);
+    if (lib.length) heavyOut = dedupeTracks([...heavyOut, ...lib], 25);
   }
 
   const libAlbumNames = libAlbums
@@ -470,14 +497,14 @@ export async function fetchAppleMusicData(
 
   const libraryPlaylistNames = dedupeNames(
     libPlaylistsRaw.map(i => i.attributes?.name?.trim()).filter((n): n is string => Boolean(n)),
-    12,
+    20,
   );
 
-  const artists = artistOrder.map(a => a.name).slice(0, 10);
+  const artists = artistOrder.map(a => a.name).slice(0, 30);
   const artistCatalogPairs = artistOrder
     .filter(a => a.catalogId !== null)
     .map(a => ({ id: a.catalogId!, name: a.name }))
-    .slice(0, 8);
+    .slice(0, 15);
 
   const storefront = storefrontRes;
   let latestReleases: AppleMusicLatestRelease[] = [];
@@ -490,11 +517,56 @@ export async function fetchAppleMusicData(
     );
   }
 
+  // Build artwork map from all tracks
+  const artworkMap: Record<string, string> = {};
+  const allTracks = [...heavyOut, ...recentlyPlayed, ...lovedSongsRes];
+  for (const t of allTracks) {
+    if (t.artistName && t.artworkUrl && !artworkMap[t.artistName]) {
+      artworkMap[t.artistName] = t.artworkUrl;
+    }
+  }
+
+  // Count genre frequency across all items
+  const genreFrequency: Record<string, number> = {};
+  for (const g of genreSet) {
+    genreFrequency[g] = 1;
+  }
+  // Recount from all albums and tracks for real frequency
+  const allGenreSources = [...heavy, ...libAlbums];
+  for (const item of allGenreSources) {
+    for (const g of item.attributes?.genreNames ?? []) {
+      if (g !== 'Music') genreFrequency[g] = (genreFrequency[g] ?? 0) + 1;
+    }
+  }
+
+  // Duration stats from all tracks with duration data
+  const tracksWithDuration = [...heavyOut, ...recentlyPlayed].filter(t => t.durationMs);
+  const durationStats = tracksWithDuration.length > 0 ? (() => {
+    const durations = tracksWithDuration.map(t => t.durationMs!);
+    const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+    const short = durations.filter(d => d < 180_000).length; // < 3 min
+    const long = durations.filter(d => d > 300_000).length;  // > 5 min
+    return {
+      avgMs: Math.round(avg),
+      pctShort: Math.round((short / durations.length) * 100),
+      pctLong: Math.round((long / durations.length) * 100),
+    };
+  })() : undefined;
+
+  // Release year distribution
+  const releaseYearDist: Record<string, number> = {};
+  for (const t of [...heavyOut, ...recentlyPlayed, ...lovedSongsRes]) {
+    if (t.releaseDate) {
+      const year = t.releaseDate.slice(0, 4);
+      if (year) releaseYearDist[year] = (releaseYearDist[year] ?? 0) + 1;
+    }
+  }
+
   return {
     artists,
     albums: albumNames,
-    genres: [...genreSet].slice(0, 10),
-    rotationPlaylists: dedupeNames(rotationPlaylists, 10),
+    genres: [...genreSet].slice(0, 15),
+    rotationPlaylists: dedupeNames(rotationPlaylists, 20),
     libraryPlaylistNames,
     latestReleases,
     heavyRotationTracks: heavyOut,
@@ -502,6 +574,11 @@ export async function fetchAppleMusicData(
     libraryArtists: libraryArtistsRes,
     lovedSongs: lovedSongsRes,
     recommendedNames: recommendationsRes,
+    artworkMap,
+    genreFrequency,
+    durationStats,
+    releaseYearDist,
+    storefront: storefront || 'us',
   };
 }
 
@@ -517,9 +594,14 @@ export async function analyseAppleMusicIdentity(
   libraryArtists: string[],
   lovedSongs: AppleMusicTrackHint[],
   recommendedNames: string[],
+  storefront?: string,
+  artworkMap?: Record<string, string>,
+  genreFrequency?: Record<string, number>,
+  durationStats?: { avgMs: number; pctShort: number; pctLong: number },
+  releaseYearDist?: Record<string, number>,
 ): Promise<AppleMusicIdentity> {
   const trackLine = (xs: AppleMusicTrackHint[]) =>
-    xs.slice(0, 8).map(t => (t.artistName ? `${t.artistName} — ${t.title}` : t.title)).join('; ');
+    xs.slice(0, 20).map(t => (t.artistName ? `${t.artistName} — ${t.title}` : t.title)).join('; ');
 
   const empty = (): AppleMusicIdentity => ({
     topArtists: [],
@@ -535,6 +617,12 @@ export async function analyseAppleMusicIdentity(
     libraryArtists,
     lovedSongs,
     recommendedNames,
+    storefront,
+    artworkMap,
+    playlistContents: [],
+    genreFrequency,
+    durationStats,
+    releaseYearDist,
   });
 
   const hasAnything =
@@ -572,6 +660,8 @@ Other library playlists: ${libraryPlaylists.join(', ') || '—'}
 Library artists (beyond rotation): ${extraLibraryArtists.join(', ') || '—'}
 Apple recommendations for this user: ${recommendedNames.join(', ') || '—'}
 Newest catalog drops from those artists: ${drops || '—'}
+Duration pattern: average ${durationStats?.avgMs ? Math.round(durationStats.avgMs / 60000) + ' min' : 'unknown'}, ${durationStats?.pctShort ?? '?'}% short tracks (<3min), ${durationStats?.pctLong ?? '?'}% long tracks (>5min)
+Release era preference: ${Object.entries(releaseYearDist ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([y, c]) => `${y}: ${c}`).join(', ') || 'unknown'}
 
 Return JSON only (no markdown):
 {
@@ -601,6 +691,12 @@ Return JSON only (no markdown):
       libraryArtists,
       lovedSongs,
       recommendedNames,
+      storefront,
+      artworkMap,
+      playlistContents: [],
+      genreFrequency,
+      durationStats,
+      releaseYearDist,
     };
   } catch {
     return {
@@ -617,6 +713,12 @@ Return JSON only (no markdown):
       libraryArtists,
       lovedSongs,
       recommendedNames,
+      storefront,
+      artworkMap,
+      playlistContents: [],
+      genreFrequency,
+      durationStats,
+      releaseYearDist,
     };
   }
 }

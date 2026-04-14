@@ -40,6 +40,11 @@ export const POST: RequestHandler = async ({ request }) => {
       snap.libraryArtists,
       snap.lovedSongs,
       snap.recommendedNames,
+      snap.storefront,
+      snap.artworkMap,
+      snap.genreFrequency,
+      snap.durationStats,
+      snap.releaseYearDist,
     );
     return json(identity);
   } catch (e) {
