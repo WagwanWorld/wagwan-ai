@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
+  const dispatch = createEventDispatcher();
 
   type Message = { role: 'user' | 'agent'; text: string };
 
@@ -79,6 +81,12 @@
             } else if (eventType === 'message' && data.text) {
               agentText = data.text;
               messages = [...messages.slice(0, -1), { role: 'agent', text: agentText }];
+            }
+            if (eventType === 'matches' && data.results) {
+              dispatch('matches', data.results);
+            }
+            if (eventType === 'brief' && data.brief) {
+              dispatch('brief', data.brief);
             }
           } catch {}
         }

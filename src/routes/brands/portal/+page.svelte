@@ -72,6 +72,17 @@
 
   let showManualSearch = false;
 
+  let chatMatches: any[] = [];
+  let chatBrief: any = null;
+
+  function handleChatMatches(e: CustomEvent) {
+    chatMatches = e.detail.matches ?? e.detail ?? [];
+  }
+
+  function handleChatBrief(e: CustomEvent) {
+    chatBrief = e.detail;
+  }
+
   let rewardInr = 50;
   let campaignTitle = '';
   let creativeText = '';
@@ -1091,8 +1102,50 @@
 
   {:else}
     <div class="agent-full">
-      <MatchAgentChat />
+      <MatchAgentChat on:matches={handleChatMatches} on:brief={handleChatBrief} />
     </div>
+    {#if chatMatches.length > 0}
+      <div class="chat-results">
+        <div class="chat-results-inner">
+          <h3 class="chat-results-title">Matched Creators</h3>
+          <div class="chat-results-grid">
+            {#each chatMatches as match}
+              <div class="chat-match-card">
+                <div class="chat-match-header">
+                  <div class="chat-match-avatar">
+                    {match.creator?.name?.charAt(0) || '?'}
+                  </div>
+                  <div>
+                    <div class="chat-match-name">{match.creator?.name || 'Unknown'}</div>
+                    {#if match.creator?.handle}
+                      <div class="chat-match-handle">@{match.creator.handle}</div>
+                    {/if}
+                  </div>
+                  <div class="chat-match-score">{match.score}</div>
+                </div>
+                {#if match.creator?.location}
+                  <div class="chat-match-location">{match.creator.location}</div>
+                {/if}
+                <p class="chat-match-reason">{match.reasoning}</p>
+                {#if match.watch_out}
+                  <p class="chat-match-watch">{match.watch_out}</p>
+                {/if}
+                {#if match.creator?.rates?.available}
+                  <div class="chat-match-rates">
+                    {#if match.creator.rates.ig_post_rate_inr}
+                      <span>Post: ₹{match.creator.rates.ig_post_rate_inr}</span>
+                    {/if}
+                    {#if match.creator.rates.ig_story_rate_inr}
+                      <span>Story: ₹{match.creator.rates.ig_story_rate_inr}</span>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    {/if}
     <div class="manual-link">
       <button class="switch-link" on:click={() => showManualSearch = true}>
         Switch to manual search
@@ -1132,6 +1185,116 @@
   .manual-link {
     text-align: center;
     padding: 8px 0 16px;
+  }
+
+  .chat-results {
+    border-top: 1px solid var(--border-subtle);
+    padding: 24px;
+    overflow-y: auto;
+    max-height: 50vh;
+  }
+
+  .chat-results-inner {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .chat-results-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 0 0 16px;
+  }
+
+  .chat-results-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .chat-match-card {
+    padding: 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--glass-light);
+    transition: border-color 0.15s;
+  }
+  .chat-match-card:hover {
+    border-color: var(--border-strong);
+  }
+
+  .chat-match-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .chat-match-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .chat-match-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .chat-match-handle {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .chat-match-score {
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: var(--accent-secondary);
+    background: rgba(77, 124, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+
+  .chat-match-location {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .chat-match-reason {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0 0 4px;
+  }
+
+  .chat-match-watch {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0;
+  }
+
+  .chat-match-rates {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
   }
 
   .switch-link {
