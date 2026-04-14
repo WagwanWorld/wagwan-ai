@@ -71,17 +71,40 @@ export const POST: RequestHandler = async ({ request }) => {
     }
   }
 
+  // Fetch creator rates for available creators
+  const ratesBySub = new Map<string, { ig_post_rate_inr: number; ig_story_rate_inr: number; ig_reel_rate_inr: number; available: boolean }>();
+  if (subs.length > 0) {
+    const { data: rateRows } = await sb
+      .from('creator_rates')
+      .select('user_google_sub, ig_post_rate_inr, ig_story_rate_inr, ig_reel_rate_inr, available')
+      .in('user_google_sub', subs)
+      .eq('available', true);
+    for (const r of rateRows ?? []) {
+      ratesBySub.set(r.user_google_sub as string, {
+        ig_post_rate_inr: r.ig_post_rate_inr as number,
+        ig_story_rate_inr: r.ig_story_rate_inr as number,
+        ig_reel_rate_inr: r.ig_reel_rate_inr as number,
+        available: true,
+      });
+    }
+  }
+
   const boostRaw = (env.BRAND_RANK_STRENGTH_BOOST ?? '').trim().toLowerCase();
   const rankStrengthBoost = boostRaw === '1' || boostRaw === 'true' || boostRaw === 'yes';
 
   const result = rankAudience(profiles, structured, {
     limit,
     reward_inr,
-    // Default 0 so “studio” search always returns ranked rows when profiles exist (weak matches still visible).
     minScore: body.min_score != null ? Number(body.min_score) : 0,
     manualTagsBySub,
     rankStrengthBoost,
   });
 
-  return json({ ok: true, ...result });
+  // Enrich results with rates
+  const enrichedUsers = (result.users ?? []).map((u: any) => ({
+    ...u,
+    rates: ratesBySub.get(u.google_sub) ?? null,
+  }));
+
+  return json({ ok: true, ...result, users: enrichedUsers });
 };
