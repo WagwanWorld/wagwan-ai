@@ -108,10 +108,12 @@
     width: 100%;
     max-width: 26rem;
     padding: 2rem;
-    border-radius: 1rem;
+    border-radius: 1.25rem;
     border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    background: var(--bg-elevated, oklch(13% 0.010 258));
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+    background: var(--glass-light, rgba(255, 255, 255, 0.055));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.06), 0 24px 64px rgba(0, 0, 0, 0.4);
   }
 
   .overline {

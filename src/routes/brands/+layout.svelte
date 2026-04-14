@@ -11,6 +11,12 @@
 </script>
 
 <div class="brands-shell" data-app-chrome="dark">
+  <!-- Ambient mesh (subtle, like the user app but quieter) -->
+  <div class="brands-mesh" aria-hidden="true">
+    <div class="brands-orb brands-orb--blue"></div>
+    <div class="brands-orb brands-orb--red"></div>
+    <div class="brands-orb brands-orb--gold"></div>
+  </div>
   <header class="brands-header">
     <div class="header-inner">
       <a href="/brands" class="wordmark">
@@ -203,5 +209,71 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Ambient mesh ── */
+  .brands-mesh {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .brands-orb {
+    position: absolute;
+    border-radius: 50%;
+    will-change: transform;
+  }
+
+  .brands-orb--blue {
+    width: 60vw;
+    height: 60vw;
+    max-width: 600px;
+    max-height: 600px;
+    top: -15%;
+    right: -10%;
+    background: radial-gradient(ellipse at center, rgba(77, 124, 255, 0.06), transparent 70%);
+    filter: blur(60px);
+    animation: orb-drift-1 24s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+
+  .brands-orb--red {
+    width: 50vw;
+    height: 50vw;
+    max-width: 500px;
+    max-height: 500px;
+    bottom: 10%;
+    left: -10%;
+    background: radial-gradient(ellipse at center, rgba(255, 77, 77, 0.04), transparent 70%);
+    filter: blur(60px);
+    animation: orb-drift-2 20s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+
+  .brands-orb--gold {
+    width: 45vw;
+    height: 45vw;
+    max-width: 450px;
+    max-height: 450px;
+    top: 40%;
+    left: 30%;
+    background: radial-gradient(ellipse at center, rgba(255, 184, 77, 0.03), transparent 70%);
+    filter: blur(60px);
+    animation: orb-drift-3 28s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+
+  @keyframes orb-drift-1 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-3vw, 4vh); }
+  }
+  @keyframes orb-drift-2 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(4vw, -3vh); }
+  }
+  @keyframes orb-drift-3 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-2vw, -2vh); }
   }
 </style>

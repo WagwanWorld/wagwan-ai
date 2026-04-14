@@ -369,6 +369,9 @@
   .preview-inner {
     border-radius: calc(1.25rem - 3px);
     background: var(--bg-secondary);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.3);
     padding: 0;
     overflow: hidden;
   }
@@ -579,11 +582,15 @@
     padding: 2rem;
     border-radius: 1.25rem;
     border: 1px solid var(--border-subtle);
-    background: var(--bg-secondary);
-    transition: border-color 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.04);
+    transition: border-color 0.4s cubic-bezier(0.32, 0.72, 0, 1), transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   }
   .bento-card:hover {
-    border-color: var(--border-strong);
+    border-color: rgba(77, 124, 255, 0.2);
+    transform: translateY(-2px);
   }
 
   .bento-num {
@@ -675,13 +682,19 @@
     padding: 1.75rem;
     border-radius: 1.25rem;
     border: 1px solid var(--border-subtle);
-    background: var(--bg-secondary);
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.04);
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    transition: border-color 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: border-color 0.4s cubic-bezier(0.32, 0.72, 0, 1), transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   }
-  .testimonial-card:hover { border-color: var(--border-strong); }
+  .testimonial-card:hover {
+    border-color: rgba(255, 184, 77, 0.2);
+    transform: translateY(-2px);
+  }
 
   .testimonial-text {
     font-size: 0.875rem;
