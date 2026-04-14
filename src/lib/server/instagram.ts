@@ -128,7 +128,7 @@ export async function fetchInstagramProfile(token: string): Promise<InstagramPro
   return res.json();
 }
 
-export async function fetchInstagramMedia(token: string, limit = 40): Promise<InstagramMedia[]> {
+export async function fetchInstagramMedia(token: string, limit = 100): Promise<InstagramMedia[]> {
   const fields = 'id,caption,media_type,timestamp,media_url,thumbnail_url,like_count,comments_count,permalink';
   const res = await fetch(
     `https://graph.instagram.com/v25.0/me/media?fields=${fields}&limit=${limit}&access_token=${token}`
@@ -198,7 +198,7 @@ async function fetchCommentsForTopPosts(
   token: string,
   media: InstagramMedia[],
   maxPosts = 5,
-  commentsPerPost = 8,
+  commentsPerPost = 15,
 ): Promise<InstagramComment[]> {
   const sorted = [...media]
     .filter(m => (m.comments_count ?? 0) > 0)
@@ -700,12 +700,48 @@ async function analyseCaptionsWithClaude(
   const types = media.map(m => m.media_type).join(', ');
   const bioLine = profile.biography ? `Bio: ${profile.biography}` : '';
 
+  // Posting time patterns
+  const postingHours: number[] = [];
+  const postingDays: number[] = [];
+  for (const m of media) {
+    if (m.timestamp) {
+      const d = new Date(m.timestamp);
+      postingHours.push(d.getHours());
+      postingDays.push(d.getDay());
+    }
+  }
+
+  const peakHour = postingHours.length > 0
+    ? (() => { const counts: Record<number, number> = {}; postingHours.forEach(h => counts[h] = (counts[h] ?? 0) + 1); return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''; })()
+    : '';
+
+  const peakDay = postingDays.length > 0
+    ? (() => { const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; const counts: Record<number, number> = {}; postingDays.forEach(d => counts[d] = (counts[d] ?? 0) + 1); const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]; return top ? days[Number(top[0])] : ''; })()
+    : '';
+
+  const allHashtags: string[] = [];
+  for (const m of media) {
+    if (m.caption) {
+      const tags = m.caption.match(/#\w+/g) ?? [];
+      allHashtags.push(...tags.map(t => t.toLowerCase()));
+    }
+  }
+  const topHashtags = [...new Set(allHashtags)]
+    .map(tag => ({ tag, count: allHashtags.filter(t => t === tag).length }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20)
+    .map(t => t.tag);
+
   const prompt = `You are analysing someone's Instagram to understand their identity, lifestyle, and taste.
 
 Username: @${profile.username}
 ${bioLine}
 Total recent posts analysed: ${postCount}
 Post types: ${types}
+Peak posting hour: ${peakHour ? peakHour + ':00' : 'unknown'}
+Most active day: ${peakDay || 'unknown'}
+Top hashtags: ${topHashtags.slice(0, 15).join(', ') || 'none'}
+Total posts analyzed: ${media.length}
 
 Post captions (most recent first):
 ${captions || '(no captions found — infer from context)'}
