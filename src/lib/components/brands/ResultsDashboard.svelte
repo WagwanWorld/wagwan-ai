@@ -82,29 +82,68 @@
 </script>
 
 <div class="results-root">
-  <div class="summary-row">
-    <div class="summary-card">
-      <span class="summary-value">{formatNumber(totalReach)}</span>
-      <span class="summary-label">Total Reach</span>
+  {#if matches.length > 0}
+    <div class="summary-row">
+      <div class="summary-card">
+        <span class="summary-value">{formatNumber(totalReach)}</span>
+        <span class="summary-label">Total Reach</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value">{matches.length}</span>
+        <span class="summary-label">Matched Creators</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value">{formatINR(estimatedCost)}</span>
+        <span class="summary-label">Estimated Cost</span>
+      </div>
+      <div class="summary-card summary-card--accent">
+        <span class="summary-value summary-value--small">{strategyLabel}</span>
+        <span class="summary-label">Recommended Strategy</span>
+      </div>
     </div>
-    <div class="summary-card">
-      <span class="summary-value">{matches.length}</span>
-      <span class="summary-label">Matched Creators</span>
-    </div>
-    <div class="summary-card">
-      <span class="summary-value">{formatINR(estimatedCost)}</span>
-      <span class="summary-label">Estimated Cost</span>
-    </div>
-    <div class="summary-card summary-card--accent">
-      <span class="summary-value summary-value--small">{strategyLabel}</span>
-      <span class="summary-label">Recommended Strategy</span>
-    </div>
-  </div>
+  {/if}
 
   {#if matches.length === 0}
     <div class="empty-state">
-      <p class="empty-text">No creators matched your criteria. Try adjusting your brief.</p>
-      <button class="text-btn" on:click={() => dispatch('startOver')}>Start over</button>
+      <h3 class="empty-title">No exact matches yet</h3>
+      <p class="empty-text">We couldn't find creators that perfectly match your criteria right now. Here's what a result would look like:</p>
+    </div>
+
+    <div class="grid-header">
+      <h3 class="grid-title">Example creators</h3>
+      <button class="text-btn" on:click={() => dispatch('startOver')}>Try different criteria</button>
+    </div>
+
+    <div class="creator-grid">
+      {#each [
+        { name: 'Sample Creator', handle: 'creator1', score: 85, themes: ['fitness', 'lifestyle'], followers: '12.4K', reason: 'Strong overlap with your target audience and content themes.' },
+        { name: 'Another Creator', handle: 'creator2', score: 72, themes: ['fashion', 'sustainability'], followers: '8.1K', reason: 'Engaged micro-audience in your target geography.' },
+        { name: 'Third Creator', handle: 'creator3', score: 68, themes: ['wellness', 'food'], followers: '5.2K', reason: 'Authentic voice that matches your brand tone.' },
+      ] as placeholder}
+        <div class="creator-card creator-card--placeholder">
+          <div class="card-avatar" style="background: linear-gradient(145deg, hsl(220, 30%, 18%), hsl(258, 25%, 12%))">
+            <span>{placeholder.name.split(' ').map(w => w[0]).join('')}</span>
+          </div>
+          <div class="card-info">
+            <span class="card-name">{placeholder.name}</span>
+            <span class="card-handle">@{placeholder.handle}</span>
+          </div>
+          <div class="card-meta">
+            <span class="card-score">{placeholder.score}% match</span>
+            <span class="card-followers">{placeholder.followers}</span>
+          </div>
+          <p class="card-reason">{placeholder.reason}</p>
+          <div class="card-tags">
+            {#each placeholder.themes as tag}
+              <span class="tag">{tag}</span>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
+
+    <div class="empty-cta">
+      <button class="action-btn" on:click={() => dispatch('startOver')}>Try again with different criteria</button>
     </div>
   {:else}
     <div class="grid-header">
@@ -426,16 +465,37 @@
 
   .empty-state {
     text-align: center;
-    padding: 48px 24px;
+    padding: 24px 24px 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
+  }
+
+  .empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
   }
 
   .empty-text {
-    font-size: 15px;
-    color: var(--text-secondary);
+    font-size: 14px;
+    color: var(--text-muted);
     margin: 0;
+    max-width: 400px;
+    line-height: 1.5;
+  }
+
+  .empty-cta {
+    display: flex;
+    justify-content: center;
+    padding-top: 8px;
+  }
+
+  .creator-card--placeholder {
+    opacity: 0.5;
+    pointer-events: none;
+    border-style: dashed;
   }
 </style>

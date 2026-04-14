@@ -47,9 +47,19 @@
     currentStep = 'questions';
   }
 
+  let thinkingTimeout: ReturnType<typeof setTimeout> | null = null;
+
   function handleThinking(e: CustomEvent<{ step: string; text: string }>) {
     if (currentStep !== 'thinking') {
       currentStep = 'thinking';
+      // Safety timeout: if stuck in thinking for 20s, force transition to results
+      thinkingTimeout = setTimeout(() => {
+        if (currentStep === 'thinking') {
+          thinkingCompleted = new Set(['brief', 'scoring', 'matching', 'done']);
+          thinkingActiveStep = 'done';
+          currentStep = 'results';
+        }
+      }, 20_000);
     }
     if (thinkingActiveStep) {
       thinkingCompleted = new Set([...thinkingCompleted, thinkingActiveStep]);
@@ -57,6 +67,7 @@
     thinkingActiveStep = e.detail.step;
 
     if (e.detail.step === 'done') {
+      if (thinkingTimeout) clearTimeout(thinkingTimeout);
       thinkingCompleted = new Set([...thinkingCompleted, 'done']);
       setTimeout(() => {
         currentStep = 'results';
@@ -67,6 +78,15 @@
   function handleMatches(e: CustomEvent<{ results: unknown }>) {
     const payload = e.detail as { results?: { matches?: typeof matchResults } };
     matchResults = payload?.results?.matches ?? [];
+    // If we got matches, ensure we transition even if 'done' status is missed
+    if (currentStep === 'thinking' && matchResults.length > 0) {
+      if (thinkingTimeout) clearTimeout(thinkingTimeout);
+      thinkingCompleted = new Set([...thinkingCompleted, thinkingActiveStep, 'done']);
+      thinkingActiveStep = 'done';
+      setTimeout(() => {
+        currentStep = 'results';
+      }, 1200);
+    }
   }
 
   function handleStartOver() {
