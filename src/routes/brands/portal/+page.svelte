@@ -553,12 +553,12 @@
   {#if !inResultsMode}
     <!-- Hero -->
     <section class="relative z-10 flex min-h-[calc(100vh-56px)] flex-col items-center justify-center px-4 py-16">
-      <p class="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-zinc-600">
+      <p class="hero-label mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.3em]">
         Describe your audience
       </p>
-      <h1 class="max-w-3xl text-center text-3xl font-semibold leading-tight text-white md:text-5xl">
+      <h1 class="hero-title max-w-3xl text-center text-3xl font-semibold leading-tight md:text-5xl">
         Who are you directing
-        <span class="text-[var(--text-secondary)]">
+        <span class="hero-title-accent">
           tonight?
         </span>
       </h1>
@@ -567,7 +567,7 @@
         <label for="studio-prompt" class="sr-only">Audience prompt</label>
         <textarea
           id="studio-prompt"
-          class="studio-textarea min-h-[140px] w-full resize-none rounded-2xl border border-white/[0.08] bg-[#111113]/90 px-5 py-4 text-base leading-relaxed text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.04)_inset,0_24px_80px_-24px_rgba(0,0,0,0.6)] outline-none transition-[border,box-shadow] duration-300 placeholder:text-zinc-700 md:min-h-[120px] md:text-lg"
+          class="studio-textarea studio-textarea-hero min-h-[140px] w-full resize-none rounded-2xl px-5 py-4 text-base leading-relaxed outline-none transition-[border,box-shadow] duration-300 md:min-h-[120px] md:text-lg"
           bind:value={promptText}
           placeholder={ghostHints[ghostIdx]}
         ></textarea>
@@ -575,7 +575,7 @@
           {#each presetChips as chip}
             <button
               type="button"
-              class="preset-chip rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-1.5 text-xs font-medium text-zinc-400 transition-all duration-300"
+              class="preset-chip rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-300"
               on:click={() => applyChip(chip.text)}
             >
               {chip.label}
@@ -587,7 +587,7 @@
       <button
         type="button"
         disabled={searching}
-        class="group mt-10 inline-flex items-center gap-2 rounded-full bg-white px-10 py-3.5 text-sm font-semibold text-[#0B0B0D] shadow-[0_4px_16px_rgba(0,0,0,0.3)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_6px_24px_rgba(0,0,0,0.4)] disabled:opacity-50"
+        class="discover-btn group mt-10 inline-flex items-center gap-2 rounded-full px-10 py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50"
         on:click={() => runDiscovery()}
       >
         {searching ? 'Composing…' : 'Discover audience'}
@@ -598,17 +598,17 @@
         <p class="mt-6 max-w-md text-center text-sm text-red-400/90">{parseErr || searchErr}</p>
       {/if}
 
-      <div class="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-4 text-xs text-zinc-600">
+      <div class="hero-footer absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-4 text-xs">
         {#if data.brandSessionValid}
           <button
             type="button"
-            class="inline-flex items-center gap-1.5 text-zinc-500 transition-colors hover:text-white"
+            class="hero-sign-out inline-flex items-center gap-1.5 transition-colors"
             on:click={() => signOut()}
           >
             <SignOut size={14} /> Sign out
           </button>
         {:else}
-          <a href={loginNext} class="text-zinc-500 underline-offset-4 hover:text-[var(--accent-secondary)] hover:underline">
+          <a href={loginNext} class="hero-sign-in underline-offset-4 hover:underline">
             Operator sign-in
           </a>
         {/if}
@@ -619,14 +619,14 @@
     <div class="relative z-10 pb-28 pt-6 md:pt-8">
       <!-- Docked prompt -->
       <div
-        class="sticky top-0 z-40 border-b border-white/[0.06] bg-[#0B0B0D]/85 px-4 py-4 backdrop-blur-xl supports-[backdrop-filter]:bg-[#0B0B0D]/70"
+        class="docked-prompt sticky top-0 z-40 px-4 py-4 backdrop-blur-xl"
       >
         <div class="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-end">
           <div class="min-w-0 flex-1">
             <label for="studio-prompt-dock" class="sr-only">Refine prompt</label>
             <textarea
               id="studio-prompt-dock"
-              class="studio-textarea min-h-[72px] w-full resize-y rounded-xl border border-white/[0.08] bg-[#111113] px-4 py-3 text-sm text-zinc-100 outline-none transition-colors md:min-h-[56px]"
+              class="studio-textarea studio-textarea-dock min-h-[72px] w-full resize-y rounded-xl px-4 py-3 text-sm outline-none transition-colors md:min-h-[56px]"
               bind:value={promptText}
             ></textarea>
           </div>
@@ -634,14 +634,14 @@
             <button
               type="button"
               disabled={searching}
-              class="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-[#0B0B0D] transition-opacity disabled:opacity-50"
+              class="rerun-btn rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
               on:click={smartRerun}
             >
               {searching ? '…' : 'Re-run'}
             </button>
             <button
               type="button"
-              class="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-500 transition-colors hover:border-red-500/30 hover:text-red-300"
+              class="new-scene-btn rounded-xl px-4 py-2.5 text-sm transition-colors"
               on:click={confirmNewScene}
             >
               New scene
@@ -663,13 +663,13 @@
         <!-- Top bar -->
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Live audience</p>
-            <h2 class="mt-2 text-3xl font-semibold text-white md:text-4xl">
+            <p class="section-label text-[11px] font-semibold uppercase tracking-[0.2em]">Live audience</p>
+            <h2 class="results-heading mt-2 text-3xl font-semibold md:text-4xl">
               {audienceSize.toLocaleString()} people
-              <span class="text-zinc-600">found</span>
+              <span class="results-heading-muted">found</span>
             </h2>
             {#if structured}
-              <p class="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+              <p class="text-secondary mt-3 max-w-2xl text-sm leading-relaxed">
                 {structured.human_summary}
               </p>
             {/if}
@@ -678,14 +678,14 @@
             {#if data.brandSessionValid}
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-400 transition-all hover:border-white/20 hover:text-white"
+                class="toolbar-btn inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all"
                 on:click={() => exportCsv()}
               >
                 <Download size={14} /> Export
               </button>
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-400 transition-all hover:border-white/20 hover:text-white"
+                class="toolbar-btn inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all"
                 on:click={() => signOut()}
               >
                 <SignOut size={14} /> Out
@@ -693,7 +693,7 @@
             {/if}
             <button
               type="button"
-              class="launch-btn rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-[transform,box-shadow] duration-300 hover:scale-[1.02]"
+              class="launch-btn rounded-xl px-6 py-2.5 text-sm font-semibold transition-[transform,box-shadow] duration-300 hover:scale-[1.02]"
               on:click={() => (campaignPanelOpen = true)}
             >
               Launch campaign
@@ -704,39 +704,39 @@
         <!-- Overview + mosaic -->
         <div class="grid gap-6 lg:grid-cols-12">
           <div
-            class="lg:col-span-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 shadow-[0_0_60px_rgba(0,0,0,0.35)] backdrop-blur-md transition-[border,box-shadow] duration-300 hover:border-white/10 {users.length === 0
+            class="overview-panel lg:col-span-5 rounded-2xl p-6 backdrop-blur-md transition-[border,box-shadow] duration-300 {users.length === 0
               ? 'opacity-60'
               : ''}"
           >
-            <div class="flex items-center gap-2 text-[var(--accent-secondary)]">
+            <div class="flex items-center gap-2 accent-secondary">
               <Sparkle size={18} weight="light" />
               <span class="text-xs font-medium uppercase tracking-wider">Overview</span>
             </div>
             <div class="mt-4 space-y-4 text-sm">
-              <div class="flex justify-between border-b border-white/[0.06] py-2 text-zinc-400">
+              <div class="overview-row flex justify-between py-2">
                 <span>Engagement</span>
-                <span class="font-medium text-white">{estimatedEngagement || '—'}</span>
+                <span class="overview-value font-medium">{estimatedEngagement || '—'}</span>
               </div>
-              <div class="flex justify-between border-b border-white/[0.06] py-2 text-zinc-400">
+              <div class="overview-row flex justify-between py-2">
                 <span>Est. investment</span>
-                <span class="font-medium text-white">
+                <span class="overview-value font-medium">
                   {#if estimatedCost != null}₹{estimatedCost.toLocaleString()} @ ₹{rewardInr}{:else}—{/if}
                 </span>
               </div>
-              <div class="flex justify-between py-2 text-zinc-400">
+              <div class="overview-row overview-row-last flex justify-between py-2">
                 <span>Avg. signal</span>
-                <span class="font-medium text-white">{avgGraphStrength}/100</span>
+                <span class="overview-value font-medium">{avgGraphStrength}/100</span>
               </div>
             </div>
             {#if structured && (structured.interests.length || structured.behaviors.length)}
               <div class="mt-5 flex flex-wrap gap-2">
                 {#each structured.interests.slice(0, 6) as t}
-                  <span class="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-zinc-300"
+                  <span class="interest-tag rounded-full px-2.5 py-1 text-[11px]"
                     >{t}</span
                   >
                 {/each}
                 {#each structured.behaviors.slice(0, 4) as b}
-                  <span class="rounded-full border border-[rgba(77,124,255,0.2)] bg-[rgba(77,124,255,0.1)] px-2.5 py-1 text-[11px] text-[#8BABFF]"
+                  <span class="behavior-tag rounded-full px-2.5 py-1 text-[11px]"
                     >{b}</span
                   >
                 {/each}
@@ -745,16 +745,16 @@
           </div>
 
           <div class="lg:col-span-7">
-            <p class="mb-3 text-[11px] font-medium uppercase tracking-wider text-zinc-500">The mosaic</p>
+            <p class="section-label mb-3 text-[11px] font-medium uppercase tracking-wider">The mosaic</p>
             <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
               {#each users.slice(0, 12) as u}
                 <div
-                  class="mosaic-tile group relative aspect-square overflow-hidden rounded-xl border border-white/[0.06] transition-all duration-300 hover:z-10 hover:scale-[1.04]"
+                  class="mosaic-tile group relative aspect-square overflow-hidden rounded-xl transition-all duration-300 hover:z-10 hover:scale-[1.04]"
                   style:background={tileGradient(u.user_google_sub)}
                   title={u.name}
                 >
                   <div
-                    class="absolute inset-0 flex items-center justify-center text-lg font-semibold text-white/90"
+                    class="mosaic-initials absolute inset-0 flex items-center justify-center text-lg font-semibold"
                   >
                     {initials(u.name)}
                   </div>
@@ -772,18 +772,18 @@
           <div class="grid gap-4 sm:grid-cols-3">
             {#each insightCards as card}
               <div
-                class="insight-card rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-5 transition-all duration-300"
+                class="insight-card rounded-2xl p-5 transition-all duration-300"
               >
-                <p class="text-2xl font-semibold tabular-nums text-white">{card.stat}</p>
-                <p class="mt-1 text-sm font-medium text-zinc-200">{card.title}</p>
-                <p class="mt-2 text-xs leading-relaxed text-zinc-500">{card.caption}</p>
+                <p class="insight-stat text-2xl font-semibold tabular-nums">{card.stat}</p>
+                <p class="insight-title mt-1 text-sm font-medium">{card.title}</p>
+                <p class="insight-caption mt-2 text-xs leading-relaxed">{card.caption}</p>
               </div>
             {/each}
           </div>
         {/if}
 
         {#if rankStrengthBoostApplied}
-          <p class="text-center text-xs text-[var(--accent-secondary)] opacity-80">Signal-strength rank boost is enabled.</p>
+          <p class="accent-secondary text-center text-xs opacity-80">Signal-strength rank boost is enabled.</p>
         {/if}
 
         {#if users.length > 0}
@@ -792,10 +792,10 @@
           >
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent-tertiary)]">
+                <p class="intel-label text-[11px] font-semibold uppercase tracking-wider">
                   Audience intelligence
                 </p>
-                <p class="mt-2 max-w-xl text-sm text-zinc-400">
+                <p class="text-secondary mt-2 max-w-xl text-sm">
                   Monetization read on this pull — goals, friction, converting content, paid wedge. Uses selected rows
                   if any, otherwise the top 24 matches.
                 </p>
@@ -803,7 +803,7 @@
               <button
                 type="button"
                 disabled={audienceIntelLoading}
-                class="generate-intel-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-opacity disabled:opacity-50"
+                class="generate-intel-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-lg transition-opacity disabled:opacity-50"
                 on:click={() => runAudienceIntelligence()}
               >
                 {audienceIntelLoading ? 'Generating…' : 'Generate'}
@@ -813,25 +813,25 @@
               <p class="mt-3 text-sm text-red-400/90">{audienceIntelErr}</p>
             {/if}
             {#if audienceIntelMembersUsed != null && audienceIntel}
-              <p class="mt-2 text-xs text-zinc-500">Based on {audienceIntelMembersUsed} profiles.</p>
+              <p class="text-muted mt-2 text-xs">Based on {audienceIntelMembersUsed} profiles.</p>
             {/if}
             {#if audienceIntel}
               <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                <div class="rounded-xl border border-white/[0.06] bg-black/20 p-4">
-                  <p class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Trying to achieve</p>
-                  <p class="mt-2 text-sm leading-relaxed text-zinc-200">{audienceIntel.trying_to_achieve}</p>
+                <div class="intel-card rounded-xl p-4">
+                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Trying to achieve</p>
+                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.trying_to_achieve}</p>
                 </div>
-                <div class="rounded-xl border border-white/[0.06] bg-black/20 p-4">
-                  <p class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Struggling with</p>
-                  <p class="mt-2 text-sm leading-relaxed text-zinc-200">{audienceIntel.struggling_with}</p>
+                <div class="intel-card rounded-xl p-4">
+                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Struggling with</p>
+                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.struggling_with}</p>
                 </div>
-                <div class="rounded-xl border border-white/[0.06] bg-black/20 p-4">
-                  <p class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Content that converts</p>
-                  <p class="mt-2 text-sm leading-relaxed text-zinc-200">{audienceIntel.content_that_converts}</p>
+                <div class="intel-card rounded-xl p-4">
+                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Content that converts</p>
+                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.content_that_converts}</p>
                 </div>
-                <div class="rounded-xl border border-white/[0.06] bg-black/20 p-4">
-                  <p class="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Will pay for</p>
-                  <p class="mt-2 text-sm leading-relaxed text-zinc-200">{audienceIntel.will_pay_for}</p>
+                <div class="intel-card rounded-xl p-4">
+                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Will pay for</p>
+                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.will_pay_for}</p>
                 </div>
               </div>
             {/if}
@@ -841,18 +841,18 @@
         <!-- Member deck (cards, not table) -->
         <div>
           <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p class="text-sm text-zinc-500">
-              <span class="text-white">{selected.size}</span> selected · tap cards to curate
+            <p class="text-muted text-sm">
+              <span class="text-primary">{selected.size}</span> selected · tap cards to curate
             </p>
             <div class="flex flex-wrap gap-2">
               <button
                 type="button"
-                class="rounded-lg border border-white/10 px-3 py-1 text-xs text-zinc-400 hover:text-white"
+                class="toolbar-btn rounded-lg px-3 py-1 text-xs"
                 on:click={() => selectTop(10)}>Top 10</button
               >
               <button
                 type="button"
-                class="rounded-lg border border-white/10 px-3 py-1 text-xs text-zinc-400 hover:text-white"
+                class="toolbar-btn rounded-lg px-3 py-1 text-xs"
                 on:click={() => selectTop(25)}>Top 25</button
               >
             </div>
@@ -863,11 +863,11 @@
           <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {#each users as u}
               <div
-                class="flex flex-col overflow-hidden rounded-2xl border transition-all duration-300 {selected.has(
+                class="member-card flex flex-col overflow-hidden rounded-2xl border transition-all duration-300 {selected.has(
                   u.user_google_sub,
                 )
-                  ? 'border-[rgba(77,124,255,0.5)] bg-[rgba(77,124,255,0.1)] shadow-[0_0_24px_rgba(77,124,255,0.15)]'
-                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]'}"
+                  ? 'member-card-selected'
+                  : 'member-card-default'}"
               >
                 <button
                   type="button"
@@ -877,14 +877,14 @@
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-3">
                       <div
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                        class="member-avatar flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                         style:background={tileGradient(u.user_google_sub)}
                       >
                         {initials(u.name)}
                       </div>
                       <div class="min-w-0">
-                        <p class="truncate font-medium text-white">{u.name}</p>
-                        <p class="truncate text-xs text-zinc-500">{u.city || '—'}</p>
+                        <p class="text-primary truncate font-medium">{u.name}</p>
+                        <p class="text-muted truncate text-xs">{u.city || '—'}</p>
                       </div>
                     </div>
                     <span
@@ -899,10 +899,10 @@
                     </span>
                   </div>
                   <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="tabular-nums text-[var(--accent-secondary)] opacity-90">Match {u.match_score}</span>
-                    <span class="max-w-[65%] truncate text-zinc-500">{u.preview_tags.join(' · ')}</span>
+                    <span class="accent-secondary tabular-nums opacity-90">Match {u.match_score}</span>
+                    <span class="text-muted max-w-[65%] truncate">{u.preview_tags.join(' · ')}</span>
                   </div>
-                  <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-zinc-500">{u.match_reason}</p>
+                  <p class="text-muted mt-2 line-clamp-2 text-xs leading-relaxed">{u.match_reason}</p>
                   {#if u.rates?.available}
                     <div class="brand-user-rates">
                       {#if u.rates.ig_post_rate_inr}<span>📸 ₹{u.rates.ig_post_rate_inr}</span>{/if}
@@ -911,28 +911,28 @@
                     </div>
                   {/if}
                 </button>
-                <div class="border-t border-white/[0.06] bg-black/20 px-4 py-3">
+                <div class="member-card-footer px-4 py-3">
                   <button
                     type="button"
                     disabled={memberBriefLoading === u.user_google_sub}
-                    class="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--accent-tertiary)] opacity-90 transition-colors hover:opacity-100 disabled:opacity-50"
+                    class="accent-tertiary inline-flex items-center gap-1.5 text-xs font-medium opacity-90 transition-colors hover:opacity-100 disabled:opacity-50"
                     on:click={() => loadMemberBrief(u)}
                   >
                     <Note size={14} />
                     {memberBriefLoading === u.user_google_sub ? 'Brief…' : 'Member brief'}
                   </button>
                   {#if memberBriefBySub[u.user_google_sub]}
-                    <div class="mt-3 space-y-2 text-xs leading-relaxed text-zinc-300">
+                    <div class="brief-body mt-3 space-y-2 text-xs leading-relaxed">
                       <p>
-                        <span class="font-semibold text-zinc-500">Now · </span>
+                        <span class="brief-label font-semibold">Now · </span>
                         {memberBriefBySub[u.user_google_sub].happening_now}
                       </p>
                       <p>
-                        <span class="font-semibold text-zinc-500">Next · </span>
+                        <span class="brief-label font-semibold">Next · </span>
                         {memberBriefBySub[u.user_google_sub].do_next}
                       </p>
                       <p>
-                        <span class="font-semibold text-zinc-500">Missing · </span>
+                        <span class="brief-label font-semibold">Missing · </span>
                         {memberBriefBySub[u.user_google_sub].missing}
                       </p>
                     </div>
@@ -954,16 +954,16 @@
       on:click={() => (campaignPanelOpen = false)}
     ></div>
     <aside
-      class="fixed inset-y-0 right-0 z-[90] flex w-full max-w-md flex-col border-l border-white/[0.08] bg-[#111113] shadow-[-16px_0_64px_rgba(0,0,0,0.5)]"
+      class="campaign-aside fixed inset-y-0 right-0 z-[90] flex w-full max-w-md flex-col"
       aria-label="Campaign launch"
     >
       <div
-        class="flex items-center justify-between border-b border-white/[0.06] px-5 py-4"
+        class="campaign-header flex items-center justify-between px-5 py-4"
       >
-        <h3 class="text-sm font-semibold tracking-wide text-white">Launch campaign</h3>
+        <h3 class="text-primary text-sm font-semibold tracking-wide">Launch campaign</h3>
         <button
           type="button"
-          class="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-white/5 hover:text-white"
+          class="campaign-close-btn rounded-lg p-1.5 transition-colors"
           on:click={() => (campaignPanelOpen = false)}
           aria-label="Close"
         >
@@ -971,29 +971,29 @@
         </button>
       </div>
       <div class="flex-1 overflow-y-auto px-5 py-5">
-        <p class="block text-xs font-medium uppercase tracking-wider text-zinc-500">Channels</p>
+        <p class="section-label block text-xs font-medium uppercase tracking-wider">Channels</p>
         <div class="mt-3 space-y-3">
           <label
-            class="flex cursor-pointer items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/10"
+            class="campaign-option flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-colors"
           >
-            <span class="text-sm text-zinc-200">In-app</span>
+            <span class="text-primary text-sm">In-app</span>
             <input type="checkbox" bind:checked={channelInApp} class="accent-[var(--accent-secondary)]" />
           </label>
           <label
-            class="flex cursor-pointer items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/10"
+            class="campaign-option flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-colors"
           >
-            <span class="text-sm text-zinc-200">Email</span>
+            <span class="text-primary text-sm">Email</span>
             <input type="checkbox" bind:checked={channelEmail} class="accent-[var(--accent-secondary)]" />
           </label>
           <div
-            class="flex cursor-not-allowed items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 opacity-50"
+            class="campaign-option campaign-option-disabled flex cursor-not-allowed items-center justify-between rounded-xl px-4 py-3 opacity-50"
           >
-            <span class="text-sm text-zinc-500">WhatsApp</span>
-            <span class="text-[10px] font-medium uppercase tracking-wide text-zinc-600">Soon</span>
+            <span class="text-muted text-sm">WhatsApp</span>
+            <span class="text-muted text-[10px] font-medium uppercase tracking-wide">Soon</span>
           </div>
         </div>
 
-        <p class="mt-8 block text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <p class="section-label mt-8 block text-xs font-medium uppercase tracking-wider">
           Reward · ₹ per person
         </p>
         <div class="mt-3">
@@ -1005,38 +1005,38 @@
             bind:value={rewardInr}
             class="slider-aud h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-800"
           />
-          <div class="mt-1 flex justify-between text-xs text-zinc-500">
+          <div class="text-muted mt-1 flex justify-between text-xs">
             <span>₹10</span>
-            <span class="font-medium text-white">₹{rewardInr}</span>
+            <span class="text-primary font-medium">₹{rewardInr}</span>
             <span>₹500</span>
           </div>
         </div>
 
         <label
-          class="mt-8 block text-xs font-medium uppercase tracking-wider text-zinc-500"
+          class="section-label mt-8 block text-xs font-medium uppercase tracking-wider"
           for="panel-brand-name">Brand</label
         >
         <input
           id="panel-brand-name"
-          class="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-[rgba(77,124,255,0.4)]"
+          class="campaign-input mt-2 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
           bind:value={brandName}
         />
 
         <label
-          class="mt-6 block text-xs font-medium uppercase tracking-wider text-zinc-500"
+          class="section-label mt-6 block text-xs font-medium uppercase tracking-wider"
           for="panel-campaign-title">Campaign title</label
         >
         <input
           id="panel-campaign-title"
-          class="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-[rgba(77,124,255,0.4)]"
+          class="campaign-input mt-2 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
           bind:value={campaignTitle}
           placeholder="Drop name"
         />
 
-        <p class="mt-6 block text-xs font-medium uppercase tracking-wider text-zinc-500">Creative</p>
+        <p class="section-label mt-6 block text-xs font-medium uppercase tracking-wider">Creative</p>
         <div
-          class="mt-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center transition-colors {dropActive
-            ? 'border-[rgba(77,124,255,0.5)] bg-[rgba(77,124,255,0.1)]'
+          class="creative-drop mt-2 rounded-xl px-4 py-8 text-center transition-colors {dropActive
+            ? 'creative-drop-active'
             : ''}"
           role="button"
           tabindex="0"
@@ -1047,9 +1047,9 @@
           on:dragover={(e) => e.preventDefault()}
           on:drop={onCreativeDrop}
         >
-          <p class="text-xs text-zinc-500">Drop copy (.txt) or write below</p>
+          <p class="text-muted text-xs">Drop copy (.txt) or write below</p>
           {#if creativeDropHint}
-            <p class="mt-1 text-[11px] text-[var(--accent-secondary)] opacity-80">{creativeDropHint}</p>
+            <p class="accent-secondary mt-1 text-[11px] opacity-80">{creativeDropHint}</p>
           {/if}
           <input
             id="creative-file"
@@ -1060,7 +1060,7 @@
           />
         </div>
         <textarea
-          class="mt-3 min-h-[100px] w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-[rgba(77,124,255,0.4)]"
+          class="campaign-input mt-3 min-h-[100px] w-full rounded-xl px-3 py-2.5 text-sm outline-none"
           bind:value={creativeText}
           placeholder="Your line, offer, or story…"
         ></textarea>
@@ -1073,14 +1073,14 @@
         {/if}
 
         {#if campaignMsg}
-          <p class="mt-4 text-sm text-zinc-400">{campaignMsg}</p>
+          <p class="text-secondary mt-4 text-sm">{campaignMsg}</p>
         {/if}
       </div>
-      <div class="border-t border-white/[0.06] p-5">
+      <div class="campaign-footer p-5">
         <button
           type="button"
           disabled={!data.brandSessionValid}
-          class="launch-btn w-full rounded-xl py-3.5 text-sm font-semibold text-white transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+          class="launch-btn w-full rounded-xl py-3.5 text-sm font-semibold transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
           on:click={() => createCampaign()}
         >
           Launch campaign · {selected.size} people
@@ -1168,6 +1168,215 @@
     font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary);
   }
 
+  /* === Token-based utility classes === */
+  .text-primary { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-muted { color: var(--text-muted); }
+  .section-label { color: var(--text-muted); }
+  .accent-secondary { color: var(--accent-secondary); }
+  .accent-tertiary { color: var(--accent-tertiary); }
+
+  /* === Hero section === */
+  .hero-label { color: var(--text-muted); }
+  .hero-title { color: var(--text-primary); }
+  .hero-title-accent { color: var(--text-secondary); }
+  .hero-footer { color: var(--text-muted); }
+  .hero-sign-out {
+    color: var(--text-muted);
+  }
+  .hero-sign-out:hover { color: var(--text-primary); }
+  .hero-sign-in {
+    color: var(--text-muted);
+  }
+  .hero-sign-in:hover { color: var(--accent-secondary); }
+
+  .studio-textarea-hero {
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 24px 80px -24px rgba(0,0,0,0.6);
+  }
+  .studio-textarea-hero::placeholder { color: var(--text-muted); }
+
+  .preset-chip {
+    border: 1px solid var(--glass-medium);
+    background: var(--glass-light);
+    color: var(--text-secondary);
+  }
+
+  .discover-btn {
+    background: white;
+    color: var(--bg-primary);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .discover-btn:hover {
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  }
+
+  /* === Docked prompt / Results toolbar === */
+  .docked-prompt {
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(11, 11, 13, 0.85);
+  }
+  @supports (backdrop-filter: blur(1px)) {
+    .docked-prompt { background: rgba(11, 11, 13, 0.70); }
+  }
+
+  .studio-textarea-dock {
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+
+  .rerun-btn {
+    background: white;
+    color: var(--bg-primary);
+  }
+
+  .new-scene-btn {
+    border: 1px solid var(--border-strong);
+    color: var(--text-muted);
+  }
+  .new-scene-btn:hover {
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+  }
+
+  /* === Results header === */
+  .results-heading { color: var(--text-primary); }
+  .results-heading-muted { color: var(--text-muted); }
+
+  .toolbar-btn {
+    border: 1px solid var(--border-strong);
+    color: var(--text-secondary);
+  }
+  .toolbar-btn:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+  }
+
+  /* === Overview panel === */
+  .overview-panel {
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
+    box-shadow: 0 0 60px rgba(0,0,0,0.35);
+  }
+  .overview-panel:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .overview-row {
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .overview-row-last { border-bottom: none; }
+  .overview-value { color: var(--text-primary); }
+
+  .interest-tag {
+    border: 1px solid var(--border-strong);
+    background: var(--glass-light);
+    color: var(--text-primary);
+  }
+  .behavior-tag {
+    border: 1px solid rgba(77, 124, 255, 0.2);
+    background: rgba(77, 124, 255, 0.1);
+    color: #8BABFF;
+  }
+
+  /* === Mosaic === */
+  .mosaic-tile {
+    border: 1px solid var(--border-subtle);
+  }
+  .mosaic-initials {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* === Insight cards === */
+  .insight-card {
+    border: 1px solid var(--border-subtle);
+    background: linear-gradient(to bottom right, var(--glass-light), transparent);
+  }
+  .insight-stat { color: var(--text-primary); }
+  .insight-title { color: var(--text-primary); }
+  .insight-caption { color: var(--text-muted); }
+
+  /* === Intel cards === */
+  .intel-label { color: var(--accent-tertiary); }
+  .intel-card {
+    border: 1px solid var(--border-subtle);
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .intel-card-label { color: var(--text-muted); }
+  .intel-card-body { color: var(--text-primary); }
+
+  /* === Member cards === */
+  .member-card-selected {
+    border-color: rgba(77, 124, 255, 0.5);
+    background: rgba(77, 124, 255, 0.1);
+    box-shadow: 0 0 24px rgba(77, 124, 255, 0.15);
+  }
+  .member-card-default {
+    border-color: var(--border-subtle);
+    background: var(--glass-light);
+  }
+  .member-card-default:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--glass-medium);
+  }
+  .member-avatar { color: var(--text-primary); }
+  .member-card-footer {
+    border-top: 1px solid var(--border-subtle);
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .brief-body { color: var(--text-primary); }
+  .brief-label { color: var(--text-muted); }
+
+  /* === Campaign slide-over === */
+  .campaign-aside {
+    border-left: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+    box-shadow: -16px 0 64px rgba(0,0,0,0.5);
+  }
+  .campaign-header {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .campaign-close-btn {
+    color: var(--text-muted);
+  }
+  .campaign-close-btn:hover {
+    background: var(--glass-light);
+    color: var(--text-primary);
+  }
+  .campaign-option {
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
+  }
+  .campaign-option:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  .campaign-option-disabled {
+    border-color: rgba(255, 255, 255, 0.04);
+  }
+  .campaign-input {
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  .campaign-input:focus {
+    border-color: rgba(77, 124, 255, 0.4);
+  }
+  .creative-drop {
+    border: 1px dashed var(--border-strong);
+    background: var(--glass-light);
+  }
+  .creative-drop-active {
+    border-color: rgba(77, 124, 255, 0.5);
+    background: rgba(77, 124, 255, 0.1);
+  }
+  .campaign-footer {
+    border-top: 1px solid var(--border-subtle);
+  }
+
   /* Textarea focus states */
   .studio-textarea:focus {
     border-color: rgba(77, 124, 255, 0.4);
@@ -1184,6 +1393,7 @@
   /* Launch campaign buttons */
   .launch-btn {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+    color: var(--text-primary);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   }
   .launch-btn:hover {
@@ -1209,6 +1419,7 @@
   /* Generate intelligence button */
   .generate-intel-btn {
     background: var(--accent-secondary);
+    color: var(--text-primary);
     box-shadow: 0 4px 14px rgba(77, 124, 255, 0.3);
   }
   .generate-intel-btn:hover {
