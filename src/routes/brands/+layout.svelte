@@ -10,7 +10,7 @@
   let mobileMenuOpen = false;
 </script>
 
-<div class="brands-shell">
+<div class="brands-shell" data-app-chrome="dark">
   <header class="brands-header">
     <div class="header-inner">
       <a href="/brands" class="wordmark">
