@@ -70,7 +70,7 @@
 
   let selected = new Set<string>();
 
-  let portalTab: 'search' | 'agent' = 'agent';
+  let showManualSearch = false;
 
   let rewardInr = 50;
   let campaignTitle = '';
@@ -521,29 +521,19 @@
   }
 </script>
 
-<div class="brand-studio relative min-h-[calc(100vh-56px)]">
+<div class="brand-studio">
+  {#if showManualSearch}
+    <div class="manual-search-header">
+      <button class="back-to-chat" on:click={() => showManualSearch = false}>
+        Back to AI matching
+      </button>
+    </div>
+
   <!-- Ambient -->
   <div
     class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-30%,rgba(77,124,255,0.10),transparent)]"
     aria-hidden="true"
   ></div>
-
-  <div class="mx-auto max-w-2xl px-4 pt-4">
-    <div class="portal-tabs">
-      <button class="portal-tab" class:active={portalTab === 'agent'} on:click={() => portalTab = 'agent'}>
-        AI Match Agent
-      </button>
-      <button class="portal-tab" class:active={portalTab === 'search'} on:click={() => portalTab = 'search'}>
-        Quick Search
-      </button>
-    </div>
-  </div>
-
-  {#if portalTab === 'agent'}
-    <div class="portal-agent-wrap">
-      <MatchAgentChat />
-    </div>
-  {:else}
 
   {#if !inResultsMode}
     <!-- Hero -->
@@ -948,7 +938,7 @@
     </div>
   {/if}
 
-  <!-- Campaign slide-over -->
+  <!-- Campaign slide-over (manual search mode only) -->
   {#if campaignPanelOpen}
     <div
       class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm transition-opacity duration-300"
@@ -1091,6 +1081,15 @@
     </aside>
   {/if}
 
+  {:else}
+    <div class="agent-full">
+      <MatchAgentChat />
+    </div>
+    <div class="manual-link">
+      <button class="switch-link" on:click={() => showManualSearch = true}>
+        Switch to manual search
+      </button>
+    </div>
   {/if}
 </div>
 
@@ -1110,7 +1109,51 @@
     --border-strong: rgba(255, 255, 255, 0.14);
     --glass-light: rgba(255, 255, 255, 0.055);
     --glass-medium: rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px);
   }
+
+  .agent-full {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .manual-link {
+    text-align: center;
+    padding: 8px 0 16px;
+  }
+
+  .switch-link {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 4px 8px;
+    transition: color 0.2s;
+  }
+  .switch-link:hover { color: var(--text-secondary); }
+
+  .manual-search-header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .back-to-chat {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 4px 0;
+    transition: color 0.2s;
+  }
+  .back-to-chat:hover { color: var(--text-primary); }
 
   .brand-user-rates {
     display: flex; gap: 8px; margin-top: 6px;
@@ -1188,26 +1231,4 @@
     cursor: pointer;
   }
 
-  /* Portal tabs */
-  .portal-tabs {
-    display: flex; gap: 4px;
-    background: var(--glass-light); border-radius: 12px; padding: 4px;
-    border: 1px solid var(--border-subtle);
-  }
-  .portal-tab {
-    flex: 1; padding: 10px 16px; border-radius: 10px; border: none;
-    background: transparent; color: var(--text-muted);
-    font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
-    transition: all 0.15s;
-  }
-  .portal-tab.active {
-    background: var(--glass-medium); color: var(--text-primary);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  }
-
-  /* Agent wrap — uses header height (56px) + tabs container (~72px) */
-  .portal-agent-wrap {
-    height: calc(100vh - 56px - 72px);
-    min-height: 500px;
-  }
 </style>
