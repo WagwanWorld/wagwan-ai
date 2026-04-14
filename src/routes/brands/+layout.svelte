@@ -11,28 +11,38 @@
 </script>
 
 <div class="brands-shell" data-app-chrome="dark">
-  <!-- Ambient mesh (subtle, like the user app but quieter) -->
+  <!-- Ambient mesh -->
   <div class="brands-mesh" aria-hidden="true">
-    <div class="brands-orb brands-orb--blue"></div>
     <div class="brands-orb brands-orb--red"></div>
+    <div class="brands-orb brands-orb--blue"></div>
     <div class="brands-orb brands-orb--gold"></div>
   </div>
+
   <header class="brands-header">
     <div class="header-inner">
+      <!-- Branded wordmark -->
       <a href="/brands" class="wordmark">
-        wagwan<span class="dot" aria-hidden="true">.</span>
+        <span class="wordmark-box">W</span>
+        <span class="wordmark-text">wagwan</span>
       </a>
 
-      <nav class="nav-links desktop-only">
+      <!-- Center nav -->
+      <nav class="nav-center desktop-only">
+        <a href="/brands" class="nav-link" class:active={$page.url.pathname === '/brands'}>Home</a>
         <a href="/brands/portal" class="nav-link" class:active={onPortal}>Audience</a>
       </nav>
 
+      <!-- Right actions -->
       <div class="header-actions">
-        <a href="/" class="creator-link">For creators</a>
+        <a href="/" class="nav-pill desktop-only">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="2" fill="var(--accent-primary)"/><circle cx="6" cy="6" r="5" stroke="var(--accent-primary)" stroke-width="0.8" opacity="0.4"/></svg>
+          <span>Web App</span>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
         {#if isAuthenticated}
           <a href="/brands/login" class="auth-btn">Sign out</a>
         {:else if !onLogin}
-          <a href="/brands/login?next=/brands/portal" class="auth-btn">Sign in</a>
+          <a href="/brands/login?next=/brands/portal" class="auth-btn auth-btn--primary">Sign in</a>
         {/if}
         <button
           class="mobile-toggle desktop-hidden"
@@ -52,7 +62,9 @@
 
     {#if mobileMenuOpen}
       <nav class="mobile-nav desktop-hidden">
+        <a href="/brands" class="nav-link" class:active={$page.url.pathname === '/brands'} on:click={() => (mobileMenuOpen = false)}>Home</a>
         <a href="/brands/portal" class="nav-link" class:active={onPortal} on:click={() => (mobileMenuOpen = false)}>Audience</a>
+        <a href="/" class="nav-link" on:click={() => (mobileMenuOpen = false)}>Web App</a>
       </nav>
     {/if}
   </header>
@@ -67,20 +79,22 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: var(--bg-primary, oklch(8% 0.008 260));
-    color: var(--text-primary, #e8ecf3);
-    font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overflow: hidden;
   }
 
+  /* ── Header ── */
   .brands-header {
     position: sticky;
     top: 0;
     z-index: 50;
-    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    background: color-mix(in srgb, var(--bg-primary, oklch(8% 0.008 260)) 80%, transparent);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--bg-primary) 85%, transparent);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
   }
 
   .header-inner {
@@ -90,87 +104,132 @@
     align-items: center;
     justify-content: space-between;
     gap: 1.5rem;
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 1.25rem;
   }
 
+  /* ── Wordmark ── */
   .wordmark {
-    font-size: 0.875rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    color: var(--text-secondary, #9aa3b2);
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-
-  .wordmark:hover {
-    color: var(--text-primary, #e8ecf3);
-  }
-
-  .dot {
-    color: var(--accent-primary, #FF4D4D);
-  }
-
-  .nav-links {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 8px;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .wordmark:hover { opacity: 0.85; }
+
+  .wordmark-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--accent-primary);
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .wordmark-text {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-primary);
+  }
+
+  /* ── Center nav ── */
+  .nav-center {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 4px;
+    border-radius: 10px;
+    background: var(--glass-light);
+    border: 1px solid var(--border-subtle);
   }
 
   .nav-link {
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 500;
-    letter-spacing: 0.04em;
-    color: var(--text-muted, #6d7684);
+    color: var(--text-muted);
     text-decoration: none;
-    transition: color 0.2s;
+    padding: 6px 14px;
+    border-radius: 8px;
+    transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  .nav-link:hover,
+  .nav-link:hover {
+    color: var(--text-secondary);
+    background: var(--glass-light);
+  }
+
   .nav-link.active {
-    color: var(--text-primary, #e8ecf3);
+    color: var(--text-primary);
+    background: var(--glass-medium);
+    font-weight: 600;
   }
 
+  /* ── Right actions ── */
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 8px;
   }
 
-  .creator-link {
+  .nav-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.75rem;
-    color: var(--text-muted, #6d7684);
+    font-weight: 500;
+    color: var(--text-secondary);
     text-decoration: none;
-    transition: color 0.2s;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-subtle);
+    transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
-
-  .creator-link:hover {
-    color: var(--text-secondary, #9aa3b2);
+  .nav-pill:hover {
+    color: var(--text-primary);
+    border-color: rgba(255, 77, 77, 0.25);
+    background: rgba(255, 77, 77, 0.04);
   }
 
   .auth-btn {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--text-secondary, #9aa3b2);
+    color: var(--text-secondary);
     text-decoration: none;
-    padding: 0.375rem 0.875rem;
+    padding: 6px 14px;
     border-radius: 9999px;
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    background: var(--glass-light, rgba(255, 255, 255, 0.055));
-    transition: all 0.2s;
+    border: 1px solid var(--border-subtle);
+    transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
-
   .auth-btn:hover {
-    color: var(--text-primary, #e8ecf3);
-    border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
-    background: var(--glass-medium, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary);
+    border-color: var(--border-strong);
   }
 
+  .auth-btn--primary {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+    font-weight: 600;
+  }
+  .auth-btn--primary:hover {
+    color: white;
+    opacity: 0.9;
+    border-color: var(--accent-primary);
+  }
+
+  /* ── Mobile ── */
   .mobile-toggle {
     background: none;
     border: none;
-    color: var(--text-secondary, #9aa3b2);
+    color: var(--text-secondary);
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -179,32 +238,24 @@
   .mobile-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.5rem 1rem 0.75rem;
-    border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    gap: 2px;
+    padding: 8px 16px 12px;
+    border-top: 1px solid var(--border-subtle);
   }
-
   .mobile-nav .nav-link {
-    padding: 0.5rem 0;
+    padding: 10px 8px;
+    border-radius: 8px;
   }
 
-  .desktop-only {
-    display: none;
-  }
-
-  .desktop-hidden {
-    display: flex;
-  }
+  .desktop-only { display: none; }
+  .desktop-hidden { display: flex; }
 
   @media (min-width: 640px) {
-    .desktop-only {
-      display: flex;
-    }
-    .desktop-hidden {
-      display: none !important;
-    }
+    .desktop-only { display: flex; }
+    .desktop-hidden { display: none !important; }
   }
 
+  /* ── Main ── */
   .brands-main {
     flex: 1;
     overflow-y: auto;
@@ -228,52 +279,52 @@
     will-change: transform;
   }
 
-  .brands-orb--blue {
-    width: 60vw;
-    height: 60vw;
-    max-width: 600px;
-    max-height: 600px;
-    top: -15%;
-    right: -10%;
-    background: radial-gradient(ellipse at center, rgba(77, 124, 255, 0.06), transparent 70%);
+  .brands-orb--red {
+    width: 70vw;
+    height: 70vw;
+    max-width: 700px;
+    max-height: 700px;
+    top: -25%;
+    left: -15%;
+    background: radial-gradient(ellipse at center, rgba(255, 77, 77, 0.07), transparent 65%);
     filter: blur(60px);
-    animation: orb-drift-1 24s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+    animation: orb-drift-1 22s cubic-bezier(0.32, 0.72, 0, 1) infinite;
   }
 
-  .brands-orb--red {
+  .brands-orb--blue {
+    width: 55vw;
+    height: 55vw;
+    max-width: 550px;
+    max-height: 550px;
+    top: 10%;
+    right: -10%;
+    background: radial-gradient(ellipse at center, rgba(77, 124, 255, 0.06), transparent 65%);
+    filter: blur(60px);
+    animation: orb-drift-2 26s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+
+  .brands-orb--gold {
     width: 50vw;
     height: 50vw;
     max-width: 500px;
     max-height: 500px;
-    bottom: 10%;
-    left: -10%;
-    background: radial-gradient(ellipse at center, rgba(255, 77, 77, 0.04), transparent 70%);
+    bottom: -10%;
+    right: 20%;
+    background: radial-gradient(ellipse at center, rgba(255, 184, 77, 0.04), transparent 65%);
     filter: blur(60px);
-    animation: orb-drift-2 20s cubic-bezier(0.32, 0.72, 0, 1) infinite;
-  }
-
-  .brands-orb--gold {
-    width: 45vw;
-    height: 45vw;
-    max-width: 450px;
-    max-height: 450px;
-    top: 40%;
-    left: 30%;
-    background: radial-gradient(ellipse at center, rgba(255, 184, 77, 0.03), transparent 70%);
-    filter: blur(60px);
-    animation: orb-drift-3 28s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+    animation: orb-drift-3 30s cubic-bezier(0.32, 0.72, 0, 1) infinite;
   }
 
   @keyframes orb-drift-1 {
     0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-3vw, 4vh); }
+    50% { transform: translate(4vw, 3vh); }
   }
   @keyframes orb-drift-2 {
     0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(4vw, -3vh); }
+    50% { transform: translate(-3vw, 4vh); }
   }
   @keyframes orb-drift-3 {
     0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-2vw, -2vh); }
+    50% { transform: translate(-2vw, -3vh); }
   }
 </style>
