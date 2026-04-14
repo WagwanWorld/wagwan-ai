@@ -23,6 +23,7 @@
   import { buildProfileTwinKnows } from '$lib/utils/googleInsightMapper';
   import { twinUiContext } from '$lib/stores/contextStore';
   import { prefetchArtistArtwork } from '$lib/client/itunesArtwork';
+  import IntegrityScore from '$lib/components/earn/IntegrityScore.svelte';
 
   // iTunes artwork cache (keyed by artist name) — shared module handles network + dedupe
   let itunesArtwork: Record<string, string> = {};
@@ -458,6 +459,24 @@
         {/each}
       </div>
     {/if}
+
+    {#if graphStrength}
+      <div style="margin-top: 16px;">
+        <IntegrityScore
+          score={graphStrength.score}
+          label={graphStrength.label}
+          breakdown={[
+            { name: 'Google', connected: $profile.googleConnected },
+            { name: 'Instagram', connected: $profile.instagramConnected },
+            { name: 'Spotify', connected: $profile.spotifyConnected },
+            { name: 'Apple Music', connected: $profile.appleMusicConnected },
+            { name: 'LinkedIn', connected: $profile.linkedinConnected },
+          ]}
+        />
+      </div>
+    {/if}
+
+    <a href="/earn" class="pf-creator-link">Creator Settings & Rates →</a>
   </div>
 
   {#if graphStrengthLoading && !graphStrength}
@@ -1547,6 +1566,17 @@
     margin-top: 4px;
     font-style: italic;
   }
+
+  .pf-creator-link {
+    display: block;
+    margin-top: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-primary);
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .pf-creator-link:hover { opacity: 0.8; }
 
   .pf-nav-spacer {
     height: calc(100px + env(safe-area-inset-bottom, 0px));
