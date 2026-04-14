@@ -34,11 +34,24 @@
   }
 
   onMount(() => {
-    const initialContext = enrichedContext
-      ? `[Brand context from their website and Instagram:\n${enrichedContext}]\n\nBrand description: ${brandContext.description}`
-      : brandContext.description;
-    const primer = `Brand: ${brandContext.brandName || 'unnamed'}. We sell: ${initialContext}.${brandContext.website ? ` Website: ${brandContext.website}.` : ''}${brandContext.instagram ? ` Instagram: @${brandContext.instagram}.` : ''}`;
-    sendMessage(primer);
+    const parts: string[] = [];
+
+    parts.push(`Brand name: ${brandContext.brandName || 'Not provided'}`);
+    parts.push(`What they sell: ${brandContext.description}`);
+
+    if (brandContext.website) parts.push(`Website: ${brandContext.website}`);
+    if (brandContext.instagram) parts.push(`Instagram: @${brandContext.instagram}`);
+
+    if (enrichedContext) {
+      parts.push('');
+      parts.push('[Additional context we gathered from their website and Instagram]:');
+      parts.push(enrichedContext);
+    }
+
+    parts.push('');
+    parts.push('Use the context above to personalize your first message. Reference specific things you know about them. Then ask your first question with preset choices. Remember: be warm, brief, and informed. Do NOT re-ask what you already know.');
+
+    sendMessage(parts.join('\n'));
   });
 
   async function sendMessage(text: string) {
