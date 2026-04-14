@@ -9,6 +9,11 @@
   import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
   import ArrowSquareOut from 'phosphor-svelte/lib/ArrowSquareOut';
   import Broadcast from 'phosphor-svelte/lib/Broadcast';
+  import IntegrityScore from '$lib/components/earn/IntegrityScore.svelte';
+  import RateCard from '$lib/components/earn/RateCard.svelte';
+  import OfferCard from '$lib/components/earn/OfferCard.svelte';
+  import VisibilityControls from '$lib/components/earn/VisibilityControls.svelte';
+  import PortraitPreview from '$lib/components/earn/PortraitPreview.svelte';
 
   let loading = true;
   let err = '';
@@ -59,6 +64,26 @@
   } | null = null;
   let refreshingGraph = false;
   let graphRefreshMsg = '';
+
+  let creatorRates: {
+    ig_post_rate_inr: number;
+    ig_story_rate_inr: number;
+    ig_reel_rate_inr: number;
+    whatsapp_intro_rate_inr: number;
+    available: boolean;
+  } = { ig_post_rate_inr: 0, ig_story_rate_inr: 0, ig_reel_rate_inr: 0, whatsapp_intro_rate_inr: 0, available: false };
+
+  let visibility = {
+    music_visible: true,
+    instagram_visible: true,
+    career_visible: true,
+    lifestyle_visible: true,
+    calendar_visible: false,
+    email_visible: false,
+  };
+
+  let showPortraitPreview = false;
+  let whatsappLink = '';
 
   $: sub = $profile.googleSub;
 
@@ -118,6 +143,14 @@
       } else {
         graphStrength = null;
       }
+      const [ratesRes, visRes] = await Promise.all([
+        fetch(`/api/creator/rates?sub=${encodeURIComponent(sub)}`),
+        fetch(`/api/creator/visibility?sub=${encodeURIComponent(sub)}`),
+      ]);
+      const ratesJson = await ratesRes.json();
+      const visJson = await visRes.json();
+      if (ratesJson.rates) creatorRates = ratesJson.rates;
+      if (visJson.visibility) visibility = visJson.visibility;
     } catch (e) {
       err = e instanceof Error ? e.message : 'Load failed';
     } finally {
@@ -243,6 +276,54 @@
     }
   }
 
+  async function saveRates(e: CustomEvent) {
+    const rates = e.detail;
+    creatorRates = { ...creatorRates, ...rates };
+    await fetch('/api/creator/rates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sub, rates }),
+    }).catch(() => {});
+  }
+
+  async function saveVisibility(e: CustomEvent) {
+    const vis = e.detail;
+    visibility = { ...visibility, ...vis };
+    await fetch('/api/creator/visibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sub, visibility: vis }),
+    }).catch(() => {});
+  }
+
+  async function acceptOffer(e: CustomEvent) {
+    const { campaignId } = e.detail;
+    const phone = localStorage.getItem('wagwan_user_id') ? (localStorage.getItem('wagwan_phone') || '') : '';
+    const campaign = campaigns.find(c => String(c.campaign_id) === String(campaignId));
+    const res = await fetch('/api/creator/brief-response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sub, campaignId, action: 'accept',
+        phone,
+        briefText: campaign?.creative_text || '',
+      }),
+    });
+    const data = await res.json();
+    if (data.whatsappLink) whatsappLink = data.whatsappLink;
+    campaigns = campaigns.filter(c => String(c.campaign_id) !== String(campaignId));
+  }
+
+  async function declineOffer(e: CustomEvent) {
+    const { campaignId } = e.detail;
+    await fetch('/api/creator/brief-response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sub, campaignId, action: 'decline' }),
+    }).catch(() => {});
+    campaigns = campaigns.filter(c => String(c.campaign_id) !== String(campaignId));
+  }
+
   const categoryKeys = ['music', 'fashion', 'events', 'sports', 'tech'];
 
   $: acctRows = [
@@ -256,10 +337,23 @@
 <div class="earn mx-auto max-w-2xl px-4 pb-28 pt-8 lg:pb-10">
   <header class="mb-8">
     <p class="text-xs font-semibold uppercase tracking-widest text-zinc-500">Earn</p>
-    <h1 class="mt-1 text-2xl font-bold tracking-tight text-zinc-900">Your attention marketplace</h1>
+    <h1 class="mt-1 text-2xl font-bold tracking-tight text-zinc-900">Your Offers</h1>
     <p class="mt-2 text-sm text-zinc-600">
       See campaigns matched to you, control channels, and track simulated payouts.
     </p>
+    {#if graphStrength}
+      <IntegrityScore
+        score={graphStrength.score}
+        label={graphStrength.label}
+        breakdown={[
+          { name: 'Google', connected: $profile.googleConnected },
+          { name: 'Instagram', connected: $profile.instagramConnected },
+          { name: 'Spotify', connected: $profile.spotifyConnected },
+          { name: 'Apple Music', connected: $profile.appleMusicConnected },
+          { name: 'LinkedIn', connected: $profile.linkedinConnected },
+        ]}
+      />
+    {/if}
   </header>
 
   {#if err}
@@ -311,6 +405,15 @@
       {/if}
     </section>
   {/if}
+
+  <RateCard
+    igPostRate={creatorRates.ig_post_rate_inr}
+    igStoryRate={creatorRates.ig_story_rate_inr}
+    igReelRate={creatorRates.ig_reel_rate_inr}
+    whatsappRate={creatorRates.whatsapp_intro_rate_inr}
+    available={creatorRates.available}
+    on:save={saveRates}
+  />
 
   <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
     <div class="flex items-center justify-between gap-3">
@@ -419,57 +522,33 @@
     </section>
   {/if}
 
-  <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
-    <h2 class="text-lg font-semibold text-zinc-900">Campaign feed</h2>
-    {#if !campaigns.length && !loading}
-      <p class="mt-3 text-sm text-zinc-500">No active campaigns for you yet.</p>
-    {:else}
-      <ul class="mt-4 space-y-4">
-        {#each campaigns as c}
-          <li class="rounded-2xl border border-zinc-100 bg-gradient-to-br from-white to-zinc-50/90 p-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{c.brand_name}</p>
-            <h3 class="mt-1 font-semibold text-zinc-900">{c.title}</h3>
-            <p class="mt-1 text-sm text-zinc-600">{c.creative_text}</p>
-            <p class="mt-2 text-sm text-blue-800/90">
-              <span class="font-medium">Why you:</span>
-              {c.match_reason}
-            </p>
-            <p class="mt-2 text-sm font-semibold text-emerald-700">₹{c.reward_inr} for engagement</p>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white"
-                on:click={() => logAction(c.campaign_id, 'view')}
-              >
-                View
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium"
-                on:click={() => logAction(c.campaign_id, 'save')}
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700"
-                on:click={() => logAction(c.campaign_id, 'dismiss')}
-              >
-                Dismiss
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900"
-                on:click={() => logAction(c.campaign_id, 'click')}
-              >
-                Engage (credit)
-              </button>
-            </div>
-          </li>
+  {#if campaigns.length}
+    <div class="earn-section">
+      <h2 class="earn-section-title">Inbound Offers</h2>
+      <div class="earn-offers">
+        {#each campaigns as campaign}
+          <OfferCard
+            campaignId={campaign.campaign_id}
+            brandName={campaign.brand_name}
+            title={campaign.title}
+            creativeText={campaign.creative_text}
+            rewardInr={campaign.reward_inr}
+            matchReason={campaign.match_reason}
+            matchScore={campaign.match_score}
+            on:accept={acceptOffer}
+            on:decline={declineOffer}
+          />
         {/each}
-      </ul>
-    {/if}
-  </section>
+      </div>
+    </div>
+  {/if}
+
+  {#if whatsappLink}
+    <div class="earn-whatsapp">
+      <p class="earn-whatsapp-text">Brief accepted! Connect with the brand:</p>
+      <a href={whatsappLink} target="_blank" rel="noopener" class="earn-whatsapp-btn">Open WhatsApp</a>
+    </div>
+  {/if}
 
   <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
     <h2 class="text-lg font-semibold text-zinc-900">Wallet</h2>
@@ -561,6 +640,34 @@
     </button>
   </section>
 
+  <VisibilityControls
+    musicVisible={visibility.music_visible}
+    instagramVisible={visibility.instagram_visible}
+    careerVisible={visibility.career_visible}
+    lifestyleVisible={visibility.lifestyle_visible}
+    calendarVisible={visibility.calendar_visible}
+    emailVisible={visibility.email_visible}
+    on:save={saveVisibility}
+  />
+
+  <button class="earn-preview-btn" on:click={() => showPortraitPreview = !showPortraitPreview}>
+    {showPortraitPreview ? 'Hide Preview' : 'Preview Your Portrait'}
+  </button>
+
+  {#if showPortraitPreview}
+    <PortraitPreview
+      name={$profile.name}
+      city={$profile.city}
+      archetype=""
+      vibeTags={[]}
+      integrityScore={graphStrength?.score ?? 0}
+      followers={$profile.instagramIdentity?.followersCount ?? 0}
+      posts={$profile.instagramIdentity?.mediaCount ?? 0}
+      rates={creatorRates}
+      visibleSections={Object.entries(visibility).filter(([_, v]) => v).map(([k]) => k.replace('_visible', ''))}
+    />
+  {/if}
+
   <p class="text-center text-xs text-zinc-500">
     Brand tools: <a href="/brands" class="font-medium text-blue-600 hover:underline">/brands</a>
   </p>
@@ -591,4 +698,28 @@
   .earn :global(a) {
     text-underline-offset: 2px;
   }
+  .earn-section { margin-top: 24px; }
+  .earn-section-title {
+    font-size: 15px; font-weight: 700; color: var(--text-primary);
+    margin: 0 0 16px;
+  }
+  .earn-offers { display: flex; flex-direction: column; gap: 16px; }
+  .earn-whatsapp {
+    margin-top: 16px; padding: 16px; border-radius: 14px;
+    background: rgba(77, 124, 255, 0.08); border: 1px solid rgba(77, 124, 255, 0.2);
+    text-align: center;
+  }
+  .earn-whatsapp-text { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
+  .earn-whatsapp-btn {
+    display: inline-block; padding: 10px 24px; border-radius: 100px;
+    background: #25D366; color: white; font-size: 14px; font-weight: 700;
+    text-decoration: none; font-family: inherit;
+  }
+  .earn-preview-btn {
+    width: 100%; margin-top: 16px; padding: 12px; border-radius: 14px;
+    background: var(--glass-light); border: 1px solid var(--border-subtle);
+    color: var(--text-secondary); font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: background 0.15s;
+  }
+  .earn-preview-btn:hover { background: var(--glass-medium); }
 </style>
