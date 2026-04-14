@@ -15,7 +15,7 @@
   export let data: { brandSessionValid: boolean };
 
   // ── Step machine ──
-  type Step = 'intake' | 'questions' | 'thinking' | 'results';
+  type Step = 'intake' | 'questions' | 'thinking' | 'confirm' | 'results';
   let currentStep: Step = 'intake';
 
   let brandContext = { brandName: '', website: '', instagram: '', description: '' };
@@ -43,6 +43,36 @@
 
   let enriching = false;
   let enrichedContext = '';
+
+  // Brief confirmation
+  let extractedBrief: {
+    product_summary?: string;
+    buyer_roles?: string[];
+    campaign_intent?: string;
+    content_themes_needed?: string[];
+    budget_tier?: string;
+    geography?: string[];
+  } | null = null;
+
+  let editableBriefSummary = '';
+  let editableBudget = '';
+  let editableLocation = '';
+
+  function handleBriefExtracted(e: CustomEvent) {
+    const brief = e.detail?.brief ?? e.detail;
+    if (brief) {
+      extractedBrief = brief;
+      editableBriefSummary = brief.product_summary || brandContext.description;
+      editableBudget = brief.budget_tier || 'micro';
+      editableLocation = (brief.geography || []).join(', ') || 'India';
+      // Show confirmation step
+      currentStep = 'confirm';
+    }
+  }
+
+  function confirmBrief() {
+    currentStep = 'thinking';
+  }
 
   async function handleIntakeSubmit(e: CustomEvent<typeof brandContext>) {
     brandContext = e.detail;
@@ -1218,7 +1248,71 @@
           {enrichedContext}
           on:thinking={handleThinking}
           on:matches={handleMatches}
+          on:brief={handleBriefExtracted}
         />
+      {:else if currentStep === 'confirm'}
+        <div class="confirm-root">
+          <div class="confirm-card">
+            <div class="confirm-badge">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7.5l3.5 3.5L12 3" stroke="var(--accent-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Brief ready</span>
+            </div>
+            <h2 class="confirm-title">Here's your campaign brief</h2>
+            <p class="confirm-sub">Review and edit, then we'll find your matches.</p>
+
+            <div class="confirm-fields">
+              <div class="confirm-field">
+                <label>What you're promoting</label>
+                <textarea bind:value={editableBriefSummary} rows="2" class="confirm-input"></textarea>
+              </div>
+              <div class="confirm-row">
+                <div class="confirm-field">
+                  <label>Budget tier</label>
+                  <select bind:value={editableBudget} class="confirm-select">
+                    <option value="nano">Nano (under 10k)</option>
+                    <option value="micro">Micro (10k-50k)</option>
+                    <option value="mid">Mid (50k-2L)</option>
+                    <option value="macro">Macro (2L+)</option>
+                  </select>
+                </div>
+                <div class="confirm-field">
+                  <label>Location</label>
+                  <input type="text" bind:value={editableLocation} class="confirm-input" placeholder="India" />
+                </div>
+              </div>
+              {#if extractedBrief?.buyer_roles?.length}
+                <div class="confirm-field">
+                  <label>Target audience</label>
+                  <div class="confirm-tags">
+                    {#each extractedBrief.buyer_roles as role}
+                      <span class="confirm-tag">{role}</span>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+              {#if extractedBrief?.content_themes_needed?.length}
+                <div class="confirm-field">
+                  <label>Content themes</label>
+                  <div class="confirm-tags">
+                    {#each extractedBrief.content_themes_needed as theme}
+                      <span class="confirm-tag confirm-tag--blue">{theme}</span>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+            </div>
+
+            <div class="confirm-actions">
+              <button class="confirm-btn" on:click={confirmBrief}>
+                <span>Find my creators</span>
+                <span class="confirm-btn-icon">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+              </button>
+              <button class="confirm-back" on:click={() => currentStep = 'questions'}>Edit answers</button>
+            </div>
+          </div>
+        </div>
       {:else if currentStep === 'thinking'}
         <ThinkingStepper
           activeStep={thinkingActiveStep}
@@ -1610,4 +1704,196 @@
     cursor: pointer;
   }
 
+  /* ── Brief Confirmation ── */
+  .confirm-root {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 32px 24px;
+  }
+
+  .confirm-card {
+    max-width: 500px;
+    width: 100%;
+    padding: 32px;
+    border-radius: 1.25rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.04), 0 16px 48px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: card-in 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .confirm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: center;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-primary);
+    background: rgba(255,77,77,0.08);
+    border: 1px solid rgba(255,77,77,0.15);
+    border-radius: 9999px;
+    padding: 5px 12px;
+  }
+
+  .confirm-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .confirm-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    margin: -12px 0 0;
+  }
+
+  .confirm-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .confirm-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 480px) {
+    .confirm-row { grid-template-columns: 1fr; }
+  }
+
+  .confirm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .confirm-field label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .confirm-input,
+  .confirm-select {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-primary);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .confirm-input:focus,
+  .confirm-select:focus {
+    border-color: rgba(77,124,255,0.4);
+  }
+
+  .confirm-select {
+    appearance: none;
+    cursor: pointer;
+  }
+
+  textarea.confirm-input {
+    resize: vertical;
+    min-height: 48px;
+    line-height: 1.5;
+  }
+
+  .confirm-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .confirm-tag {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    background: rgba(255,77,77,0.08);
+    color: #FF6B6B;
+    border: 1px solid rgba(255,77,77,0.15);
+  }
+
+  .confirm-tag--blue {
+    background: rgba(77,124,255,0.08);
+    color: #6B9AFF;
+    border-color: rgba(77,124,255,0.15);
+  }
+
+  .confirm-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .confirm-btn {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .confirm-btn:hover { transform: translateY(-1px); }
+  .confirm-btn:active { transform: scale(0.98); }
+
+  .confirm-btn-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .confirm-back {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 8px;
+    text-align: center;
+    transition: color 0.2s;
+  }
+  .confirm-back:hover { color: var(--text-secondary); }
 </style>
