@@ -15,8 +15,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
   try {
     const token = await exchangeYouTubeCode(code);
-    const { channels, categories, tags } = await fetchYouTubeData(token);
-    const identity = await analyseYouTubeIdentity(channels, categories, tags);
+    const { channels, channelDescriptions, categories, tags, videoTitles } = await fetchYouTubeData(token);
+    const identity = await analyseYouTubeIdentity(channels, categories, tags, videoTitles, channelDescriptions);
 
     cookies.set('youtube_identity', JSON.stringify(identity), {
       path: '/',

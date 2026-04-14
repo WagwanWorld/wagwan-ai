@@ -79,14 +79,16 @@ const YT_CATEGORY_MAP: Record<string, string> = {
 
 export async function fetchYouTubeData(token: string): Promise<{
   channels: string[];
+  channelDescriptions: string[];
   categories: string[];
   tags: string[];
+  videoTitles: string[];
 }> {
   const headers = ytHeaders(token);
 
   const [subsRes, likesRes] = await Promise.all([
     fetch(`${YT_BASE}/subscriptions?mine=true&part=snippet&maxResults=50&order=relevance`, { headers }),
-    fetch(`${YT_BASE}/videos?myRating=like&part=snippet&maxResults=20`, { headers }),
+    fetch(`${YT_BASE}/videos?myRating=like&part=snippet&maxResults=50`, { headers }),
   ]);
 
   const subs: YTChannel[] = subsRes.ok ? ((await subsRes.json()).items ?? []) : [];
@@ -96,6 +98,16 @@ export async function fetchYouTubeData(token: string): Promise<{
     .map(s => s.snippet?.title)
     .filter((t): t is string => !!t)
     .slice(0, 20);
+
+  const channelDescriptions = subs
+    .map(s => s.snippet?.description)
+    .filter((d): d is string => !!d && d.trim().length > 0)
+    .slice(0, 20);
+
+  const videoTitles = likes
+    .map(v => v.snippet?.title)
+    .filter((t): t is string => !!t)
+    .slice(0, 30);
 
   const categoryIds = likes
     .map(v => v.snippet?.categoryId)
@@ -115,23 +127,33 @@ export async function fetchYouTubeData(token: string): Promise<{
   likes.forEach(v => (v.snippet?.tags ?? []).slice(0, 3).forEach(t => tagSet.add(t.toLowerCase())));
   const tags = [...tagSet].slice(0, 15);
 
-  return { channels, categories, tags };
+  return { channels, channelDescriptions, categories, tags, videoTitles };
 }
 
 export async function analyseYouTubeIdentity(
   channels: string[],
   categories: string[],
-  tags: string[]
+  tags: string[],
+  videoTitles: string[] = [],
+  channelDescriptions: string[] = []
 ): Promise<YouTubeIdentity> {
-  if (!channels.length && !categories.length) {
+  if (!channels.length && !categories.length && !videoTitles.length) {
     return { topChannels: [], topCategories: categories, contentPersonality: '', lifestyleSignals: [] };
   }
 
+  const channelDescSection = channelDescriptions.length
+    ? `\nChannel descriptions: ${channelDescriptions.slice(0, 10).join(' | ')}`
+    : '';
+
+  const videoTitlesSection = videoTitles.length
+    ? `\nTitles of liked videos: ${videoTitles.slice(0, 20).join(' | ')}`
+    : '';
+
   const prompt = `Analyse this YouTube data to understand someone's lifestyle, interests, and personality.
 
-Subscribed channels: ${channels.slice(0, 15).join(', ')}
+Subscribed channels: ${channels.slice(0, 15).join(', ')}${channelDescSection}
 Content categories they like: ${categories.join(', ')}
-Tags from liked videos: ${tags.slice(0, 10).join(', ')}
+Tags from liked videos: ${tags.slice(0, 10).join(', ')}${videoTitlesSection}
 
 Return JSON only (no markdown):
 {
