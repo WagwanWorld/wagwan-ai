@@ -524,17 +524,19 @@
 <div class="brand-studio relative min-h-[calc(100vh-56px)]">
   <!-- Ambient -->
   <div
-    class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-30%,rgba(139,92,246,0.14),transparent)]"
+    class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-30%,rgba(77,124,255,0.10),transparent)]"
     aria-hidden="true"
   ></div>
 
-  <div class="portal-tabs">
-    <button class="portal-tab" class:active={portalTab === 'agent'} on:click={() => portalTab = 'agent'}>
-      AI Match Agent
-    </button>
-    <button class="portal-tab" class:active={portalTab === 'search'} on:click={() => portalTab = 'search'}>
-      Quick Search
-    </button>
+  <div class="mx-auto max-w-2xl px-4 pt-4">
+    <div class="portal-tabs">
+      <button class="portal-tab" class:active={portalTab === 'agent'} on:click={() => portalTab = 'agent'}>
+        AI Match Agent
+      </button>
+      <button class="portal-tab" class:active={portalTab === 'search'} on:click={() => portalTab = 'search'}>
+        Quick Search
+      </button>
+    </div>
   </div>
 
   {#if portalTab === 'agent'}
@@ -551,7 +553,7 @@
       </p>
       <h1 class="max-w-3xl text-center text-3xl font-semibold leading-tight text-white md:text-5xl">
         Who are you directing
-        <span class="bg-gradient-to-r from-violet-300 via-white to-fuchsia-300 bg-clip-text text-transparent">
+        <span class="bg-gradient-to-r from-[#FF4D4D] via-white to-[#FFB84D] bg-clip-text text-transparent">
           tonight?
         </span>
       </h1>
@@ -560,7 +562,7 @@
         <label for="studio-prompt" class="sr-only">Audience prompt</label>
         <textarea
           id="studio-prompt"
-          class="min-h-[140px] w-full resize-none rounded-2xl border border-white/[0.08] bg-[#111113]/90 px-5 py-4 text-base leading-relaxed text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.04)_inset,0_24px_80px_-24px_rgba(0,0,0,0.6)] outline-none transition-[border,box-shadow] duration-300 placeholder:text-zinc-700 focus:border-violet-500/40 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.35)_inset,0_0_48px_rgba(139,92,246,0.12)] md:min-h-[120px] md:text-lg"
+          class="studio-textarea min-h-[140px] w-full resize-none rounded-2xl border border-white/[0.08] bg-[#111113]/90 px-5 py-4 text-base leading-relaxed text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.04)_inset,0_24px_80px_-24px_rgba(0,0,0,0.6)] outline-none transition-[border,box-shadow] duration-300 placeholder:text-zinc-700 md:min-h-[120px] md:text-lg"
           bind:value={promptText}
           placeholder={ghostHints[ghostIdx]}
         ></textarea>
@@ -568,7 +570,7 @@
           {#each presetChips as chip}
             <button
               type="button"
-              class="rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-1.5 text-xs font-medium text-zinc-400 transition-all duration-300 hover:border-violet-500/35 hover:bg-violet-500/10 hover:text-white hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]"
+              class="preset-chip rounded-full border border-white/[0.07] bg-white/[0.03] px-3.5 py-1.5 text-xs font-medium text-zinc-400 transition-all duration-300"
               on:click={() => applyChip(chip.text)}
             >
               {chip.label}
@@ -580,7 +582,7 @@
       <button
         type="button"
         disabled={searching}
-        class="group mt-10 inline-flex items-center gap-2 rounded-full bg-white px-10 py-3.5 text-sm font-semibold text-[#0B0B0D] shadow-[0_0_40px_rgba(255,255,255,0.08)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_56px_rgba(167,139,250,0.22)] disabled:opacity-50"
+        class="group mt-10 inline-flex items-center gap-2 rounded-full bg-white px-10 py-3.5 text-sm font-semibold text-[#0B0B0D] shadow-[0_0_40px_rgba(255,255,255,0.08)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_56px_rgba(77,124,255,0.22)] disabled:opacity-50"
         on:click={() => runDiscovery()}
       >
         {searching ? 'Composing…' : 'Discover audience'}
@@ -601,7 +603,7 @@
             <SignOut size={14} /> Sign out
           </button>
         {:else}
-          <a href={loginNext} class="text-zinc-500 underline-offset-4 hover:text-violet-300 hover:underline">
+          <a href={loginNext} class="text-zinc-500 underline-offset-4 hover:text-[var(--accent-secondary)] hover:underline">
             Operator sign-in
           </a>
         {/if}
@@ -619,7 +621,7 @@
             <label for="studio-prompt-dock" class="sr-only">Refine prompt</label>
             <textarea
               id="studio-prompt-dock"
-              class="min-h-[72px] w-full resize-y rounded-xl border border-white/[0.08] bg-[#111113] px-4 py-3 text-sm text-zinc-100 outline-none transition-colors focus:border-violet-500/40 md:min-h-[56px]"
+              class="studio-textarea min-h-[72px] w-full resize-y rounded-xl border border-white/[0.08] bg-[#111113] px-4 py-3 text-sm text-zinc-100 outline-none transition-colors md:min-h-[56px]"
               bind:value={promptText}
             ></textarea>
           </div>
@@ -656,9 +658,8 @@
             class="rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] px-5 py-4 text-sm leading-relaxed text-amber-100/95"
             role="status"
           >
-            <strong class="text-amber-50">No rows to show.</strong>
-            Either there are no profiles in Supabase yet, or <code class="text-amber-200/90">SUPABASE_*</code> env is
-            missing (search returns 503). After seeding users, run discovery again—or widen your prompt.
+            <strong class="text-amber-50">No results found.</strong>
+            Try broadening your search — use fewer constraints or describe a wider audience.
           </div>
         {/if}
         <!-- Top bar -->
@@ -694,7 +695,7 @@
             {/if}
             <button
               type="button"
-              class="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_0_32px_rgba(139,92,246,0.35)] transition-[transform,box-shadow] duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(139,92,246,0.45)]"
+              class="launch-btn rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-[transform,box-shadow] duration-300 hover:scale-[1.02]"
               on:click={() => (campaignPanelOpen = true)}
             >
               Launch campaign
@@ -709,7 +710,7 @@
               ? 'opacity-60'
               : ''}"
           >
-            <div class="flex items-center gap-2 text-violet-300/90">
+            <div class="flex items-center gap-2 text-[var(--accent-secondary)]">
               <Sparkle size={18} weight="light" />
               <span class="text-xs font-medium uppercase tracking-wider">Overview</span>
             </div>
@@ -737,7 +738,7 @@
                   >
                 {/each}
                 {#each structured.behaviors.slice(0, 4) as b}
-                  <span class="rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-[11px] text-violet-200"
+                  <span class="rounded-full border border-[rgba(77,124,255,0.2)] bg-[rgba(77,124,255,0.1)] px-2.5 py-1 text-[11px] text-[#8BABFF]"
                     >{b}</span
                   >
                 {/each}
@@ -750,7 +751,7 @@
             <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
               {#each users.slice(0, 12) as u}
                 <div
-                  class="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.06] transition-all duration-300 hover:z-10 hover:scale-[1.04] hover:border-violet-500/30 hover:shadow-[0_0_28px_rgba(139,92,246,0.25)]"
+                  class="mosaic-tile group relative aspect-square overflow-hidden rounded-xl border border-white/[0.06] transition-all duration-300 hover:z-10 hover:scale-[1.04]"
                   style:background={tileGradient(u.user_google_sub)}
                   title={u.name}
                 >
@@ -773,7 +774,7 @@
           <div class="grid gap-4 sm:grid-cols-3">
             {#each insightCards as card}
               <div
-                class="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-5 transition-all duration-300 hover:border-violet-500/20 hover:shadow-[0_0_32px_rgba(139,92,246,0.1)]"
+                class="insight-card rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-5 transition-all duration-300"
               >
                 <p class="text-2xl font-semibold tabular-nums text-white">{card.stat}</p>
                 <p class="mt-1 text-sm font-medium text-zinc-200">{card.title}</p>
@@ -784,16 +785,16 @@
         {/if}
 
         {#if rankStrengthBoostApplied}
-          <p class="text-center text-xs text-violet-300/80">Signal-strength rank boost is enabled.</p>
+          <p class="text-center text-xs text-[var(--accent-secondary)] opacity-80">Signal-strength rank boost is enabled.</p>
         {/if}
 
         {#if users.length > 0}
           <div
-            class="rounded-2xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-500/[0.08] to-transparent p-6 shadow-[0_0_40px_rgba(217,70,239,0.08)]"
+            class="audience-intel-panel rounded-2xl p-6"
           >
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p class="text-[11px] font-semibold uppercase tracking-wider text-fuchsia-300/90">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-[var(--accent-tertiary)]">
                   Audience intelligence
                 </p>
                 <p class="mt-2 max-w-xl text-sm text-zinc-400">
@@ -804,7 +805,7 @@
               <button
                 type="button"
                 disabled={audienceIntelLoading}
-                class="shrink-0 rounded-xl bg-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-fuchsia-900/40 transition-opacity disabled:opacity-50 hover:bg-fuchsia-500"
+                class="generate-intel-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-opacity disabled:opacity-50"
                 on:click={() => runAudienceIntelligence()}
               >
                 {audienceIntelLoading ? 'Generating…' : 'Generate'}
@@ -867,7 +868,7 @@
                 class="flex flex-col overflow-hidden rounded-2xl border transition-all duration-300 {selected.has(
                   u.user_google_sub,
                 )
-                  ? 'border-violet-500/50 bg-violet-500/10 shadow-[0_0_24px_rgba(139,92,246,0.15)]'
+                  ? 'border-[rgba(77,124,255,0.5)] bg-[rgba(77,124,255,0.1)] shadow-[0_0_24px_rgba(77,124,255,0.15)]'
                   : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]'}"
               >
                 <button
@@ -900,13 +901,8 @@
                     </span>
                   </div>
                   <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="tabular-nums text-violet-300/90">Match {u.match_score}</span>
-                    <div class="flex items-center gap-2">
-                      {#if u.graph_strength_score}
-                        <span class="brand-user-strength">{u.graph_strength_score}</span>
-                      {/if}
-                      <span class="max-w-[65%] truncate text-zinc-500">{u.preview_tags.join(' · ')}</span>
-                    </div>
+                    <span class="tabular-nums text-[var(--accent-secondary)] opacity-90">Match {u.match_score}</span>
+                    <span class="max-w-[65%] truncate text-zinc-500">{u.preview_tags.join(' · ')}</span>
                   </div>
                   <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-zinc-500">{u.match_reason}</p>
                   {#if u.rates?.available}
@@ -921,7 +917,7 @@
                   <button
                     type="button"
                     disabled={memberBriefLoading === u.user_google_sub}
-                    class="inline-flex items-center gap-1.5 text-xs font-medium text-fuchsia-300/90 transition-colors hover:text-fuchsia-200 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--accent-tertiary)] opacity-90 transition-colors hover:opacity-100 disabled:opacity-50"
                     on:click={() => loadMemberBrief(u)}
                   >
                     <Note size={14} />
@@ -983,13 +979,13 @@
             class="flex cursor-pointer items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/10"
           >
             <span class="text-sm text-zinc-200">In-app</span>
-            <input type="checkbox" bind:checked={channelInApp} class="accent-violet-500" />
+            <input type="checkbox" bind:checked={channelInApp} class="accent-[var(--accent-secondary)]" />
           </label>
           <label
             class="flex cursor-pointer items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/10"
           >
             <span class="text-sm text-zinc-200">Email</span>
-            <input type="checkbox" bind:checked={channelEmail} class="accent-violet-500" />
+            <input type="checkbox" bind:checked={channelEmail} class="accent-[var(--accent-secondary)]" />
           </label>
           <div
             class="flex cursor-not-allowed items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 opacity-50"
@@ -1009,7 +1005,7 @@
             max="500"
             step="10"
             bind:value={rewardInr}
-            class="slider-aud h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-violet-500"
+            class="slider-aud h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-800"
           />
           <div class="mt-1 flex justify-between text-xs text-zinc-500">
             <span>₹10</span>
@@ -1024,7 +1020,7 @@
         >
         <input
           id="panel-brand-name"
-          class="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/40"
+          class="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-[rgba(77,124,255,0.4)]"
           bind:value={brandName}
         />
 
@@ -1034,7 +1030,7 @@
         >
         <input
           id="panel-campaign-title"
-          class="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/40"
+          class="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-[rgba(77,124,255,0.4)]"
           bind:value={campaignTitle}
           placeholder="Drop name"
         />
@@ -1042,7 +1038,7 @@
         <p class="mt-6 block text-xs font-medium uppercase tracking-wider text-zinc-500">Creative</p>
         <div
           class="mt-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center transition-colors {dropActive
-            ? 'border-violet-500/50 bg-violet-500/10'
+            ? 'border-[rgba(77,124,255,0.5)] bg-[rgba(77,124,255,0.1)]'
             : ''}"
           role="button"
           tabindex="0"
@@ -1055,7 +1051,7 @@
         >
           <p class="text-xs text-zinc-500">Drop copy (.txt) or write below</p>
           {#if creativeDropHint}
-            <p class="mt-1 text-[11px] text-violet-300/80">{creativeDropHint}</p>
+            <p class="mt-1 text-[11px] text-[var(--accent-secondary)] opacity-80">{creativeDropHint}</p>
           {/if}
           <input
             id="creative-file"
@@ -1066,7 +1062,7 @@
           />
         </div>
         <textarea
-          class="mt-3 min-h-[100px] w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/40"
+          class="mt-3 min-h-[100px] w-full rounded-xl border border-white/[0.08] bg-[#0B0B0D] px-3 py-2.5 text-sm text-white outline-none focus:border-[rgba(77,124,255,0.4)]"
           bind:value={creativeText}
           placeholder="Your line, offer, or story…"
         ></textarea>
@@ -1086,7 +1082,7 @@
         <button
           type="button"
           disabled={!data.brandSessionValid}
-          class="w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3.5 text-sm font-semibold text-white shadow-[0_0_28px_rgba(139,92,246,0.3)] transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+          class="launch-btn w-full rounded-xl py-3.5 text-sm font-semibold text-white transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
           on:click={() => createCampaign()}
         >
           Launch campaign · {selected.size} people
@@ -1099,23 +1095,87 @@
 </div>
 
 <style>
+  /* === Brand color system === */
+  .brand-studio {
+    --accent-primary: #FF4D4D;
+    --accent-secondary: #4D7CFF;
+    --accent-tertiary: #FFB84D;
+    --bg-primary: oklch(8% 0.008 260);
+    --bg-secondary: oklch(10% 0.009 255);
+    --bg-elevated: oklch(13% 0.010 258);
+    --text-primary: #e8ecf3;
+    --text-secondary: #9aa3b2;
+    --text-muted: #6d7684;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --glass-light: rgba(255, 255, 255, 0.055);
+    --glass-medium: rgba(255, 255, 255, 0.08);
+  }
+
   .brand-user-rates {
     display: flex; gap: 8px; margin-top: 6px;
     font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary);
   }
-  .brand-user-strength {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; border-radius: 50%;
-    background: rgba(77, 124, 255, 0.12); border: 1.5px solid rgba(77, 124, 255, 0.3);
-    font-size: 11px; font-weight: 800; font-family: var(--font-mono); color: #6B9AFF;
+
+  /* Textarea focus states */
+  .studio-textarea:focus {
+    border-color: rgba(77, 124, 255, 0.4);
+    box-shadow: 0 0 0 1px rgba(77, 124, 255, 0.35) inset, 0 0 48px rgba(77, 124, 255, 0.12);
   }
+
+  /* Preset chip hover */
+  .preset-chip:hover {
+    border-color: rgba(77, 124, 255, 0.35);
+    background: rgba(77, 124, 255, 0.1);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(77, 124, 255, 0.15);
+  }
+
+  /* Launch campaign buttons */
+  .launch-btn {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+    box-shadow: 0 0 32px rgba(255, 77, 77, 0.25);
+  }
+  .launch-btn:hover {
+    box-shadow: 0 0 40px rgba(255, 77, 77, 0.35);
+  }
+
+  /* Mosaic tile hover */
+  .mosaic-tile:hover {
+    border-color: rgba(77, 124, 255, 0.3);
+    box-shadow: 0 0 28px rgba(77, 124, 255, 0.25);
+  }
+
+  /* Insight cards hover */
+  .insight-card:hover {
+    border-color: rgba(77, 124, 255, 0.2);
+    box-shadow: 0 0 32px rgba(77, 124, 255, 0.1);
+  }
+
+  /* Audience intelligence panel */
+  .audience-intel-panel {
+    border: 1px solid rgba(77, 124, 255, 0.2);
+    background: linear-gradient(to bottom right, rgba(77, 124, 255, 0.08), transparent);
+    box-shadow: 0 0 40px rgba(77, 124, 255, 0.06);
+  }
+
+  /* Generate intelligence button */
+  .generate-intel-btn {
+    background: var(--accent-secondary);
+    box-shadow: 0 4px 14px rgba(77, 124, 255, 0.3);
+  }
+  .generate-intel-btn:hover {
+    background: #5d8aff;
+  }
+
+  /* Slider thumb */
   .slider-aud::-webkit-slider-thumb {
     appearance: none;
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #a78bfa, #e879f9);
-    box-shadow: 0 0 16px rgba(167, 139, 250, 0.5);
+    background: linear-gradient(145deg, var(--accent-primary), var(--accent-tertiary));
+    box-shadow: 0 0 16px rgba(255, 77, 77, 0.4);
     cursor: pointer;
   }
   .slider-aud::-moz-range-thumb {
@@ -1123,12 +1183,14 @@
     height: 18px;
     border: none;
     border-radius: 50%;
-    background: linear-gradient(145deg, #a78bfa, #e879f9);
-    box-shadow: 0 0 16px rgba(167, 139, 250, 0.5);
+    background: linear-gradient(145deg, var(--accent-primary), var(--accent-tertiary));
+    box-shadow: 0 0 16px rgba(255, 77, 77, 0.4);
     cursor: pointer;
   }
+
+  /* Portal tabs */
   .portal-tabs {
-    display: flex; gap: 4px; margin-bottom: 24px;
+    display: flex; gap: 4px;
     background: var(--glass-light); border-radius: 12px; padding: 4px;
     border: 1px solid var(--border-subtle);
   }
@@ -1142,7 +1204,10 @@
     background: var(--glass-medium); color: var(--text-primary);
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
   }
+
+  /* Agent wrap — uses header height (56px) + tabs container (~72px) */
   .portal-agent-wrap {
-    height: calc(100vh - 200px); min-height: 500px;
+    height: calc(100vh - 56px - 72px);
+    min-height: 500px;
   }
 </style>
