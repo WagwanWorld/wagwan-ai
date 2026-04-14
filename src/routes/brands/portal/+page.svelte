@@ -305,6 +305,21 @@
     }
   }
 
+  function smartRerun() {
+    if (structured) {
+      refineDiscovery();
+    } else {
+      runDiscovery();
+    }
+  }
+
+  function confirmNewScene() {
+    if (inResultsMode && (selected.size > 0 || users.length > 0)) {
+      if (!confirm('This will clear your current audience. Start over?')) return;
+    }
+    newScene();
+  }
+
   function newScene() {
     users = [];
     structured = null;
@@ -543,7 +558,7 @@
       </p>
       <h1 class="max-w-3xl text-center text-3xl font-semibold leading-tight text-white md:text-5xl">
         Who are you directing
-        <span class="bg-gradient-to-r from-[#FF4D4D] via-white to-[#FFB84D] bg-clip-text text-transparent">
+        <span class="text-[var(--text-secondary)]">
           tonight?
         </span>
       </h1>
@@ -572,7 +587,7 @@
       <button
         type="button"
         disabled={searching}
-        class="group mt-10 inline-flex items-center gap-2 rounded-full bg-white px-10 py-3.5 text-sm font-semibold text-[#0B0B0D] shadow-[0_0_40px_rgba(255,255,255,0.08)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_56px_rgba(77,124,255,0.22)] disabled:opacity-50"
+        class="group mt-10 inline-flex items-center gap-2 rounded-full bg-white px-10 py-3.5 text-sm font-semibold text-[#0B0B0D] shadow-[0_4px_16px_rgba(0,0,0,0.3)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_6px_24px_rgba(0,0,0,0.4)] disabled:opacity-50"
         on:click={() => runDiscovery()}
       >
         {searching ? 'Composing…' : 'Discover audience'}
@@ -620,21 +635,14 @@
               type="button"
               disabled={searching}
               class="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-[#0B0B0D] transition-opacity disabled:opacity-50"
-              on:click={() => runDiscovery()}
+              on:click={smartRerun}
             >
               {searching ? '…' : 'Re-run'}
             </button>
             <button
               type="button"
-              class="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
-              on:click={() => refineDiscovery()}
-            >
-              Refresh match
-            </button>
-            <button
-              type="button"
               class="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-zinc-500 transition-colors hover:border-red-500/30 hover:text-red-300"
-              on:click={() => newScene()}
+              on:click={confirmNewScene}
             >
               New scene
             </button>
@@ -1163,7 +1171,7 @@
   /* Textarea focus states */
   .studio-textarea:focus {
     border-color: rgba(77, 124, 255, 0.4);
-    box-shadow: 0 0 0 1px rgba(77, 124, 255, 0.35) inset, 0 0 48px rgba(77, 124, 255, 0.12);
+    box-shadow: 0 0 0 1px rgba(77, 124, 255, 0.35) inset;
   }
 
   /* Preset chip hover */
@@ -1171,35 +1179,31 @@
     border-color: rgba(77, 124, 255, 0.35);
     background: rgba(77, 124, 255, 0.1);
     color: #fff;
-    box-shadow: 0 0 20px rgba(77, 124, 255, 0.15);
   }
 
   /* Launch campaign buttons */
   .launch-btn {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
-    box-shadow: 0 0 32px rgba(255, 77, 77, 0.25);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   }
   .launch-btn:hover {
-    box-shadow: 0 0 40px rgba(255, 77, 77, 0.35);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   }
 
   /* Mosaic tile hover */
   .mosaic-tile:hover {
     border-color: rgba(77, 124, 255, 0.3);
-    box-shadow: 0 0 28px rgba(77, 124, 255, 0.25);
   }
 
   /* Insight cards hover */
   .insight-card:hover {
     border-color: rgba(77, 124, 255, 0.2);
-    box-shadow: 0 0 32px rgba(77, 124, 255, 0.1);
   }
 
   /* Audience intelligence panel */
   .audience-intel-panel {
     border: 1px solid rgba(77, 124, 255, 0.2);
     background: linear-gradient(to bottom right, rgba(77, 124, 255, 0.08), transparent);
-    box-shadow: 0 0 40px rgba(77, 124, 255, 0.06);
   }
 
   /* Generate intelligence button */
@@ -1218,7 +1222,7 @@
     height: 18px;
     border-radius: 50%;
     background: linear-gradient(145deg, var(--accent-primary), var(--accent-tertiary));
-    box-shadow: 0 0 16px rgba(255, 77, 77, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     cursor: pointer;
   }
   .slider-aud::-moz-range-thumb {
@@ -1227,7 +1231,7 @@
     border: none;
     border-radius: 50%;
     background: linear-gradient(145deg, var(--accent-primary), var(--accent-tertiary));
-    box-shadow: 0 0 16px rgba(255, 77, 77, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     cursor: pointer;
   }
 

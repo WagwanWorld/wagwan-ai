@@ -26,43 +26,30 @@
   <!-- Features -->
   <section class="features">
     <div class="features-inner">
-      <div class="feature-card">
-        <div class="feature-icon feature-icon--red" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5" />
-            <path d="M10 2v3m0 10v3M2 10h3m10 0h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-          </svg>
-        </div>
-        <h2 class="feature-title">Audience-first matching</h2>
-        <p class="feature-desc">
-          Describe your ideal audience in a sentence. We map it to real identity signals — not checkbox demographics.
-        </p>
+      <div class="process-step">
+        <span class="step-num">01</span>
+        <h2 class="step-title">Describe</h2>
+        <p class="step-desc">Tell us who you want to reach in plain language. Not demographics — identity.</p>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon feature-icon--blue" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="3" y="5" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.5" />
-          </svg>
-        </div>
-        <h2 class="feature-title">Portrait-verified creators</h2>
-        <p class="feature-desc">
-          Every match is a real person with verified identity. See the creator, not just a row of anonymous IDs.
-        </p>
+      <div class="process-arrow" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon feature-icon--gold" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M4 16l2-6L10 4l4 6 2 6H4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-            <circle cx="10" cy="12" r="1.5" fill="currentColor" />
-          </svg>
-        </div>
-        <h2 class="feature-title">Conversational briefs</h2>
-        <p class="feature-desc">
-          Build campaign briefs through conversation, not forms. When you are ready, push to channels — in-app, email, more to come.
-        </p>
+      <div class="process-step">
+        <span class="step-num">02</span>
+        <h2 class="step-title">Discover</h2>
+        <p class="step-desc">We match your brief against verified creator portraits — by signal, not spreadsheet.</p>
+      </div>
+      <div class="process-arrow" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="process-step">
+        <span class="step-num">03</span>
+        <h2 class="step-title">Deploy</h2>
+        <p class="step-desc">Launch your campaign to matched creators. In-app, email, WhatsApp — they see your brief.</p>
       </div>
     </div>
   </section>
@@ -118,15 +105,7 @@
 
   .headline-accent {
     display: block;
-    background: linear-gradient(
-      to right,
-      var(--text-secondary, #9aa3b2),
-      var(--text-primary, #e8ecf3),
-      var(--text-secondary, #9aa3b2)
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text-secondary, #9aa3b2);
   }
 
   .subline {
@@ -165,13 +144,13 @@
     color: #fff;
     text-decoration: none;
     background: linear-gradient(135deg, var(--accent-primary, #FF4D4D), var(--accent-tertiary, #FFB84D));
-    box-shadow: 0 0 32px rgba(255, 77, 77, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     transition: all 0.25s;
   }
 
   .cta-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 0 48px rgba(255, 77, 77, 0.3);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
   }
 
   /* ---- Features ---- */
@@ -182,66 +161,54 @@
   }
 
   .features-inner {
-    max-width: 60rem;
+    max-width: 56rem;
     margin: 0 auto;
-    display: grid;
-    gap: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2rem;
+  }
+
+  .process-step {
+    flex: 1;
+    max-width: 16rem;
+  }
+
+  .process-arrow {
+    color: var(--text-muted, #6d7684);
+    flex-shrink: 0;
+    margin-top: 1.5rem;
+    display: none;
   }
 
   @media (min-width: 768px) {
-    .features-inner {
-      grid-template-columns: repeat(3, 1fr);
-    }
+    .process-arrow { display: block; }
+    .features-inner { gap: 1.5rem; }
   }
 
-  .feature-card {
-    padding: 1.75rem;
-    border-radius: 1rem;
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    background: var(--glass-light, rgba(255, 255, 255, 0.055));
-    transition: border-color 0.25s;
+  @media (max-width: 767px) {
+    .features-inner { flex-direction: column; align-items: center; }
   }
 
-  .feature-card:hover {
-    border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
-  }
-
-  .feature-icon {
-    width: 2.25rem;
-    height: 2.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .feature-icon--red {
-    color: var(--accent-primary, #FF4D4D);
-    background: rgba(255, 77, 77, 0.1);
-  }
-
-  .feature-icon--blue {
+  .step-num {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-family: var(--font-mono, 'Geist Mono', monospace);
     color: var(--accent-secondary, #4D7CFF);
-    background: rgba(77, 124, 255, 0.1);
+    letter-spacing: 0.06em;
   }
 
-  .feature-icon--gold {
-    color: var(--accent-tertiary, #FFB84D);
-    background: rgba(255, 184, 77, 0.1);
-  }
-
-  .feature-title {
-    font-size: 0.875rem;
+  .step-title {
+    font-size: 1.125rem;
     font-weight: 600;
     color: var(--text-primary, #e8ecf3);
-    margin: 0;
+    margin: 0.5rem 0 0;
   }
 
-  .feature-desc {
-    margin-top: 0.5rem;
+  .step-desc {
     font-size: 0.875rem;
     line-height: 1.65;
     color: var(--text-muted, #6d7684);
+    margin: 0.5rem 0 0;
   }
 </style>

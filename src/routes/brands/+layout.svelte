@@ -19,7 +19,6 @@
 
       <nav class="nav-links desktop-only">
         <a href="/brands/portal" class="nav-link" class:active={onPortal}>Audience</a>
-        <a href="/brands/portal" class="nav-link">Campaigns</a>
       </nav>
 
       <div class="header-actions">
@@ -48,7 +47,6 @@
     {#if mobileMenuOpen}
       <nav class="mobile-nav desktop-hidden">
         <a href="/brands/portal" class="nav-link" class:active={onPortal} on:click={() => (mobileMenuOpen = false)}>Audience</a>
-        <a href="/brands/portal" class="nav-link" on:click={() => (mobileMenuOpen = false)}>Campaigns</a>
       </nav>
     {/if}
   </header>
