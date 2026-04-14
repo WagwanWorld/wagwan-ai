@@ -33,7 +33,7 @@
       <text x="{size/2}" y="{size/2 - 2}" text-anchor="middle" dominant-baseline="central"
         fill="var(--text-primary)" font-size="22" font-weight="800" font-family="var(--font-mono)">{score}</text>
       <text x="{size/2}" y="{size/2 + 14}" text-anchor="middle"
-        fill="var(--text-muted)" font-size="9" font-weight="600" text-transform="uppercase" letter-spacing="0.08em"
+        fill="var(--text-muted)" font-size="9" font-weight="600"
         font-family="var(--font-sans)">PORTRAIT</text>
     </svg>
   </div>

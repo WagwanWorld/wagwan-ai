@@ -1733,7 +1733,7 @@
     if (!ig) return '';
     const parts: string[] = [];
     if (typeof ig.followersCount === 'number') parts.push(`${ig.followersCount.toLocaleString()} followers`);
-    if (typeof ig.followingCount === 'number') parts.push(`${ig.followingCount.toLocaleString()} following`);
+    if (typeof (ig as any).followingCount === 'number') parts.push(`${(ig as any).followingCount.toLocaleString()} following`);
     if (typeof ig.mediaCount === 'number') parts.push(`${ig.mediaCount} posts`);
     return parts.join(' · ') || '';
   })();
