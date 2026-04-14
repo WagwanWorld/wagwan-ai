@@ -57,6 +57,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
       gmail.threads,
       gmail.senders,
       email, name, picture,
+      twin?.lifestylePatterns,
     );
 
     // Attach the stable Google sub to the identity object

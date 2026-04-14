@@ -166,6 +166,7 @@ export const POST: RequestHandler = async ({ request }) => {
             yt.channels, yt.categories,
             gmail.threads, gmail.senders,
             email, name, picture,
+            twin?.lifestylePatterns,
           );
           (identity as unknown as Record<string, unknown>).sub = googleSub;
           if (twin) identity.twin = twin;

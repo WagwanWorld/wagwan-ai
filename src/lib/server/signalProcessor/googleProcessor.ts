@@ -4,8 +4,11 @@
 
 import {
   fetchCalendarEvents,
+  fetchPastCalendarEvents,
   extractCalendarSignals,
+  extractLifestylePatterns,
   type CalendarSignals,
+  type LifestylePatterns,
 } from '$lib/server/google/calendar';
 import {
   fetchGmailMessagesForSignals,
@@ -33,6 +36,7 @@ export function processGoogleSignals(
   gmail: GmailSignals,
   profile: ProfileSignals,
   now: Date = new Date(),
+  lifestylePatterns?: LifestylePatterns,
 ): GoogleTwin {
   const { lifestyle: calLife, time_pattern: timePat, intent, habits } = calendar;
   const spend = gmail.spending;
@@ -132,20 +136,24 @@ export function processGoogleSignals(
       location: e.location,
     })),
     topMerchantHints: gmail.brands.slice(0, 4).map((b: { name: string }) => b.name),
+    ...(lifestylePatterns ? { lifestylePatterns } : {}),
   };
 }
 
 /** Full pipeline for OAuth callback / refresh (token must have calendar + gmail scope). */
 export async function computeGoogleTwinForToken(accessToken: string, mergeCity?: string): Promise<GoogleTwin | null> {
   try {
-    const [events, gmailMsgs, prof] = await Promise.all([
+    const now = new Date();
+    const [events, pastEvents, gmailMsgs, prof] = await Promise.all([
       fetchCalendarEvents(accessToken, 14),
+      fetchPastCalendarEvents(accessToken, 30),
       fetchGmailMessagesForSignals(accessToken),
       fetchGoogleProfileSignals(accessToken, mergeCity),
     ]);
-    const calSig = extractCalendarSignals(events, new Date());
+    const calSig = extractCalendarSignals(events, now);
+    const lifestylePatterns = extractLifestylePatterns(pastEvents);
     const gSig = extractGmailSignals(gmailMsgs);
-    return processGoogleSignals(calSig, gSig, prof, new Date());
+    return processGoogleSignals(calSig, gSig, prof, now, lifestylePatterns);
   } catch (e) {
     console.error('[computeGoogleTwinForToken]', e);
     return null;

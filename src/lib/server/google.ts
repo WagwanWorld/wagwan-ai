@@ -248,14 +248,31 @@ export async function analyseGoogleIdentity(
   email: string,
   name?: string,
   picture?: string,
+  lifestylePatterns?: {
+    events_by_day_of_week: Record<string, number>;
+    events_by_time_block: { morning: number; afternoon: number; evening: number; night: number };
+    recurring_event_titles: string[];
+    frequent_event_titles: string[];
+    total_events: number;
+  },
 ): Promise<GoogleIdentity> {
+  const calendarContext = lifestylePatterns && lifestylePatterns.total_events > 0
+    ? `
+Calendar lifestyle patterns (past 30 days, ${lifestylePatterns.total_events} events):
+  Active days: ${Object.entries(lifestylePatterns.events_by_day_of_week).sort((a, b) => b[1] - a[1]).map(([d, c]) => `${d}(${c})`).join(', ') || 'none'}
+  Time blocks: morning=${lifestylePatterns.events_by_time_block.morning}, afternoon=${lifestylePatterns.events_by_time_block.afternoon}, evening=${lifestylePatterns.events_by_time_block.evening}, night=${lifestylePatterns.events_by_time_block.night}
+  Recurring events: ${lifestylePatterns.recurring_event_titles.slice(0, 8).join(', ') || 'none'}
+  Frequent events: ${lifestylePatterns.frequent_event_titles.slice(0, 8).join(', ') || 'none'}`
+    : '';
+
   const prompt = `Analyse this Google account data to understand someone's lifestyle and interests.
 Prioritise YouTube **subscription channel names** and **liked-video categories** as ground truth for what they actually watch; use subject lines only as supporting hints.
+Use calendar lifestyle patterns (when present) as strong behavioural evidence for routines and habits.
 
 YouTube subscriptions (highest signal): ${ytChannels.slice(0, 12).join(', ') || 'none'}
 YouTube liked-video categories: ${ytCategories.join(', ') || 'none'}
 Recent subject-line themes: ${gmailThreads.slice(0, 8).join(' | ') || 'none'}
-Sender labels: ${gmailSenders.slice(0, 6).join(', ') || 'none'}
+Sender labels: ${gmailSenders.slice(0, 6).join(', ') || 'none'}${calendarContext}
 
 Return JSON only (no markdown):
 {

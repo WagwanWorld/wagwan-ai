@@ -74,17 +74,24 @@ function toIntentEvent(e: CalendarEvent): CalendarIntentEvent {
   };
 }
 
-export async function fetchCalendarEvents(token: string, daysAhead = 7): Promise<CalendarEvent[]> {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const future = new Date(todayStart.getTime() + daysAhead * 24 * 60 * 60 * 1000);
-  const params = new URLSearchParams({
-    timeMin: todayStart.toISOString(),
-    timeMax: future.toISOString(),
-    singleEvents: 'true',
-    orderBy: 'startTime',
-    maxResults: '50',
-  });
+const CALENDAR_ITEM_SHAPE = (e: {
+  id?: string;
+  summary?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+  location?: string;
+  recurrence?: string[];
+}): CalendarEvent => ({
+  id: e.id ?? crypto.randomUUID(),
+  title: e.summary ?? 'Untitled',
+  start: e.start?.dateTime ?? e.start?.date ?? '',
+  end: e.end?.dateTime ?? e.end?.date ?? '',
+  location: e.location,
+  allDay: !e.start?.dateTime,
+  recurrence: e.recurrence,
+});
+
+async function fetchCalendarPage(token: string, params: URLSearchParams): Promise<CalendarEvent[]> {
   const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -95,24 +102,100 @@ export async function fetchCalendarEvents(token: string, daysAhead = 7): Promise
     throw new Error(`Calendar API ${res.status}: ${errText}`);
   }
   const data = await res.json();
-  return (data.items ?? []).map(
-    (e: {
-      id?: string;
-      summary?: string;
-      start?: { dateTime?: string; date?: string };
-      end?: { dateTime?: string; date?: string };
-      location?: string;
-      recurrence?: string[];
-    }) => ({
-      id: e.id ?? crypto.randomUUID(),
-      title: e.summary ?? 'Untitled',
-      start: e.start?.dateTime ?? e.start?.date ?? '',
-      end: e.end?.dateTime ?? e.end?.date ?? '',
-      location: e.location,
-      allDay: !e.start?.dateTime,
-      recurrence: e.recurrence,
-    }),
-  );
+  return (data.items ?? []).map(CALENDAR_ITEM_SHAPE);
+}
+
+export async function fetchCalendarEvents(token: string, daysAhead = 7): Promise<CalendarEvent[]> {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const future = new Date(todayStart.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+  return fetchCalendarPage(token, new URLSearchParams({
+    timeMin: todayStart.toISOString(),
+    timeMax: future.toISOString(),
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '50',
+  }));
+}
+
+/** Fetch the past 30 days of events for lifestyle pattern analysis. */
+export async function fetchPastCalendarEvents(token: string, daysPast = 30): Promise<CalendarEvent[]> {
+  const now = new Date();
+  const past = new Date(now.getTime() - daysPast * 24 * 60 * 60 * 1000);
+  return fetchCalendarPage(token, new URLSearchParams({
+    timeMin: past.toISOString(),
+    timeMax: now.toISOString(),
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '100',
+  }));
+}
+
+// ── Lifestyle pattern extraction from past events ────────────────────────────
+
+export interface LifestylePatterns {
+  /** Count of events per ISO day-of-week name (Monday–Sunday) */
+  events_by_day_of_week: Record<string, number>;
+  /** Count of events per time block */
+  events_by_time_block: { morning: number; afternoon: number; evening: number; night: number };
+  /** De-duplicated recurring event titles (gym, standup, dinner, etc.) */
+  recurring_event_titles: string[];
+  /** Most common non-recurring event titles (top 10) */
+  frequent_event_titles: string[];
+  /** Total events analysed */
+  total_events: number;
+}
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export function extractLifestylePatterns(pastEvents: CalendarEvent[]): LifestylePatterns {
+  const byDow: Record<string, number> = {};
+  const timeBlock = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+  const recurringTitles = new Set<string>();
+  const titleFreq = new Map<string, number>();
+
+  for (const e of pastEvents) {
+    if (!e.start) continue;
+    const start = new Date(e.start);
+    if (Number.isNaN(start.getTime())) continue;
+
+    // Day-of-week tally
+    const dow = DAY_NAMES[start.getDay()];
+    byDow[dow] = (byDow[dow] ?? 0) + 1;
+
+    // Time block tally (skip all-day events)
+    if (!e.allDay) {
+      const h = start.getHours();
+      if (h >= 5 && h < 12) timeBlock.morning += 1;
+      else if (h >= 12 && h < 17) timeBlock.afternoon += 1;
+      else if (h >= 17 && h < 21) timeBlock.evening += 1;
+      else timeBlock.night += 1;
+    }
+
+    const titleKey = e.title.toLowerCase().trim().slice(0, 60);
+
+    // Recurring event titles
+    if (e.recurrence?.length) {
+      recurringTitles.add(e.title.slice(0, 60));
+    } else {
+      titleFreq.set(titleKey, (titleFreq.get(titleKey) ?? 0) + 1);
+    }
+  }
+
+  // Top frequent non-recurring titles (appearing 2+ times)
+  const frequentTitles = [...titleFreq.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([title]) => title);
+
+  return {
+    events_by_day_of_week: byDow,
+    events_by_time_block: timeBlock,
+    recurring_event_titles: [...recurringTitles].slice(0, 15),
+    frequent_event_titles: frequentTitles,
+    total_events: pastEvents.length,
+  };
 }
 
 export function extractCalendarSignals(events: CalendarEvent[], now: Date = new Date()): CalendarSignals {

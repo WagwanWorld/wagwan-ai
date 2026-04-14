@@ -167,6 +167,14 @@ export interface GoogleTwin {
   calendarIntent48h?: GoogleTwinCalendarHint[];
   /** Top repeated merchant names from commerce signals (for graph when IG brands empty). */
   topMerchantHints?: string[];
+  /** Lifestyle rhythm patterns extracted from the past 30 days of calendar events. */
+  lifestylePatterns?: {
+    events_by_day_of_week: Record<string, number>;
+    events_by_time_block: { morning: number; afternoon: number; evening: number; night: number };
+    recurring_event_titles: string[];
+    frequent_event_titles: string[];
+    total_events: number;
+  };
 }
 
 export interface GoogleIdentity {
