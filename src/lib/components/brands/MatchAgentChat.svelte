@@ -40,7 +40,7 @@
   onMount(() => {
     setTimeout(() => { mounted = true; }, 100);
     setTimeout(() => {
-      messages = [{ role: 'agent', text: 'Tell me about what you\'re trying to sell and who buys it.', id: ++msgId }];
+      messages = [{ role: 'agent', text: 'Tell me about what you\'re building and who it\'s for — I\'ll find creators whose audiences match.', id: ++msgId }];
     }, 600);
   });
 
