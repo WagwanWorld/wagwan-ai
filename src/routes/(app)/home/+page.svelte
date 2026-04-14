@@ -1628,17 +1628,36 @@
   $: musicArtists = (() => {
     const am = $profile.appleMusicIdentity;
     const sp = $profile.spotifyIdentity;
+    const artworkMap = am?.artworkMap ?? {};
     const raw = am?.topArtists?.length ? am.topArtists : (sp?.topArtists || []);
-    return raw.slice(0, 6).map((a: any) => ({
-      name: typeof a === 'string' ? a : (a?.name || a?.artist || ''),
-      image: typeof a === 'object' ? (a?.imageUrl || a?.image || '') : '',
-    }));
+    return raw.slice(0, 8).map((a: any) => {
+      const name = typeof a === 'string' ? a : (a?.name || a?.artist || '');
+      return {
+        name,
+        image: artworkMap[name] || (typeof a === 'object' ? (a?.imageUrl || a?.image || '') : ''),
+      };
+    });
   })();
   $: musicGenreSegments = (() => {
-    const sp = $profile.spotifyIdentity;
     const am = $profile.appleMusicIdentity;
-    const genres = sp?.topGenres || am?.topGenres || [];
+    const sp = $profile.spotifyIdentity;
     const colors = ['#FF4D4D', '#4D7CFF', '#FFB84D', '#FF6B6B', '#6B9AFF'];
+
+    // Prefer real genre frequency data from Apple Music
+    const freq = am?.genreFrequency;
+    if (freq && Object.keys(freq).length > 0) {
+      return Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([genre, count], i) => ({
+          label: genre,
+          value: count,
+          color: colors[i % colors.length],
+        }));
+    }
+
+    // Fallback: genre list (estimated values)
+    const genres = sp?.topGenres || am?.topGenres || [];
     return genres.slice(0, 4).map((g: string, i: number) => ({
       label: g,
       value: Math.max(30 - i * 6, 10),
