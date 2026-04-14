@@ -1738,6 +1738,41 @@
     return parts.join(' · ') || '';
   })();
 
+  // ── YouTube narrative section data ──
+  $: youtubeDomain = personaInference?.current?.life_domains?.find(d => d.id === 'tech_media');
+  $: youtubeNarrative = youtubeDomain?.narrative || '';
+  $: youtubeChannels = (() => {
+    const yt = $profile.youtubeIdentity;
+    if (!yt?.topChannels?.length) return [];
+    return yt.topChannels.slice(0, 6);
+  })();
+  $: youtubeCategories = (() => {
+    const yt = $profile.youtubeIdentity;
+    if (!yt?.topCategories?.length) return [];
+    const colors = ['#FF4D4D', '#4D7CFF', '#FFB84D', '#6B9AFF'];
+    return yt.topCategories.slice(0, 4).map((cat: string, i: number) => ({
+      label: cat,
+      emoji: ['🎬', '💻', '🎵', '🏋️'][i % 4],
+      value: Math.round(100 / (i + 1.5)),
+      color: colors[i % colors.length],
+    }));
+  })();
+
+  // ── Instagram posting cadence ──
+  $: igPostingCadence = (() => {
+    const ig = $profile.instagramIdentity;
+    if (!ig) return '';
+    const cadence = (ig as any).igPostingCadence || (ig as any).postingCadence || '';
+    if (cadence) return cadence;
+    const count = ig.mediaCount;
+    if (typeof count === 'number' && count > 0) {
+      if (count > 200) return '3-4x per week';
+      if (count > 100) return '2-3x per week';
+      return '1-2x per week';
+    }
+    return '';
+  })();
+
   // ── Trajectory section data ──
   $: trajectoryOneLiner = personaIntelligence?.payload?.trajectory?.direction || personaHyperCompact?.predictions?.[0]?.action || '';
   $: trajectoryScores = (() => {
@@ -1858,16 +1893,43 @@
                   <MiniBarChart bars={socialBarData} />
                 </div>
               {/if}
-              {#if socialReachText}
+              {#if socialReachText || igPostingCadence}
                 <div class="narrative-card">
                   <div class="narrative-card-label">Your Reach</div>
-                  <p class="narrative-stat">{socialReachText}</p>
-                  <p class="narrative-subtext">Rising engagement · documenting authentically</p>
+                  {#if socialReachText}<p class="narrative-stat">{socialReachText}</p>{/if}
+                  {#if igPostingCadence}<p class="narrative-subtext">Posting {igPostingCadence}</p>{/if}
                 </div>
               {/if}
               {#if socialNarrative}
                 <div class="narrative-card">
                   <p class="narrative-text">{socialNarrative}</p>
+                </div>
+              {/if}
+            </NarrativeSection>
+          {/if}
+
+          <!-- ── 🎬 What You Watch ── -->
+          {#if youtubeNarrative || youtubeChannels.length || youtubeCategories.length}
+            <NarrativeSection emoji="🎬" label="What You Watch">
+              {#if youtubeCategories.length}
+                <div class="narrative-card">
+                  <div class="narrative-card-label">Content Mix</div>
+                  <MiniBarChart bars={youtubeCategories} />
+                </div>
+              {/if}
+              {#if youtubeChannels.length}
+                <div class="narrative-card">
+                  <div class="narrative-card-label">Channels</div>
+                  <div class="yt-channels">
+                    {#each youtubeChannels as ch}
+                      <span class="yt-channel-pill">{ch}</span>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+              {#if youtubeNarrative}
+                <div class="narrative-card">
+                  <p class="narrative-text">{youtubeNarrative}</p>
                 </div>
               {/if}
             </NarrativeSection>
@@ -2489,6 +2551,13 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--text-muted);
+  }
+
+  .yt-channels { display: flex; flex-wrap: wrap; gap: 6px; }
+  .yt-channel-pill {
+    font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 100px;
+    background: rgba(255, 77, 77, 0.08); color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
   }
 
   .narrative-text {

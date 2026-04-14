@@ -50,6 +50,13 @@
     preview_tags: string[];
     graph_strength: number;
     graph_strength_label: string;
+    rates?: {
+      ig_post_rate_inr?: number;
+      ig_story_rate_inr?: number;
+      ig_reel_rate_inr?: number;
+      available?: boolean;
+    };
+    graph_strength_score?: number;
   }> = [];
 
   let keyTraits: Array<{ tag: string; count: number }> = [];
@@ -876,9 +883,21 @@
                   </div>
                   <div class="mt-3 flex items-center justify-between text-xs">
                     <span class="tabular-nums text-violet-300/90">Match {u.match_score}</span>
-                    <span class="max-w-[65%] truncate text-zinc-500">{u.preview_tags.join(' · ')}</span>
+                    <div class="flex items-center gap-2">
+                      {#if u.graph_strength_score}
+                        <span class="brand-user-strength">{u.graph_strength_score}</span>
+                      {/if}
+                      <span class="max-w-[65%] truncate text-zinc-500">{u.preview_tags.join(' · ')}</span>
+                    </div>
                   </div>
                   <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-zinc-500">{u.match_reason}</p>
+                  {#if u.rates?.available}
+                    <div class="brand-user-rates">
+                      {#if u.rates.ig_post_rate_inr}<span>📸 ₹{u.rates.ig_post_rate_inr}</span>{/if}
+                      {#if u.rates.ig_story_rate_inr}<span>📱 ₹{u.rates.ig_story_rate_inr}</span>{/if}
+                      {#if u.rates.ig_reel_rate_inr}<span>🎬 ₹{u.rates.ig_reel_rate_inr}</span>{/if}
+                    </div>
+                  {/if}
                 </button>
                 <div class="border-t border-white/[0.06] bg-black/20 px-4 py-3">
                   <button
@@ -1060,6 +1079,16 @@
 </div>
 
 <style>
+  .brand-user-rates {
+    display: flex; gap: 8px; margin-top: 6px;
+    font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary);
+  }
+  .brand-user-strength {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(77, 124, 255, 0.12); border: 1.5px solid rgba(77, 124, 255, 0.3);
+    font-size: 11px; font-weight: 800; font-family: var(--font-mono); color: #6B9AFF;
+  }
   .slider-aud::-webkit-slider-thumb {
     appearance: none;
     width: 18px;
