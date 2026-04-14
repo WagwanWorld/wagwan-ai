@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte';
 
   export let brandContext: { brandName: string; website: string; instagram: string; description: string };
+  export let enrichedContext = '';
 
   type Choice = { label: string; value: string };
   type QA = {
@@ -33,7 +34,10 @@
   }
 
   onMount(() => {
-    const primer = `Brand: ${brandContext.brandName || 'unnamed'}. We sell: ${brandContext.description}.${brandContext.website ? ` Website: ${brandContext.website}.` : ''}${brandContext.instagram ? ` Instagram: @${brandContext.instagram}.` : ''}`;
+    const initialContext = enrichedContext
+      ? `[Brand context from their website and Instagram:\n${enrichedContext}]\n\nBrand description: ${brandContext.description}`
+      : brandContext.description;
+    const primer = `Brand: ${brandContext.brandName || 'unnamed'}. We sell: ${initialContext}.${brandContext.website ? ` Website: ${brandContext.website}.` : ''}${brandContext.instagram ? ` Instagram: @${brandContext.instagram}.` : ''}`;
     sendMessage(primer);
   });
 

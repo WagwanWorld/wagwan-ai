@@ -41,9 +41,34 @@
     watch_out: string;
   }> = [];
 
-  function handleIntakeSubmit(e: CustomEvent<typeof brandContext>) {
+  let enriching = false;
+  let enrichedContext = '';
+
+  async function handleIntakeSubmit(e: CustomEvent<typeof brandContext>) {
     brandContext = e.detail;
     brandName = brandContext.brandName || 'Your brand';
+
+    // Enrich brand context from website + Instagram
+    enriching = true;
+    try {
+      const res = await fetch('/api/brand/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          website: brandContext.website,
+          instagram: brandContext.instagram,
+        }),
+      });
+      const data = await res.json();
+      if (data.contextSummary) {
+        enrichedContext = data.contextSummary;
+      }
+    } catch {
+      // Enrichment failed — continue without it
+    } finally {
+      enriching = false;
+    }
+
     currentStep = 'questions';
   }
 
@@ -95,6 +120,7 @@
     thinkingActiveStep = '';
     thinkingCompleted = new Set();
     matchResults = [];
+    enrichedContext = '';
   }
 
   const loginNext = '/brands/login?next=/brands/portal';
@@ -1178,10 +1204,18 @@
   {:else}
     <div class="agent-full">
       {#if currentStep === 'intake'}
-        <BrandIntakeCard on:submit={handleIntakeSubmit} />
+        {#if enriching}
+          <div class="enriching-state">
+            <div class="enriching-spinner"></div>
+            <p class="enriching-text">Looking up your brand...</p>
+          </div>
+        {:else}
+          <BrandIntakeCard on:submit={handleIntakeSubmit} />
+        {/if}
       {:else if currentStep === 'questions'}
         <GuidedQuestions
           {brandContext}
+          {enrichedContext}
           on:thinking={handleThinking}
           on:matches={handleMatches}
         />
@@ -1252,6 +1286,29 @@
     transition: color 0.2s;
   }
   .switch-link:hover { color: var(--text-secondary); }
+
+  .enriching-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 48px;
+  }
+  .enriching-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-subtle);
+    border-top-color: var(--accent-secondary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .enriching-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+  }
 
   .manual-search-header {
     padding: 12px 24px;
