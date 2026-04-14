@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { onMount } from 'svelte';
+  import MatchAgentChat from '$lib/components/brands/MatchAgentChat.svelte';
   import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
   import Download from 'phosphor-svelte/lib/Download';
   import SignOut from 'phosphor-svelte/lib/SignOut';
@@ -68,6 +69,8 @@
   let rankStrengthBoostApplied = false;
 
   let selected = new Set<string>();
+
+  let portalTab: 'search' | 'agent' = 'agent';
 
   let rewardInr = 50;
   let campaignTitle = '';
@@ -524,6 +527,21 @@
     class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-30%,rgba(139,92,246,0.14),transparent)]"
     aria-hidden="true"
   ></div>
+
+  <div class="portal-tabs">
+    <button class="portal-tab" class:active={portalTab === 'agent'} on:click={() => portalTab = 'agent'}>
+      AI Match Agent
+    </button>
+    <button class="portal-tab" class:active={portalTab === 'search'} on:click={() => portalTab = 'search'}>
+      Quick Search
+    </button>
+  </div>
+
+  {#if portalTab === 'agent'}
+    <div class="portal-agent-wrap">
+      <MatchAgentChat />
+    </div>
+  {:else}
 
   {#if !inResultsMode}
     <!-- Hero -->
@@ -1076,6 +1094,8 @@
       </div>
     </aside>
   {/if}
+
+  {/if}
 </div>
 
 <style>
@@ -1106,5 +1126,23 @@
     background: linear-gradient(145deg, #a78bfa, #e879f9);
     box-shadow: 0 0 16px rgba(167, 139, 250, 0.5);
     cursor: pointer;
+  }
+  .portal-tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    background: var(--glass-light); border-radius: 12px; padding: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+  .portal-tab {
+    flex: 1; padding: 10px 16px; border-radius: 10px; border: none;
+    background: transparent; color: var(--text-muted);
+    font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .portal-tab.active {
+    background: var(--glass-medium); color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .portal-agent-wrap {
+    height: calc(100vh - 200px); min-height: 500px;
   }
 </style>
