@@ -101,36 +101,67 @@
   $: displayName = $profile.name || 'You';
   $: city = $profile.city || $profile.instagramIdentity?.city || '';
 
-  $: locationLocked = (() => {
-    const updatedAt = $profile.locationUpdatedAt;
-    if (!updatedAt) return false;
-    const diff = Date.now() - new Date(updatedAt).getTime();
-    return diff < 30 * 24 * 60 * 60 * 1000; // 30 days
-  })();
-
-  $: locationUnlockDate = (() => {
-    const updatedAt = $profile.locationUpdatedAt;
-    if (!updatedAt) return '';
-    const unlock = new Date(new Date(updatedAt).getTime() + 30 * 24 * 60 * 60 * 1000);
-    return unlock.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
-  })();
-
   let locationCity = $profile.city || '';
+  let locationSaving = false;
+  let locationSaved = false;
 
   async function saveLocation() {
-    const prev = $profile.city || '';
     const next = locationCity.trim();
-    const cityChanged = next !== prev;
-    if (!cityChanged) return;
-    profile.update(p => ({ ...p, city: next }));
-    if (cityChanged) {
-      profile.update(p => ({ ...p, locationUpdatedAt: new Date().toISOString() }));
-      // Fire-and-forget signal refresh
+    if (!next || next === ($profile.city || '')) return;
+    locationSaving = true;
+    locationSaved = false;
+    profile.update(p => ({ ...p, city: next, locationUpdatedAt: new Date().toISOString() }));
+
+    // Save to backend
+    try {
+      await fetch('/api/profile/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSub: $profile.googleSub, profile: { ...$profile, city: next } }),
+      });
+      // Refresh signals with new location
       fetch('/api/refresh-signals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ googleSub: $profile.googleSub, profile: $profile }),
+        body: JSON.stringify({ googleSub: $profile.googleSub, forceInference: true }),
       }).catch(() => {});
+      locationSaved = true;
+      setTimeout(() => { locationSaved = false; }, 3000);
+    } catch {} finally {
+      locationSaving = false;
+    }
+  }
+
+  // Creator rates
+  let rates = { ig_post_rate_inr: 0, ig_story_rate_inr: 0, ig_reel_rate_inr: 0, whatsapp_intro_rate_inr: 0, available: false };
+  let ratesLoaded = false;
+  let ratesSaving = false;
+  let ratesSaved = false;
+
+  async function loadRates() {
+    if (!$profile.googleSub) return;
+    try {
+      const res = await fetch(`/api/creator/rates?sub=${encodeURIComponent($profile.googleSub)}`);
+      const json = await res.json();
+      if (json.rates) rates = json.rates;
+      ratesLoaded = true;
+    } catch {}
+  }
+
+  async function saveRates() {
+    if (!$profile.googleSub) return;
+    ratesSaving = true;
+    ratesSaved = false;
+    try {
+      await fetch('/api/creator/rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sub: $profile.googleSub, rates }),
+      });
+      ratesSaved = true;
+      setTimeout(() => { ratesSaved = false; }, 3000);
+    } catch {} finally {
+      ratesSaving = false;
     }
   }
   $: ig = $profile.instagramIdentity;
@@ -430,6 +461,7 @@
       }
     }
     await loadGraphStrength();
+    await loadRates();
     })();
   });
 </script>
@@ -834,20 +866,70 @@
   <!-- Location -->
   <section class="pf-section">
     <h2 class="pf-label">Location</h2>
-    <p class="pf-desc">Used to personalise your identity graph and improve match relevance.</p>
+    <p class="pf-desc">Where you're based. Updates your recommendations and match relevance.</p>
     <div class="pf-location-row">
       <input
         class="pf-location-input"
         type="text"
-        placeholder="City or region"
+        placeholder="Mumbai, Bangalore, Delhi..."
         bind:value={locationCity}
-        disabled={locationLocked}
-        on:blur={saveLocation}
+        on:keydown={(e) => { if (e.key === 'Enter') saveLocation(); }}
       />
-      {#if locationLocked}
-        <span class="profile-lock-msg">You can update your location on {locationUnlockDate}</span>
-      {/if}
+      <button class="pf-save-btn" on:click={saveLocation} disabled={locationSaving || !locationCity.trim() || locationCity.trim() === ($profile.city || '')}>
+        {#if locationSaving}Saving...{:else if locationSaved}Saved{:else}Update{/if}
+      </button>
     </div>
+    {#if locationSaved}
+      <span class="pf-saved-msg">Location updated — refreshing your signals</span>
+    {/if}
+  </section>
+
+  <!-- Creator Rates -->
+  <section class="pf-section">
+    <h2 class="pf-label">Your rates</h2>
+    <p class="pf-desc">Set your rates so brands know what to expect. All values in INR.</p>
+    <div class="pf-rates-grid">
+      <div class="pf-rate-field">
+        <label for="rate-post">Instagram Post</label>
+        <div class="pf-rate-input-wrap">
+          <span class="pf-rate-currency">&#8377;</span>
+          <input id="rate-post" type="number" min="0" bind:value={rates.ig_post_rate_inr} placeholder="0" />
+        </div>
+      </div>
+      <div class="pf-rate-field">
+        <label for="rate-story">Instagram Story</label>
+        <div class="pf-rate-input-wrap">
+          <span class="pf-rate-currency">&#8377;</span>
+          <input id="rate-story" type="number" min="0" bind:value={rates.ig_story_rate_inr} placeholder="0" />
+        </div>
+      </div>
+      <div class="pf-rate-field">
+        <label for="rate-reel">Instagram Reel</label>
+        <div class="pf-rate-input-wrap">
+          <span class="pf-rate-currency">&#8377;</span>
+          <input id="rate-reel" type="number" min="0" bind:value={rates.ig_reel_rate_inr} placeholder="0" />
+        </div>
+      </div>
+      <div class="pf-rate-field">
+        <label for="rate-wa">WhatsApp Intro</label>
+        <div class="pf-rate-input-wrap">
+          <span class="pf-rate-currency">&#8377;</span>
+          <input id="rate-wa" type="number" min="0" bind:value={rates.whatsapp_intro_rate_inr} placeholder="0" />
+        </div>
+      </div>
+    </div>
+    <div class="pf-rates-footer">
+      <label class="pf-toggle">
+        <input type="checkbox" bind:checked={rates.available} on:change={saveRates} />
+        <span class="pf-toggle-label">{rates.available ? 'Open to brand deals' : 'Not available for deals'}</span>
+      </label>
+      <button class="pf-save-btn" on:click={saveRates} disabled={ratesSaving}>
+        {#if ratesSaving}Saving...{:else if ratesSaved}Saved{:else}Save rates{/if}
+      </button>
+    </div>
+    {#if ratesSaved}
+      <span class="pf-saved-msg">Rates saved — brands can now see your pricing</span>
+    {/if}
   </section>
 
   <!-- Settings -->
@@ -1533,11 +1615,11 @@
   /* Location edit */
   .pf-location-row {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+    align-items: center;
   }
   .pf-location-input {
-    width: 100%;
+    flex: 1;
     padding: 10px 14px;
     font-size: 14px;
     color: var(--text-primary);
@@ -1547,24 +1629,124 @@
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.2s, background 0.2s;
+    font-family: inherit;
   }
   .pf-location-input::placeholder {
     color: var(--text-muted);
   }
-  .pf-location-input:focus:not(:disabled) {
+  .pf-location-input:focus {
     border-color: var(--accent-primary);
     background: var(--glass-medium);
   }
-  .pf-location-input:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
+
+  .pf-save-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    color: white;
+    background: var(--accent-primary);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
-  .profile-lock-msg {
-    font-size: 11px;
-    color: var(--text-muted);
+  .pf-save-btn:hover:not(:disabled) { opacity: 0.9; }
+  .pf-save-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .pf-saved-msg {
+    font-size: 12px;
+    color: #34D399;
+    margin-top: 6px;
     display: block;
-    margin-top: 4px;
-    font-style: italic;
+  }
+
+  /* Creator rates */
+  .pf-rates-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 480px) {
+    .pf-rates-grid { grid-template-columns: 1fr; }
+  }
+
+  .pf-rate-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pf-rate-field label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .pf-rate-input-wrap {
+    display: flex;
+    align-items: center;
+    background: color-mix(in srgb, var(--glass-light) 85%, transparent);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    transition: border-color 0.2s;
+  }
+
+  .pf-rate-input-wrap:focus-within {
+    border-color: var(--accent-primary);
+  }
+
+  .pf-rate-currency {
+    padding: 0 0 0 12px;
+    font-size: 14px;
+    color: var(--text-muted);
+    user-select: none;
+  }
+
+  .pf-rate-input-wrap input {
+    flex: 1;
+    padding: 9px 12px 9px 4px;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    min-width: 0;
+  }
+
+  .pf-rate-input-wrap input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .pf-rates-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .pf-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .pf-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
+  }
+
+  .pf-toggle-label {
+    font-size: 13px;
+    color: var(--text-secondary);
   }
 
   .pf-creator-link {
