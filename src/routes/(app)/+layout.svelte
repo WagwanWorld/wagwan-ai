@@ -152,6 +152,14 @@
     scrollbar-width: none;
   }
 
+  /* Mobile: account for fixed top bar + bottom tabs */
+  @media (max-width: 767px) {
+    .app-content {
+      padding-top: 52px;
+      padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
   .page-wrap {
     display: flex;
     flex-direction: column;

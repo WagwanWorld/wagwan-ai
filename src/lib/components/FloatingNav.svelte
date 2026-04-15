@@ -10,150 +10,117 @@
   $: profileActive = path === '/profile';
 </script>
 
-<nav class="float-nav md:hidden" aria-label="Main navigation">
-  <div class="float-nav-pill">
-    <a
-      href="/home"
-      class="float-nav-hit"
-      class:float-nav-hit--active={homeActive}
-      aria-label="Home"
-      aria-current={homeActive ? 'page' : undefined}
-    >
-      <span class="nav-item-wrap" class:nav-item--active={homeActive}>
-        <House size={21} weight={homeActive ? 'fill' : 'light'} />
-        <span class="nav-dot" aria-hidden="true"></span>
-      </span>
-    </a>
-    <a
-      href="/ai"
-      class="float-nav-hit"
-      class:float-nav-hit--active={chatActive}
-      aria-label="Chat"
-      aria-current={chatActive ? 'page' : undefined}
-    >
-      <span class="nav-item-wrap" class:nav-item--active={chatActive}>
-        <ChatCircle size={21} weight={chatActive ? 'fill' : 'light'} />
-        <span class="nav-dot" aria-hidden="true"></span>
-      </span>
-    </a>
-    <a
-      href="/profile"
-      class="float-nav-hit"
-      class:float-nav-hit--active={profileActive}
-      aria-label="Profile"
-      aria-current={profileActive ? 'page' : undefined}
-    >
-      <span class="nav-item-wrap" class:nav-item--active={profileActive}>
-        <UserCircle size={21} weight={profileActive ? 'fill' : 'light'} />
-        <span class="nav-dot" aria-hidden="true"></span>
-      </span>
-    </a>
-  </div>
+<!-- Mobile top bar -->
+<header class="mobile-topbar">
+  <img src="/logo-white.svg" alt="WagwanAI" class="mobile-topbar__logo" />
+</header>
+
+<!-- Mobile bottom tab bar -->
+<nav class="bottom-tabs" aria-label="Main navigation">
+  <a
+    href="/home"
+    class="bottom-tab"
+    class:bottom-tab--active={homeActive}
+    aria-label="Home"
+    aria-current={homeActive ? 'page' : undefined}
+  >
+    <House size={22} weight={homeActive ? 'fill' : 'regular'} />
+    <span class="bottom-tab__label">Home</span>
+  </a>
+  <a
+    href="/ai"
+    class="bottom-tab"
+    class:bottom-tab--active={chatActive}
+    aria-label="Chat"
+    aria-current={chatActive ? 'page' : undefined}
+  >
+    <ChatCircle size={22} weight={chatActive ? 'fill' : 'regular'} />
+    <span class="bottom-tab__label">Chat</span>
+  </a>
+  <a
+    href="/profile"
+    class="bottom-tab"
+    class:bottom-tab--active={profileActive}
+    aria-label="Profile"
+    aria-current={profileActive ? 'page' : undefined}
+  >
+    <UserCircle size={22} weight={profileActive ? 'fill' : 'regular'} />
+    <span class="bottom-tab__label">Profile</span>
+  </a>
 </nav>
 
 <style>
-  .float-nav {
+  /* ── Mobile top bar ── */
+  .mobile-topbar {
+    display: none;
     position: fixed;
-    left: 50%;
-    bottom: max(14px, env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
-    z-index: 70;
-    pointer-events: none;
-  }
-
-  .float-nav-pill {
-    pointer-events: auto;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 7px;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    position: relative;
-    backdrop-filter: blur(var(--blur-medium)) saturate(1.05);
-    -webkit-backdrop-filter: blur(var(--blur-medium)) saturate(1.05);
-    box-shadow:
-      0 8px 32px rgba(15, 20, 25, 0.12),
-      0 1px 0 rgba(255, 255, 255, 0.85) inset;
-  }
-
-  /* Grain overlay */
-  .float-nav-pill::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    background-size: 128px 128px;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .float-nav-hit {
-    width: 44px;
-    height: 44px;
-    display: flex;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    height: 52px;
+    padding: 0 20px;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    color: var(--text-muted);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .mobile-topbar__logo {
+    height: 16px;
+    width: auto;
+    opacity: 0.85;
+  }
+
+  /* ── Bottom tab bar ── */
+  .bottom-tabs {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 70;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-subtle);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  @media (max-width: 767px) {
+    .mobile-topbar {
+      display: flex;
+    }
+
+    .bottom-tabs {
+      display: flex;
+      align-items: stretch;
+    }
+  }
+
+  .bottom-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 0 6px;
     text-decoration: none;
+    color: var(--text-muted);
     -webkit-tap-highlight-color: transparent;
-    transition: transform var(--dur-micro) var(--ease-premium),
-                color var(--dur-micro) var(--ease-premium);
+    transition: color 0.15s;
   }
 
-  .float-nav-hit:hover {
-    color: var(--text-secondary);
+  .bottom-tab:active {
+    transform: scale(0.92);
   }
 
-  .float-nav-hit:active {
-    transform: scale(0.9);
-  }
-
-  .float-nav-hit--active {
+  .bottom-tab--active {
     color: var(--accent-primary);
   }
 
-  .nav-item-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Active nav dot indicator */
-  .nav-dot {
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--accent-primary);
-    opacity: 0;
-    transition: opacity var(--dur-micro) var(--ease-premium);
-  }
-
-  .nav-item--active .nav-dot {
-    opacity: 1;
-    animation: dot-pulse 3s ease-in-out infinite;
-  }
-
-  @keyframes dot-pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .float-nav-hit,
-    .float-nav-hit--active {
-      transition-duration: 0.01ms;
-    }
-    .nav-item--active .nav-dot {
-      animation: none;
-      opacity: 1;
-    }
+  .bottom-tab__label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
   }
 </style>

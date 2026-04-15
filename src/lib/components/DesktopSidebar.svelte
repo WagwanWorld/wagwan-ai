@@ -12,8 +12,8 @@
 
 <aside class="sidebar-rail" aria-label="Main navigation">
   <div class="sidebar-rail__brand" aria-hidden="true">
-    <span class="sidebar-rail__brand-full">Wagwan</span>
-    <span class="sidebar-rail__brand-compact">W</span>
+    <img src="/logo-white.svg" alt="WagwanAI" class="sidebar-rail__brand-logo" />
+    <img src="/favicon.png" alt="W" class="sidebar-rail__brand-icon" />
   </div>
   <nav class="sidebar-rail__nav">
     <a
@@ -77,18 +77,23 @@
       align-items: center;
     }
 
-    .sidebar-rail__brand-full {
+    .sidebar-rail__brand-logo {
       display: none;
     }
 
-    .sidebar-rail__brand-compact {
+    .sidebar-rail__brand-icon {
       display: block;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
     }
 
     .sidebar-rail__brand {
       padding: 0 0 20px;
       text-align: center;
       width: 100%;
+      display: flex;
+      justify-content: center;
     }
 
     .sidebar-rail__label {
@@ -114,11 +119,14 @@
       align-items: stretch;
     }
 
-    .sidebar-rail__brand-full {
+    .sidebar-rail__brand-logo {
       display: block;
+      height: 18px;
+      width: auto;
+      opacity: 0.85;
     }
 
-    .sidebar-rail__brand-compact {
+    .sidebar-rail__brand-icon {
       display: none;
     }
 
@@ -138,23 +146,20 @@
   }
 
   .sidebar-rail__brand {
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-muted);
     padding: 0 12px 24px;
-    background: linear-gradient(135deg, var(--accent-primary), var(--brand-gold-mid));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
   }
 
-  .sidebar-rail__brand-compact {
+  .sidebar-rail__brand-logo {
     display: none;
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 0;
+    height: 18px;
+    width: auto;
+  }
+
+  .sidebar-rail__brand-icon {
+    display: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
   }
 
   .sidebar-rail__nav {
