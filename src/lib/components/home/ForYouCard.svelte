@@ -4,7 +4,6 @@
   export let title: string;
   export let imageUrl: string = '';
   export let category: string = '';
-  export let emoji: string = '';
   export let matchScore: number = 0;
   export let url: string = '';
   export let price: string = '';
