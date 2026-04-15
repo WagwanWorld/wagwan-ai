@@ -9,12 +9,25 @@
   const TARGETS = { conversion: 3.2, creators: 847, acceptance: 92 };
 
   const creators = [
-    { initial: 'A', name: 'Arjun Mehta', type: 'Design-led builder', followers: '8.2k', tags: ['SaaS', 'Product'], gradient: '#FF4D4D, #FFB84D' },
-    { initial: 'P', name: 'Priya Nair', type: 'Cultural storyteller', followers: '12.4k', tags: ['Fashion', 'Culture'], gradient: '#4D7CFF, #FF4D4D' },
-    { initial: 'R', name: 'Rohan Desai', type: 'Fintech evangelist', followers: '6.1k', tags: ['Fintech', 'Startups'], gradient: '#FFB84D, #4D7CFF' },
-    { initial: 'S', name: 'Shreya Kapoor', type: 'Wellness advocate', followers: '15.7k', tags: ['Wellness', 'Lifestyle'], gradient: '#FF4D4D, #4D7CFF' },
-    { initial: 'V', name: 'Vikram Singh', type: 'Tech reviewer', followers: '9.8k', tags: ['Tech', 'Reviews'], gradient: '#4D7CFF, #FFB84D' },
-    { initial: 'M', name: 'Maya Iyer', type: 'Food & travel creator', followers: '22.1k', tags: ['Food', 'Travel'], gradient: '#FFB84D, #FF4D4D' },
+    { emoji: '🎨', name: 'Arjun Mehta', type: 'Design-led builder', followers: '8.2k', tags: ['SaaS', 'Product'], gradient: '#FF4D4D, #FFB84D', vibe: 'Ships pixel-perfect products weekly' },
+    { emoji: '✨', name: 'Priya Nair', type: 'Cultural storyteller', followers: '12.4k', tags: ['Fashion', 'Culture'], gradient: '#4D7CFF, #FF4D4D', vibe: 'Makes brands feel like movements' },
+    { emoji: '📈', name: 'Rohan Desai', type: 'Fintech evangelist', followers: '6.1k', tags: ['Fintech', 'Startups'], gradient: '#FFB84D, #4D7CFF', vibe: 'Turns complex finance into stories' },
+    { emoji: '🧘', name: 'Shreya Kapoor', type: 'Wellness advocate', followers: '15.7k', tags: ['Wellness', 'Lifestyle'], gradient: '#FF4D4D, #4D7CFF', vibe: 'Her audience actually buys what she loves' },
+    { emoji: '⚡', name: 'Vikram Singh', type: 'Tech reviewer', followers: '9.8k', tags: ['Tech', 'Reviews'], gradient: '#4D7CFF, #FFB84D', vibe: 'Founders trust his take on tools' },
+    { emoji: '🍜', name: 'Maya Iyer', type: 'Food & travel creator', followers: '22.1k', tags: ['Food', 'Travel'], gradient: '#FFB84D, #FF4D4D', vibe: 'Every post drives restaurant traffic' },
+  ];
+
+  // Floating faces for hero background
+  const floatingFaces = ['👩🏽‍💻', '🧑🏻‍🎨', '👨🏾‍🍳', '👩🏼‍🔬', '🧑🏽‍💼', '👨🏻‍🎤', '👩🏾‍🏫', '🧑🏼‍🚀'];
+  const floatingPositions = [
+    { top: '8%', left: '5%', delay: '0s', size: '2.5rem' },
+    { top: '15%', right: '8%', delay: '0.5s', size: '2rem' },
+    { top: '45%', left: '2%', delay: '1s', size: '1.75rem' },
+    { top: '70%', right: '5%', delay: '1.5s', size: '2.25rem' },
+    { top: '80%', left: '8%', delay: '2s', size: '1.5rem' },
+    { top: '30%', right: '3%', delay: '0.3s', size: '1.75rem' },
+    { top: '55%', right: '12%', delay: '1.2s', size: '2rem' },
+    { top: '25%', left: '12%', delay: '0.8s', size: '1.5rem' },
   ];
 
   function animateCounters() {
@@ -52,27 +65,45 @@
   <!-- ═══ HERO ═══ -->
   <section class="hero">
     <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow--warm" aria-hidden="true"></div>
+
+    <!-- Floating emoji faces -->
+    {#each floatingFaces as face, i}
+      <span
+        class="floating-face"
+        style="top: {floatingPositions[i].top}; {floatingPositions[i].left ? `left: ${floatingPositions[i].left}` : `right: ${floatingPositions[i].right}`}; animation-delay: {floatingPositions[i].delay}; font-size: {floatingPositions[i].size};"
+        aria-hidden="true"
+      >{face}</span>
+    {/each}
 
     <div class="hero-split">
       <div class="hero-left">
-        <div class="eyebrow-pill">Audience Intelligence</div>
+        <div class="eyebrow-pill eyebrow-pill--glow">Your people are out there</div>
         <h1 class="h1">
-          Stop guessing.<br/>
-          Start reaching the<br/>
-          <span class="h1-accent">right people.</span>
+          Find creators whose<br/>
+          audiences <span class="h1-accent-gradient">actually look</span><br/>
+          <span class="h1-accent-gradient">like your buyers.</span>
         </h1>
         <p class="hero-sub">
-          Describe your ideal customer in a sentence. Our AI matches you to verified
-          micro-creators whose audiences actually look like your buyers.
+          Tell us who you're trying to reach. We'll match you to micro-creators
+          whose followers are genuinely your people — not just big numbers.
         </p>
         <div class="hero-ctas">
-          <a href="/brands/portal" class="btn-primary">
-            <span>Start matching</span>
+          <a href="/brands/portal" class="btn-primary btn-primary--glow">
+            <span>Let's find them</span>
             <span class="btn-icon">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
           </a>
           <a href="#how" class="btn-ghost">See how it works</a>
+        </div>
+        <div class="hero-social-proof">
+          <div class="avatar-stack">
+            {#each ['🧑🏽‍💼', '👩🏻‍💻', '👨🏾‍🎨'] as emoji}
+              <span class="avatar-stack-item">{emoji}</span>
+            {/each}
+          </div>
+          <span class="hero-proof-text">47 brands matched this week</span>
         </div>
       </div>
 
@@ -85,16 +116,23 @@
               <span class="preview-dot"></span>
             </div>
             <div class="preview-chat">
-              <p class="preview-msg preview-msg--agent preview-msg--animated" style="animation-delay: 600ms;">Tell me about what you're building and who it's for.</p>
-              <p class="preview-msg preview-msg--user preview-msg--animated" style="animation-delay: 1200ms;">Developer tools for early-stage founders building their first SaaS.</p>
-              <p class="preview-msg preview-msg--agent preview-msg--animated" style="animation-delay: 1800ms;">Nice. What does your ideal customer care about most?</p>
-            </div>
-            <div class="preview-result preview-result--animated" style="animation-delay: 2400ms;">
-              <div class="preview-result-header">
-                <span class="preview-result-badge">92</span>
-                <span class="preview-result-name">Arjun Mehta</span>
+              <p class="preview-msg preview-msg--agent preview-msg--animated" style="animation-delay: 600ms;">What's your main campaign goal?</p>
+              <div class="preview-chips preview-chips--animated" style="animation-delay: 1000ms;">
+                <span class="preview-chip">Get seen by the right people</span>
+                <span class="preview-chip preview-chip--selected">Build trust</span>
+                <span class="preview-chip">Drive purchases</span>
               </div>
-              <span class="preview-result-meta">Builder archetype · 8.2k followers · Mumbai</span>
+              <p class="preview-msg preview-msg--agent preview-msg--animated" style="animation-delay: 1600ms;">Great taste. Who specifically should see this?</p>
+            </div>
+            <div class="preview-result preview-result--animated" style="animation-delay: 2200ms;">
+              <div class="preview-result-header">
+                <span class="preview-result-emoji">🎨</span>
+                <div>
+                  <span class="preview-result-name">Arjun Mehta</span>
+                  <span class="preview-result-meta">Builder archetype · 8.2k · Mumbai</span>
+                </div>
+                <span class="preview-result-badge">92%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -137,18 +175,19 @@
   <!-- ═══ CREATOR SHOWCASE ═══ -->
   <section class="creator-showcase">
     <div class="creator-showcase-header">
-      <div class="eyebrow-pill">The Network</div>
-      <h2 class="h2">Portrait-verified creators ready to match.</h2>
+      <div class="eyebrow-pill">Real people, real audiences</div>
+      <h2 class="h2">Creators who actually move the needle.</h2>
     </div>
     <div class="creator-strip">
-      {#each creators as c}
-        <div class="creator-card">
+      {#each creators as c, i}
+        <div class="creator-card" style="animation-delay: {i * 0.1}s">
           <div class="creator-avatar" style="background: linear-gradient(135deg, {c.gradient});">
-            <span class="creator-initial">{c.initial}</span>
+            <span class="creator-emoji">{c.emoji}</span>
           </div>
           <span class="creator-name">{c.name}</span>
           <span class="creator-type">{c.type}</span>
-          <span class="creator-followers">{c.followers}</span>
+          <span class="creator-vibe">{c.vibe}</span>
+          <span class="creator-followers">{c.followers} followers</span>
           <div class="creator-tags">
             {#each c.tags as tag}
               <span class="creator-tag">{tag}</span>
@@ -162,33 +201,35 @@
   <!-- ═══ BENTO SHOWCASE ═══ -->
   <section class="bento" id="how">
     <div class="bento-header">
-      <div class="eyebrow-pill">How it works</div>
-      <h2 class="h2">Not a database.<br/>An intelligence layer.</h2>
+      <div class="eyebrow-pill">Dead simple</div>
+      <h2 class="h2">Three steps.<br/>Real results.</h2>
     </div>
 
     <div class="bento-grid">
       <div class="bento-card bento-card--wide">
         <span class="bento-num">01</span>
-        <h3 class="bento-title">You describe the audience. Not the creator.</h3>
+        <h3 class="bento-title">Just tell us who you're looking for</h3>
         <p class="bento-desc">
-          "Founders building in fintech, early-stage, who read Paul Graham and ship weekly."
-          Our AI parses intent, not keywords. It understands buyer identity, not just demographics.
+          "People who care about sustainable fashion and actually buy." That's all we need.
+          Our AI figures out the rest — no spreadsheets, no filters, no 47-field forms.
         </p>
       </div>
 
       <div class="bento-card">
         <span class="bento-num">02</span>
-        <h3 class="bento-title">We score on signal depth</h3>
+        <h3 class="bento-title">We know who actually follows them</h3>
         <p class="bento-desc">
-          Every creator has a verified identity portrait built from real platform data — Instagram, Spotify, Google, LinkedIn. We match on who their audience actually is.
+          Not vanity metrics. We look at what creators' audiences care about, buy, and do —
+          built from real data across Instagram, Spotify, Google, and LinkedIn.
         </p>
       </div>
 
       <div class="bento-card">
         <span class="bento-num">03</span>
-        <h3 class="bento-title">You deploy in one click</h3>
+        <h3 class="bento-title">Pick creators, hit go</h3>
         <p class="bento-desc">
-          Launch campaigns to matched creators. They see your brief, set their rates, and accept. WhatsApp, in-app, email — their choice.
+          Select the ones you like, launch the campaign. They get your brief, set their rates,
+          and say yes. That's it. No back-and-forth DMs.
         </p>
       </div>
 
@@ -287,10 +328,10 @@
   <!-- ═══ FINAL CTA ═══ -->
   <section class="final-cta">
     <div class="final-glow" aria-hidden="true"></div>
-    <h2 class="h2">Your audience exists.<br/>We know where they are.</h2>
-    <p class="final-sub">No spreadsheets. No cold DMs. Just describe who you need.</p>
-    <a href="/brands/portal" class="btn-primary btn-primary--lg">
-      <span>Find your audience</span>
+    <h2 class="h2">Your people are one<br/>conversation away.</h2>
+    <p class="final-sub">Takes 2 minutes. No signup needed to try.</p>
+    <a href="/brands/portal" class="btn-primary btn-primary--lg btn-primary--glow">
+      <span>Let's go</span>
       <span class="btn-icon">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </span>
@@ -337,6 +378,13 @@
     color: var(--text-muted);
   }
 
+  .h1-accent-gradient {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   .h2 {
     font-size: clamp(1.75rem, 4vw, 2.75rem);
     font-weight: 600;
@@ -363,6 +411,13 @@
   .btn-primary:hover { transform: translateY(-1px); }
   .btn-primary:active { transform: scale(0.98); }
   .btn-primary--lg { padding: 1rem 1.5rem 1rem 2rem; font-size: 1rem; }
+
+  .btn-primary--glow {
+    box-shadow: 0 0 24px rgba(255, 77, 77, 0.3), 0 0 60px rgba(255, 77, 77, 0.1);
+  }
+  .btn-primary--glow:hover {
+    box-shadow: 0 0 32px rgba(255, 77, 77, 0.4), 0 0 80px rgba(255, 77, 77, 0.15);
+  }
 
   .btn-icon {
     width: 1.75rem;
@@ -391,6 +446,72 @@
     border-color: var(--border-strong);
   }
 
+  /* ── Eyebrow glow ── */
+  .eyebrow-pill--glow {
+    border-color: rgba(255, 77, 77, 0.25);
+    color: var(--accent-primary);
+    background: rgba(255, 77, 77, 0.06);
+  }
+
+  /* ── Floating faces ── */
+  .floating-face {
+    position: absolute;
+    opacity: 0;
+    animation: float-bob 6s ease-in-out infinite, float-in 1s ease-out forwards;
+    pointer-events: none;
+    z-index: 0;
+    filter: grayscale(0.2);
+  }
+
+  @keyframes float-bob {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    33% { transform: translateY(-12px) rotate(3deg); }
+    66% { transform: translateY(6px) rotate(-2deg); }
+  }
+
+  @keyframes float-in {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 0.35; transform: scale(1); }
+  }
+
+  @media (max-width: 767px) {
+    .floating-face { display: none; }
+  }
+
+  /* ── Social proof ── */
+  .hero-social-proof {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .avatar-stack {
+    display: flex;
+  }
+
+  .avatar-stack-item {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--glass-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-left: -6px;
+    border: 2px solid var(--bg-primary);
+  }
+
+  .avatar-stack-item:first-child {
+    margin-left: 0;
+  }
+
+  .hero-proof-text {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
   /* ═══ HERO ═══ */
   .hero {
     position: relative;
@@ -407,6 +528,16 @@
     border-radius: 50%;
     background: radial-gradient(circle, rgba(77, 124, 255, 0.08), transparent 70%);
     pointer-events: none;
+  }
+
+  .hero-glow--warm {
+    top: auto;
+    bottom: -300px;
+    left: -100px;
+    right: auto;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(255, 77, 77, 0.06), rgba(255, 184, 77, 0.03), transparent 70%);
   }
 
   .hero-split {
@@ -539,6 +670,36 @@
     }
   }
 
+  /* Preview chips */
+  .preview-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 16px;
+  }
+
+  .preview-chips--animated {
+    opacity: 0;
+    animation: msgFadeUp 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation-fill-mode: both;
+  }
+
+  .preview-chip {
+    font-size: 0.6875rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-subtle);
+    background: var(--glass-light);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+  }
+
+  .preview-chip--selected {
+    border-color: var(--accent-primary);
+    background: rgba(255, 77, 77, 0.08);
+    color: var(--accent-primary);
+  }
+
   .preview-result {
     margin: 0 16px 16px;
     padding: 12px;
@@ -556,25 +717,33 @@
     gap: 8px;
   }
 
+  .preview-result-emoji {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
   .preview-result-badge {
     font-size: 0.6875rem;
     font-weight: 800;
     font-family: var(--font-mono);
-    color: var(--accent-secondary);
-    background: rgba(77,124,255,0.12);
-    padding: 2px 6px;
-    border-radius: 4px;
+    color: var(--accent-primary);
+    background: rgba(255,77,77,0.12);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    margin-left: auto;
   }
 
   .preview-result-name {
     font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text-primary);
+    display: block;
   }
 
   .preview-result-meta {
-    font-size: 0.6875rem;
+    font-size: 0.625rem;
     color: var(--text-muted);
+    display: block;
   }
 
   /* ═══ MARQUEE ═══ */
@@ -734,6 +903,17 @@
     font-size: 1.125rem;
     font-weight: 700;
     color: #fff;
+  }
+
+  .creator-emoji {
+    font-size: 1.5rem;
+  }
+
+  .creator-vibe {
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-style: italic;
   }
 
   .creator-name {
