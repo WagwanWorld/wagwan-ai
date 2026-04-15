@@ -159,6 +159,15 @@ export function buildInferenceSignalBundle(
     youtube_channels: Array.isArray(yt) ? yt.slice(0, 15) : [],
     prior_inference_compact: priorCompact,
     behavioral_precalc: behavioralPrecalc ? precalcToBundleJson(behavioralPrecalc) : null,
+    signal_relations: behavioralPrecalc ? {
+      corroborations: behavioralPrecalc.cross_platform_themes
+        .filter(t => t.tier >= 2)
+        .slice(0, 8)
+        .map(t => ({ theme: t.label, platforms: t.platforms, strength: t.tier >= 3 ? 'high' : 'medium' })),
+      contradictions: behavioralPrecalc.negative_signals
+        .filter(n => n.pattern.includes('conflict'))
+        .map(n => ({ pattern: n.pattern, resolution: n.implication })),
+    } : null,
   };
 
   let json = JSON.stringify(bundle, null, 0);
@@ -225,6 +234,10 @@ If behavioral_precalc is non-null:
 - Respect intent_classification.primary_intent_type as the dominant mode — weight narratives toward that intent without erasing other domains.
 - Use cross_platform themes as higher-confidence anchors (tier 3 = strong multi-platform truth).
 - Apply negative_signals to temper overconfident predictions where patterns imply absence (e.g. low engagement → do not assert heavy posting intent).
+
+When signal_relations is present:
+- corroborations: themes confirmed across multiple platforms — treat as high-confidence anchors
+- contradictions: conflicting signals with resolution guidance — follow the resolution, do not infer both sides
 
 ## OUTPUT
 
