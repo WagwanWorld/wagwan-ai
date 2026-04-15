@@ -30,6 +30,7 @@
       <nav class="nav-center desktop-only">
         <a href="/brands" class="nav-link" class:active={$page.url.pathname === '/brands'}>Home</a>
         <a href="/brands/portal" class="nav-link" class:active={onPortal}>Audience</a>
+        <a href="/brands/creators" class="nav-link" class:active={$page.url.pathname.startsWith('/brands/creators')}>Creators</a>
       </nav>
 
       <!-- Right actions -->
@@ -64,6 +65,7 @@
       <nav class="mobile-nav desktop-hidden">
         <a href="/brands" class="nav-link" class:active={$page.url.pathname === '/brands'} on:click={() => (mobileMenuOpen = false)}>Home</a>
         <a href="/brands/portal" class="nav-link" class:active={onPortal} on:click={() => (mobileMenuOpen = false)}>Audience</a>
+        <a href="/brands/creators" class="nav-link" class:active={$page.url.pathname.startsWith('/brands/creators')} on:click={() => (mobileMenuOpen = false)}>Creators</a>
         <a href="/" class="nav-link" on:click={() => (mobileMenuOpen = false)}>Web App</a>
       </nav>
     {/if}
