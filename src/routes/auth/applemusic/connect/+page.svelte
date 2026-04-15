@@ -76,7 +76,7 @@
       ).MusicKit;
       const music = await MusicKit.configure({
         developerToken,
-        app: { name: 'Wagwan AI', build: '1.0' },
+        app: { name: 'WagwanAI', build: '1.0' },
       });
       const userToken = (await music.authorize()) || music.musicUserToken;
       if (!userToken) throw new Error('No user token returned from Apple Music');

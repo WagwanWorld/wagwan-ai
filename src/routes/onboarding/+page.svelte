@@ -582,7 +582,7 @@
     <!-- ═══ STEP 1: Google or Instagram ═══ -->
     {#if step === 1}
     <div class="ob-step screen-enter">
-      <div class="ob-mark">wagwan</div>
+      <div class="ob-mark"><img src="/logo-white.svg" alt="WagwanAI" style="height: 22px; width: auto;" /></div>
       <h1 class="ob-h1">Let's get to<br>know each other.</h1>
       <p class="ob-sub">Connect Google or Instagram to get started. You can add the other later.</p>
 

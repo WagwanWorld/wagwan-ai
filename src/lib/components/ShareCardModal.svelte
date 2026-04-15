@@ -46,7 +46,7 @@
       vibeTags.join(' · '),
       p.core_contradiction,
       '',
-      'wagwan.ai',
+      'wagwanworld.vercel.app',
     ].join('\n');
     try {
       await navigator.clipboard.writeText(text);
@@ -68,7 +68,7 @@
       vibeTags.join(' · '),
       p.core_contradiction,
       '',
-      'wagwan.ai',
+      'wagwanworld.vercel.app',
     ].join('\n');
     if (canNativeShare()) {
       sharing = true;
@@ -104,7 +104,7 @@
       {/if}
       <div class="share-card__gradient"></div>
       <div class="share-card__content">
-        <span class="share-card__wordmark">wagwan</span>
+        <span class="share-card__wordmark">WagwanAI</span>
         <div class="share-card__body">
           <span class="share-card__archetype">{p.archetype}</span>
           <p class="share-card__one-liner">{p.one_liner}</p>
@@ -124,7 +124,7 @@
           {/if}
         </div>
         <div class="share-card__footer">
-          <span class="share-card__footer-url">wagwan.ai</span>
+          <span class="share-card__footer-url">wagwanworld.vercel.app</span>
         </div>
       </div>
     </div>

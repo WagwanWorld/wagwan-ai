@@ -22,8 +22,7 @@
     <div class="header-inner">
       <!-- Branded wordmark -->
       <a href="/brands" class="wordmark">
-        <span class="wordmark-box">W</span>
-        <span class="wordmark-text">wagwan</span>
+        <img src="/logo-white.svg" alt="WagwanAI" class="wordmark-logo" />
       </a>
 
       <!-- Center nav -->
@@ -119,25 +118,9 @@
   }
   .wordmark:hover { opacity: 0.85; }
 
-  .wordmark-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: var(--accent-primary);
-    color: white;
-    font-size: 0.8125rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-
-  .wordmark-text {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--text-primary);
+  .wordmark-logo {
+    height: 20px;
+    width: auto;
   }
 
   /* ── Center nav ── */

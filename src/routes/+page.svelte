@@ -77,7 +77,7 @@
 
   <div class="landing-content" class:ready={visible}>
     <nav class="landing-nav">
-      <span class="landing-logo">wagwan</span>
+      <img src="/logo-white.svg" alt="WagwanAI" class="landing-logo-img" />
     </nav>
 
     <div class="landing-hero">
@@ -193,6 +193,12 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--text-muted);
+  }
+
+  .landing-logo-img {
+    height: 18px;
+    width: auto;
+    opacity: 0.7;
   }
 
   .landing-hero {
