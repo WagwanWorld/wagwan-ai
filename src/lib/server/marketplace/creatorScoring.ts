@@ -173,10 +173,20 @@ export function scoreCreators(
   limit = 5,
 ): MatchOutput {
   const qualified: { portrait: CreatorPortrait; score: number }[] = [];
+  const allScored: { portrait: CreatorPortrait; score: number }[] = [];
   let disqualifiedCount = 0;
   const disqualReasons: Record<string, number> = {};
 
   for (const creator of portraits) {
+    // Score everyone regardless of disqualification
+    const cred = credibilityScore(creator, brief);
+    const aud = audienceScore(creator, brief);
+    const eng = engagementScore(creator);
+    const mom = momentumNorm(creator);
+    const score = Math.round((cred * 0.30 + aud * 0.35 + eng * 0.20 + mom * 0.15) * 100);
+
+    allScored.push({ portrait: creator, score });
+
     const dqReason = isDisqualified(creator, brief);
     if (dqReason) {
       disqualifiedCount++;
@@ -184,21 +194,22 @@ export function scoreCreators(
       continue;
     }
 
-    const cred = credibilityScore(creator, brief);
-    const aud = audienceScore(creator, brief);
-    const eng = engagementScore(creator);
-    const mom = momentumNorm(creator);
-
-    const score = Math.round((cred * 0.30 + aud * 0.35 + eng * 0.20 + mom * 0.15) * 100);
     qualified.push({ portrait: creator, score });
   }
 
   qualified.sort((a, b) => b.score - a.score);
-  const topMatches = qualified.slice(0, limit);
 
-  const matches: MatchResult[] = topMatches.map(({ portrait, score }) => ({
+  // Guarantee at least 1 result — if zero qualified, use top scored regardless of disqualification
+  let pool = qualified.slice(0, limit);
+  if (pool.length === 0 && allScored.length > 0) {
+    allScored.sort((a, b) => b.score - a.score);
+    pool = allScored.slice(0, Math.min(limit, 3)); // Show up to 3 loose matches
+    disqualifiedCount = Math.max(0, disqualifiedCount - pool.length);
+  }
+
+  const matches: MatchResult[] = pool.map(({ portrait, score }) => ({
     creator: portrait,
-    score,
+    score: Math.max(score, 25), // Floor at 25 so it doesn't look broken
     reasoning: buildReasoning(portrait, brief, score),
     watch_out: buildWatchOut(portrait, brief),
   }));

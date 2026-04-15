@@ -152,12 +152,13 @@
     </div>
 
     <div class="creator-grid">
-      {#each matches as match}
+      {#each matches as match, i}
         {@const c = match.creator}
         {@const isSelected = selected.has(c.google_sub)}
         <button
           class="creator-card"
           class:creator-card--selected={isSelected}
+          style="--index: {i}"
           on:click={() => toggleCreator(c.google_sub)}
         >
           <div class="card-check" class:card-check--on={isSelected}>
@@ -232,6 +233,11 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    opacity: 0;
+    animation: card-enter 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
 
   .summary-card--accent {
@@ -242,8 +248,9 @@
   .summary-value {
     font-size: 24px;
     font-weight: 700;
+    font-family: var(--font-mono);
     color: var(--text-primary);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
   }
 
   .summary-value--small {
@@ -297,27 +304,41 @@
   .creator-card {
     background: var(--glass-light);
     border: 1px solid var(--border-subtle);
-    border-radius: 14px;
-    padding: 16px;
+    border-radius: 16px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     cursor: pointer;
     text-align: left;
     font-family: inherit;
     color: inherit;
-    transition: border-color 0.2s, background 0.2s;
     position: relative;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: card-enter 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation-delay: calc(var(--index, 0) * 0.08s);
+    transition: border-color 0.3s cubic-bezier(0.32, 0.72, 0, 1), background 0.3s cubic-bezier(0.32, 0.72, 0, 1), transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @keyframes card-enter {
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .creator-card:hover {
-    border-color: var(--border-strong);
+    border-color: rgba(77, 124, 255, 0.25);
     background: var(--glass-medium);
+    transform: translateY(-2px);
+  }
+
+  .creator-card:active {
+    transform: scale(0.98);
   }
 
   .creator-card--selected {
     border-color: var(--accent-primary);
-    background: var(--accent-soft);
+    background: rgba(255, 77, 77, 0.06);
+    box-shadow: inset 0 0 0 1px rgba(255, 77, 77, 0.1);
   }
 
   .card-check {
@@ -340,15 +361,16 @@
   }
 
   .card-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    border: 2px solid var(--border-subtle);
   }
 
   .card-info {
@@ -375,9 +397,14 @@
   }
 
   .card-score {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent-primary);
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: #6B9AFF;
+    background: rgba(77, 124, 255, 0.1);
+    border: 1px solid rgba(77, 124, 255, 0.2);
+    padding: 3px 8px;
+    border-radius: 8px;
   }
 
   .card-followers {
