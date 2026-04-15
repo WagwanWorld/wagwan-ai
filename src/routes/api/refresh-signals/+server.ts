@@ -54,6 +54,15 @@ import { syncIdentityClaimsFromGraph } from '$lib/server/identityClaims/syncFrom
 import { buildExpressionLayer } from '$lib/server/expression/buildExpressionLayer';
 import type { IdentityGraph } from '$lib/server/identity';
 import type { ExpressionFeedbackState } from '$lib/types/expressionLayer';
+import { createHash } from 'crypto';
+
+function computeSignalHash(signals: Array<{ value: string; final_score: number }>): string {
+  const key = signals
+    .sort((a, b) => a.value.localeCompare(b.value))
+    .map(s => `${s.value}:${s.final_score.toFixed(3)}`)
+    .join('|');
+  return createHash('sha256').update(key).digest('hex').slice(0, 16);
+}
 
 const INFERENCE_THROTTLE_MS = 7 * 86400 * 1000;
 /** After 3+ platforms update in one refresh, allow re-inference sooner. */
@@ -91,10 +100,68 @@ export const POST: RequestHandler = async ({ request }) => {
   const expired: string[] = [];
   const updated: Record<string, unknown> = {};
 
+  // Stream progress updates to the client
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (step: string) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ step })}\n\n`)); } catch {}
+      };
+      const sendResult = (data: Record<string, unknown>) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, ...data })}\n\n`)); } catch {}
+      };
+
+      try {
+        await runRefreshPipeline({ send, sendResult, googleSub, tokens, profileData, expired, updated, forceInference, forceIntelligence, userQuery, row: row! });
+      } catch (e) {
+        console.error('[RefreshSignals] Pipeline error:', e);
+        sendResult({ ok: false, error: e instanceof Error ? e.message : 'Unknown error' });
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+};
+
+async function runRefreshPipeline({
+  send,
+  sendResult,
+  googleSub,
+  tokens,
+  profileData,
+  expired,
+  updated,
+  forceInference,
+  forceIntelligence,
+  userQuery,
+  row,
+}: {
+  send: (step: string) => void;
+  sendResult: (data: Record<string, unknown>) => void;
+  googleSub: string;
+  tokens: Awaited<ReturnType<typeof getTokens>>;
+  profileData: Record<string, unknown>;
+  expired: string[];
+  updated: Record<string, unknown>;
+  forceInference: boolean;
+  forceIntelligence: boolean;
+  userQuery: string | undefined;
+  row: NonNullable<Awaited<ReturnType<typeof getProfile>>>;
+}) {
+  send('Connecting to your accounts…');
+
   const tasks: Promise<void>[] = [];
 
   // Instagram refresh
   if (profileData.instagramConnected && tokens.instagramToken) {
+    send('Pulling your Instagram…');
     tasks.push(
       (async () => {
         try {
@@ -124,6 +191,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   // Google refresh
   if (profileData.googleConnected && (tokens.googleRefreshToken || tokens.googleAccessToken)) {
+    send('Syncing Google data…');
     tasks.push(
       (async () => {
         try {
@@ -182,6 +250,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   // Spotify refresh
   if (profileData.spotifyConnected && tokens.spotifyToken) {
+    send('Reading your Spotify…');
     tasks.push(
       (async () => {
         try {
@@ -198,6 +267,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   // LinkedIn refresh
   if (profileData.linkedinConnected && tokens.linkedinToken) {
+    send('Checking your LinkedIn…');
     tasks.push(
       (async () => {
         try {
@@ -220,6 +290,7 @@ export const POST: RequestHandler = async ({ request }) => {
     tokens.appleMusicUserToken?.trim() &&
     isAppleMusicConfigured()
   ) {
+    send('Reading your Apple Music…');
     tasks.push(
       (async () => {
         try {
@@ -251,7 +322,9 @@ export const POST: RequestHandler = async ({ request }) => {
     );
   }
 
+  send('Waiting for all accounts to respond…');
   await Promise.allSettled(tasks);
+  send('All accounts synced — building your identity…');
 
   const manualInterestTags = await getManualInterestTags(googleSub);
   const syncStamp = new Date().toISOString();
@@ -298,6 +371,10 @@ export const POST: RequestHandler = async ({ request }) => {
     const priorFullGraph = (row.identity_graph ?? {}) as Record<string, unknown>;
     const priorWrap = parseInferenceIdentityWrapper(priorFullGraph.inferenceIdentity);
 
+    const newSignalHash = computeSignalHash(signalMeter.signals ?? []);
+    const priorHash = (profileData.lastSignalHash as string) ?? '';
+    const hashUnchanged = newSignalHash === priorHash && priorHash !== '';
+
     const keyOk = Boolean((env.ANTHROPIC_API_KEY ?? '').trim());
     const meaningfulPlatformSync = Object.keys(updated).length > 0;
     const largePlatformSync = Object.keys(updated).length >= LARGE_SYNC_PLATFORM_THRESHOLD;
@@ -309,11 +386,15 @@ export const POST: RequestHandler = async ({ request }) => {
       priorWrap &&
       Number.isFinite(inferredMs) &&
       Date.now() - inferredMs < effectiveThrottleMs;
-    const shouldInfer = keyOk && (forceInference || meaningfulPlatformSync || !priorWrap || !recent);
+    const shouldInfer = keyOk && !hashUnchanged && (forceInference || meaningfulPlatformSync || !priorWrap || !recent);
+    if (hashUnchanged && !forceInference) {
+      send('Signals unchanged — skipping inference');
+    }
 
     let inferenceIdentity: unknown = priorFullGraph.inferenceIdentity;
 
     if (shouldInfer) {
+      send('Running deep identity inference…');
       inferenceRan = true;
       const bundle = buildInferenceSignalBundle(
         merged,
@@ -365,6 +446,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     if (shouldRunIntelligence) {
+      send('Analyzing your personality and patterns…');
       const recency = buildRecencyContext({
         profileData: merged as Record<string, unknown>,
         updatedPlatformKeys: Object.keys(updated),
@@ -420,6 +502,7 @@ export const POST: RequestHandler = async ({ request }) => {
         profileData: merged as Record<string, unknown>,
         updatedPlatformKeys: Object.keys(updated),
       });
+      send('Synthesizing your full portrait…');
       try {
         const synthesis = await runIdentitySynthesisFromInputs({
           graph,
@@ -454,6 +537,7 @@ export const POST: RequestHandler = async ({ request }) => {
           inferenceIdentity: graphData.inferenceIdentity as IdentityGraph['inferenceIdentity'],
           hyperInference: graphData.hyperInference as IdentityGraph['hyperInference'],
         };
+        send('Building your expression layer…');
         const exprLayer = await buildExpressionLayer({
           mergedProfile: merged,
           graph: graphForExpression,
@@ -473,13 +557,16 @@ export const POST: RequestHandler = async ({ request }) => {
     }
     graphData.expressionFeedback = priorExprFeedback ?? { votes: [], atomNudges: {} };
 
+    merged.lastSignalHash = newSignalHash;
+    await upsertProfile(googleSub, { lastSignalHash: newSignalHash });
     await upsertIdentityGraph(googleSub, graphData, summaryStr);
     await syncIdentityClaimsFromGraph(googleSub, graph, graphData.inferenceIdentity);
   } catch (e) {
     console.error('[RefreshSignals] Identity graph build error:', e);
   }
 
-  return json({
+  send('Done — your signals are fresh ✓');
+  sendResult({
     ok: true,
     updated,
     expired,
@@ -495,4 +582,4 @@ export const POST: RequestHandler = async ({ request }) => {
     hyperInferenceRan,
     hyperInferenceGeneratedAt,
   });
-};
+}
