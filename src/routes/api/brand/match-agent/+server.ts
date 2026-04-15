@@ -16,7 +16,11 @@ import {
 } from '$lib/server/marketplace/brandMatchAgent';
 import { loadCreatorPortraits, scoreCreators } from '$lib/server/marketplace/creatorScoring';
 
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: 90_000 });
+export const config = {
+  maxDuration: 60,
+};
+
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: 55_000 });
 
 type Choice = { label: string; value: string };
 
