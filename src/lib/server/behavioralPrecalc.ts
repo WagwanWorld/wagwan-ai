@@ -35,6 +35,10 @@ export interface BehavioralPrecalcResult {
   platform_connected: Record<string, boolean>;
   /** Human-readable summary for LLM context */
   intent_weight_matrix_applied: string;
+  /** Deterministic momentum score 0–100 (replaces LLM-estimated value). */
+  momentum_score: number;
+  /** Change from prior momentum_score; 0 if no prior exists. */
+  momentum_delta: number;
 }
 
 function normToken(s: string): string {
@@ -287,7 +291,45 @@ function deriveNegativeSignals(graph: IdentityGraph, mergedProfile: Record<strin
     });
   }
 
+  // founder_jobseeker_conflict: Instagram bio says founder/ceo but LinkedIn signals job seeking
+  const founderPatterns = /\b(founder|co-founder|cofounder|ceo|chief executive)\b/i;
+  const bioRolesText = graph.bioRoles.join(' ');
+  const li = mergedProfile.linkedinIdentity as Record<string, unknown> | undefined;
+  const jobInterests = (li?.jobInterests as string[] | undefined) ?? [];
+  if (founderPatterns.test(bioRolesText) && jobInterests.length > 0) {
+    out.push({
+      pattern: 'founder_jobseeker_conflict',
+      implication: 'Instagram bio claims founder/CEO role but LinkedIn signals active job seeking. Treat Instagram bio as ground truth.',
+      dampens: ['growth'],
+    });
+  }
+
+  // creator_consumer_conflict: established IG creator with heavy YouTube consumption likely studying competitors
+  const followersCount = typeof ig?.followersCount === 'number' ? ig.followersCount : 0;
+  const isCreatorLevel =
+    graph.igCreatorTier === 'micro' || followersCount > 5000;
+  if (isCreatorLevel && graph.topChannels.length >= 8) {
+    out.push({
+      pattern: 'creator_consumer_conflict',
+      implication: 'Creator-level Instagram presence with heavy YouTube consumption — likely studying competitors, not a passive consumer.',
+      dampens: ['consumer_score'],
+    });
+  }
+
   return out.slice(0, 8);
+}
+
+function computeDeterministicMomentum(
+  signalMeter: SignalMeterOutput,
+  priorMomentum: number | null,
+): { score: number; delta: number } {
+  if (priorMomentum === null || priorMomentum === undefined) return { score: 50, delta: 0 };
+  const avgStrength = signalMeter.signals.length > 0
+    ? signalMeter.signals.reduce((a, s) => a + s.final_score, 0) / signalMeter.signals.length
+    : 0;
+  const signalCountFactor = Math.min(signalMeter.signals.length / 30, 1.0);
+  const newScore = Math.max(0, Math.min(100, Math.round(avgStrength * 60 + signalCountFactor * 40)));
+  return { score: newScore, delta: newScore - priorMomentum };
 }
 
 function buildMatrixSummary(primary: IntentType): string {
@@ -323,6 +365,9 @@ export function buildBehavioralPrecalc(
     music: Boolean(sp || am),
   };
 
+  const priorMomentum = (mergedProfile.lastMomentumScore as number | undefined) ?? null;
+  const { score: momentum_score, delta: momentum_delta } = computeDeterministicMomentum(signalMeter, priorMomentum);
+
   return {
     primary_intent_type: primary,
     intent_scores: scores,
@@ -330,6 +375,8 @@ export function buildBehavioralPrecalc(
     negative_signals,
     platform_connected,
     intent_weight_matrix_applied: buildMatrixSummary(primary),
+    momentum_score,
+    momentum_delta,
   };
 }
 
