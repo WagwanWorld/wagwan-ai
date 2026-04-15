@@ -49,6 +49,20 @@ export async function buildExpressionLayer(
     if (atoms.length < 4) atoms = fb.atoms;
   }
 
+  // Apply user votes to atom strength — ground truth calibration
+  const votes = input.feedback?.votes ?? [];
+  if (votes.length > 0) {
+    for (const atom of atoms) {
+      const vote = votes.find(v =>
+        v.targetId?.toLowerCase() === (atom.label ?? '').toLowerCase()
+      );
+      if (vote) {
+        const oldStrength = atom.strength ?? 0.5;
+        atom.strength = Math.max(0, Math.min(1, oldStrength * (vote.vote === 'up' ? 1.25 : 0.40)));
+      }
+    }
+  }
+
   return {
     version: EXPRESSION_LAYER_VERSION,
     generatedAt: new Date().toISOString(),
