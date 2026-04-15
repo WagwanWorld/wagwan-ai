@@ -117,11 +117,13 @@
 <style>
   .intake-backdrop {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     min-height: 100%;
-    padding: 48px 24px;
+    padding: 32px 16px 48px;
     position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
     opacity: 0;
     transform: translateY(12px);
     transition: all 0.6s cubic-bezier(0.32, 0.72, 0, 1);
@@ -133,38 +135,30 @@
 
   .intake-glow {
     position: absolute;
-    width: 400px;
-    height: 400px;
-    top: 10%;
+    width: 300px;
+    height: 300px;
+    top: 5%;
     left: 50%;
     transform: translateX(-50%);
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(77,124,255,0.08), rgba(255,77,77,0.04) 50%, transparent 70%);
+    background: radial-gradient(circle, rgba(77,124,255,0.06), transparent 70%);
     pointer-events: none;
-    animation: glow-pulse 6s cubic-bezier(0.32, 0.72, 0, 1) infinite;
-  }
-
-  @keyframes glow-pulse {
-    0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
-    50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
   }
 
   .intake-card {
     position: relative;
     width: 100%;
-    max-width: 480px;
+    max-width: 440px;
     display: flex;
     flex-direction: column;
-    gap: 32px;
-    padding: 36px;
-    border-radius: 1.5rem;
+    gap: 24px;
+    padding: 28px 24px;
+    border-radius: 1.25rem;
     border: 1px solid var(--border-subtle);
     background: var(--glass-light);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow:
-      inset 0 1px 1px rgba(255,255,255,0.06),
-      0 16px 48px rgba(0,0,0,0.3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   }
 
   /* ── Header ── */
