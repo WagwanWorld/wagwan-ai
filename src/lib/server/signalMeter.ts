@@ -146,18 +146,29 @@ function primaryBucket(buckets: PlatformBucket[]): PlatformBucket {
   return 'manual';
 }
 
-/** Behavioral spec: strength 0.4, recency 0.3, frequency 0.2, confidence 0.1 */
+const PLATFORM_WEIGHTS: Record<string, { s: number; r: number; f: number; c: number }> = {
+  manual:    { s: 0.50, r: 0.10, f: 0.10, c: 0.30 },
+  instagram: { s: 0.45, r: 0.25, f: 0.15, c: 0.15 },
+  linkedin:  { s: 0.35, r: 0.15, f: 0.10, c: 0.40 },
+  music:     { s: 0.30, r: 0.35, f: 0.30, c: 0.05 },
+  google:    { s: 0.35, r: 0.40, f: 0.20, c: 0.05 },
+  youtube:   { s: 0.40, r: 0.25, f: 0.25, c: 0.10 },
+};
+
+/** Platform-stratified scoring: weights vary by platform bucket. */
 function scoreBase(signal: {
   strength: number;
   recency: number;
   frequency: number;
   confidence: number;
+  platform_bucket?: string;
 }): number {
+  const w = PLATFORM_WEIGHTS[signal.platform_bucket ?? 'manual'] ?? PLATFORM_WEIGHTS.manual;
   return clamp01(
-    signal.strength * 0.4 +
-      signal.recency * 0.3 +
-      signal.frequency * 0.2 +
-      signal.confidence * 0.1,
+    signal.strength * w.s +
+      signal.recency * w.r +
+      signal.frequency * w.f +
+      signal.confidence * w.c,
   );
 }
 
@@ -257,6 +268,21 @@ function addCandidate(
   out.push({ ...candidate, value });
 }
 
+const EVIDENCE_K: Record<string, number> = {
+  linkedin:  8,
+  google:    12,
+  instagram: 20,
+  music:     5,
+  manual:    3,
+  youtube:   10,
+};
+
+/** Exponential saturation gate — sparse platforms get score dampened. */
+function evidenceGate(nSignals: number, platform: string): number {
+  const k = EVIDENCE_K[platform] ?? 10;
+  return 1 - Math.exp(-nSignals / k);
+}
+
 function mergeCandidates(
   candidates: SignalCandidate[],
 ): { merged: WeightedSignal[]; noise: Array<{ reason: string; discarded_signal: string }> } {
@@ -295,10 +321,19 @@ function mergeCandidates(
     });
   }
 
+  // Count signals per platform bucket for evidence gating
+  const bucketCounts: Record<string, number> = {};
+  for (const c of candidates) {
+    const pb = primaryBucket(c.platform_buckets);
+    bucketCounts[pb] = (bucketCounts[pb] ?? 0) + 1;
+  }
+
   const merged: WeightedSignal[] = [];
   for (const row of map.values()) {
+    const pb = primaryBucket(row.platform_buckets);
     const boost = crossPlatformBoost(row.platform_buckets.length);
-    const base_score = clamp01(scoreBase(row) + boost);
+    const gate = evidenceGate(bucketCounts[pb] ?? 0, pb);
+    const base_score = clamp01((scoreBase({ ...row, platform_bucket: pb }) + boost) * gate);
     const scores_by_intent = buildScoresByIntent(base_score, row.platform_buckets);
     const ws: WeightedSignal = {
       type: row.type,
@@ -338,6 +373,92 @@ const CLUSTER_RULES: Array<{ theme: string; re: RegExp }> = [
   { theme: 'indie music taste', re: /\bindie|alternative|rnb|neo-soul|electronic|house|jazz\b/i },
   { theme: 'community-first builder', re: /\bcommunity|storytelling|creator|culture|documenter\b/i },
 ];
+
+/** Collapse inflated genre clusters into a single merged signal when >2 exist. */
+function collapseGenreCluster(candidates: SignalCandidate[]): SignalCandidate[] {
+  const genreSignals = candidates.filter(c => /genre/i.test(c.category));
+  const rest = candidates.filter(c => !/genre/i.test(c.category));
+  if (genreSignals.length <= 2) return candidates;
+
+  const top3 = [...genreSignals].sort((a, b) => b.strength - a.strength).slice(0, 3);
+  const collapsed: SignalCandidate = {
+    type: top3[0].type,
+    category: top3[0].category,
+    value: top3.map(g => g.value).join(' / '),
+    context: 'Collapsed genre cluster from listening history',
+    strength: Math.max(...genreSignals.map(g => g.strength)),
+    confidence: genreSignals[0].confidence,
+    recency: Math.max(...genreSignals.map(g => g.recency)),
+    frequency: genreSignals.reduce((sum, g) => sum + g.frequency, 0) / genreSignals.length,
+    source: genreSignals[0].source,
+    platform_buckets: genreSignals[0].platform_buckets,
+    direction: genreSignals[0].direction,
+  };
+
+  return [...rest, collapsed];
+}
+
+const PLAYLIST_PATTERNS: Array<{ re: RegExp; value: string; context: string }> = [
+  { re: /gym|workout|lift|gains|sweat|run|cardio/i,     value: 'fitness active',         context: 'Inferred from gym/workout playlist names' },
+  { re: /party|turn up|hype|pregame|rave|festival/i,    value: 'active social life',      context: 'Inferred from party/social playlist names' },
+  { re: /study|focus|deep work|grind|concentrate/i,     value: 'deep focus worker',       context: 'Inferred from study/focus playlist names' },
+  { re: /chill|relax|vibe|lofi|lo-fi|mellow|calm/i,    value: 'calm / introspective',    context: 'Inferred from chill/relax playlist names' },
+  { re: /travel|road trip|drive|cruise|jet/i,           value: 'travel lifestyle',        context: 'Inferred from travel playlist names' },
+  { re: /morning|sunrise|wake|coffee|commute/i,         value: 'structured morning routine', context: 'Inferred from morning routine playlist names' },
+  { re: /night|late|sleep|wind down|moonlight/i,        value: 'night owl tendencies',    context: 'Inferred from night/sleep playlist names' },
+  { re: /cook|kitchen|dinner|brunch|foodie/i,           value: 'food culture interest',   context: 'Inferred from cooking/food playlist names' },
+];
+
+/** Extract lifestyle signals from Apple Music playlist names. */
+function playlistNameToContextSignals(playlistNames: string[], recency: number): SignalCandidate[] {
+  const out: SignalCandidate[] = [];
+  for (const name of playlistNames) {
+    for (const pattern of PLAYLIST_PATTERNS) {
+      if (pattern.re.test(name)) {
+        out.push({
+          type: 'behavior',
+          category: 'playlist lifestyle signal',
+          value: pattern.value,
+          context: pattern.context,
+          strength: 0.62,
+          confidence: 0.65,
+          recency,
+          frequency: 0.55,
+          source: 'apple_music',
+          platform_buckets: ['music'],
+          direction: 'positive',
+        });
+        break; // one signal per playlist name
+      }
+    }
+  }
+  return out;
+}
+
+const APPLE_MUSIC_TIERS: Record<string, { strength: number; confidence: number }> = {
+  lovedSongs:       { strength: 0.92, confidence: 0.90 },
+  heavyRotation:    { strength: 0.75, confidence: 0.70 },
+  recentlyPlayed:   { strength: 0.55, confidence: 0.50 },
+  libraryArtists:   { strength: 0.45, confidence: 0.40 },
+  recommendedNames: { strength: 0.30, confidence: 0.25 },
+};
+
+/** Convert Instagram captionMentions to high-confidence intent signals. */
+function captionMentionsToSignals(mentions: string[], recency: number): SignalCandidate[] {
+  return mentions.map(mention => ({
+    type: 'intent' as SignalMeterType,
+    category: 'caption mention',
+    value: mention,
+    context: 'Brand or entity explicitly mentioned in Instagram captions',
+    strength: 0.80,
+    confidence: 0.95,
+    recency,
+    frequency: 0.65,
+    source: 'instagram',
+    platform_buckets: ['instagram'] as PlatformBucket[],
+    direction: 'positive' as SignalMeterDirection,
+  }));
+}
 
 function buildClusters(signals: WeightedSignal[]): SignalCluster[] {
   const clusters: SignalCluster[] = [];
@@ -472,6 +593,10 @@ export function buildSignalMeter(input: SignalMeterInput): SignalMeterOutput {
     });
   }
 
+  for (const signal of captionMentionsToSignals(ig?.captionMentions ?? [], igRecency)) {
+    addCandidate(candidates, rawNoise, signal);
+  }
+
   for (const [index, value] of (sp?.topGenres ?? am?.topGenres ?? []).slice(0, 6).entries()) {
     addCandidate(candidates, rawNoise, {
       type: 'taste',
@@ -526,6 +651,51 @@ export function buildSignalMeter(input: SignalMeterInput): SignalMeterOutput {
       ),
       direction: 'positive',
     });
+  }
+
+  // Apple Music tier-based ingestion
+  for (const [index, track] of (am?.heavyRotationTracks ?? []).slice(0, 6).entries()) {
+    const value = clean([track.title, track.artistName].filter(Boolean).join(' — '));
+    if (!value) continue;
+    const tier = APPLE_MUSIC_TIERS.heavyRotation;
+    addCandidate(candidates, rawNoise, {
+      type: 'taste',
+      category: 'heavy rotation track',
+      value,
+      context: 'Track in heavy rotation on Apple Music',
+      strength: tier.strength,
+      confidence: tier.confidence,
+      recency: appleRecency,
+      frequency: frequencyFromIndex(index, am?.heavyRotationTracks?.length ?? 1, 0.05),
+      source: 'apple_music',
+      platform_buckets: sourceTokensToBuckets('apple_music'),
+      direction: 'positive',
+    });
+  }
+
+  for (const [index, track] of (am?.recentlyPlayed ?? []).slice(0, 6).entries()) {
+    const value = clean([track.title, track.artistName].filter(Boolean).join(' — '));
+    if (!value) continue;
+    const tier = APPLE_MUSIC_TIERS.recentlyPlayed;
+    addCandidate(candidates, rawNoise, {
+      type: 'taste',
+      category: 'recently played track',
+      value,
+      context: 'Recently played on Apple Music',
+      strength: tier.strength,
+      confidence: tier.confidence,
+      recency: appleRecency,
+      frequency: frequencyFromIndex(index, am?.recentlyPlayed?.length ?? 1),
+      source: 'apple_music',
+      platform_buckets: sourceTokensToBuckets('apple_music'),
+      direction: 'positive',
+    });
+  }
+
+  // Apple Music playlist name → lifestyle signals
+  const allPlaylists = [...(am?.rotationPlaylists ?? []), ...(am?.libraryPlaylists ?? [])];
+  for (const signal of playlistNameToContextSignals(allPlaylists, appleRecency)) {
+    addCandidate(candidates, rawNoise, signal);
   }
 
   for (const [index, value] of (google?.topChannels ?? []).slice(0, 8).entries()) {
@@ -685,7 +855,7 @@ export function buildSignalMeter(input: SignalMeterInput): SignalMeterOutput {
     });
   }
 
-  const { merged, noise } = mergeCandidates(candidates);
+  const { merged, noise } = mergeCandidates(collapseGenreCluster(candidates));
   const clusters = buildClusters(merged);
   const dominant_patterns = clusters.slice(0, 5).map(cluster => cluster.theme);
 
