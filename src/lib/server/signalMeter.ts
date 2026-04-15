@@ -100,6 +100,8 @@ export interface SignalMeterInput {
     professionalThemeTags?: string[];
     linkedinIntentHints?: Array<{ intent?: string; confidence?: number }>;
   } | null;
+  firstPartySignals?: Array<{ value: string; category: string; type: string; strength: number; confidence: number; recency: number; frequency: number; source: string; platform_buckets: string[]; direction: string; context: string }>;
+  feedbackAdjustments?: Array<{ target_value: string; target_category: string; multiplier: number }>;
 }
 
 interface SignalCandidate {
@@ -285,6 +287,7 @@ function evidenceGate(nSignals: number, platform: string): number {
 
 function mergeCandidates(
   candidates: SignalCandidate[],
+  feedbackAdjustments?: Array<{ target_value: string; target_category: string; multiplier: number }>,
 ): { merged: WeightedSignal[]; noise: Array<{ reason: string; discarded_signal: string }> } {
   type Acc = Omit<SignalCandidate, 'platform_buckets'> & { platform_buckets: PlatformBucket[] };
   const map = new Map<string, Acc>();
@@ -335,6 +338,17 @@ function mergeCandidates(
     const gate = evidenceGate(bucketCounts[pb] ?? 0, pb);
     const base_score = clamp01((scoreBase({ ...row, platform_bucket: pb }) + boost) * gate);
     const scores_by_intent = buildScoresByIntent(base_score, row.platform_buckets);
+    let adjusted_score = base_score;
+    if (feedbackAdjustments) {
+      for (const adj of feedbackAdjustments) {
+        const valueMatch = adj.target_value && row.value.toLowerCase().includes(adj.target_value.toLowerCase());
+        const categoryMatch = adj.target_category && row.category.toLowerCase() === adj.target_category.toLowerCase();
+        if (valueMatch || categoryMatch) {
+          adjusted_score = clamp01(adjusted_score * adj.multiplier);
+          break;
+        }
+      }
+    }
     const ws: WeightedSignal = {
       type: row.type,
       category: row.category,
@@ -349,7 +363,7 @@ function mergeCandidates(
       platform_buckets: row.platform_buckets,
       direction: row.direction,
       base_score,
-      final_score: base_score,
+      final_score: adjusted_score,
       scores_by_intent,
     };
     if (ws.final_score < 0.3) {
@@ -855,7 +869,26 @@ export function buildSignalMeter(input: SignalMeterInput): SignalMeterOutput {
     });
   }
 
-  const { merged, noise } = mergeCandidates(collapseGenreCluster(candidates));
+  // Inject first-party signals (fetched async by caller)
+  if (input.firstPartySignals) {
+    for (const fp of input.firstPartySignals) {
+      addCandidate(candidates, rawNoise, {
+        type: (fp.type ?? 'interest') as SignalMeterType,
+        category: fp.category,
+        value: fp.value,
+        context: fp.context ?? 'First-party activity signal',
+        strength: fp.strength,
+        confidence: fp.confidence,
+        recency: fp.recency,
+        frequency: fp.frequency,
+        source: fp.source,
+        platform_buckets: (fp.platform_buckets ?? []) as PlatformBucket[],
+        direction: (fp.direction ?? 'positive') as SignalMeterDirection,
+      });
+    }
+  }
+
+  const { merged, noise } = mergeCandidates(collapseGenreCluster(candidates), input.feedbackAdjustments);
   const clusters = buildClusters(merged);
   const dominant_patterns = clusters.slice(0, 5).map(cluster => cluster.theme);
 

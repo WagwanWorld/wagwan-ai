@@ -50,6 +50,10 @@ import { computeGoogleTwinForToken } from '$lib/server/signalProcessor/googlePro
 import { fetchSpotifyEnrichedData, analyseSpotifyIdentityEnriched } from '$lib/server/spotify';
 import { fetchLinkedInProfile, analyseLinkedInIdentity } from '$lib/server/linkedin';
 import { buildSignalMeter } from '$lib/server/signalMeter';
+import { getFirstPartySignals } from '$lib/server/firstPartySignals';
+import { buildFeedbackAdjustments } from '$lib/server/feedbackLoop';
+import { insertPredictions } from '$lib/server/predictionLedger';
+import { computeIdentityDrift } from '$lib/server/identityDriftDetector';
 import { syncIdentityClaimsFromGraph } from '$lib/server/identityClaims/syncFromGraph';
 import { buildExpressionLayer } from '$lib/server/expression/buildExpressionLayer';
 import type { IdentityGraph } from '$lib/server/identity';
@@ -326,6 +330,12 @@ async function runRefreshPipeline({
   await Promise.allSettled(tasks);
   send('All accounts synced — building your identity…');
 
+  send('Loading your activity history…');
+  const [firstPartySignals, feedbackAdjustments] = await Promise.all([
+    getFirstPartySignals(googleSub).catch(() => []),
+    buildFeedbackAdjustments(googleSub).catch(() => []),
+  ]);
+
   const manualInterestTags = await getManualInterestTags(googleSub);
   const syncStamp = new Date().toISOString();
 
@@ -363,7 +373,7 @@ async function runRefreshPipeline({
   let hyperInferenceRan = false;
   let hyperInferenceGeneratedAt: string | null = null;
   try {
-    const signalMeter = buildSignalMeter(merged);
+    const signalMeter = buildSignalMeter({ ...merged, firstPartySignals, feedbackAdjustments });
     const graph = buildIdentityGraph({ ...merged, signalMeter });
     const behavioralPrecalc = buildBehavioralPrecalc(graph, signalMeter, merged);
     summaryStr = identitySummary(graph);
@@ -393,6 +403,9 @@ async function runRefreshPipeline({
 
     let inferenceIdentity: unknown = priorFullGraph.inferenceIdentity;
 
+    const priorSignals = (priorFullGraph.signalMeterSnapshot as Array<{ value: string; final_score: number; category?: string }>) ?? null;
+    const driftVector = computeIdentityDrift(signalMeter.signals, priorSignals);
+
     if (shouldInfer) {
       send('Running deep identity inference…');
       inferenceRan = true;
@@ -406,6 +419,7 @@ async function runRefreshPipeline({
           updatedPlatforms: Object.keys(updated),
         },
         behavioralPrecalc,
+        driftVector,
       );
       const current = await runInferenceFromBundle(bundle);
       if (current) {
@@ -487,6 +501,11 @@ async function runRefreshPipeline({
         graphData.hyperInference = hyper.value;
         hyperInferenceRan = true;
         hyperInferenceGeneratedAt = hyper.value.generatedAt;
+        // Track predictions for feedback loop
+        const predictions = (hyper.value as any)?.prediction_layer ?? [];
+        if (predictions.length > 0 && inferenceRevision !== null) {
+          insertPredictions(googleSub, predictions, inferenceRevision).catch(() => {});
+        }
       }
     }
 
@@ -556,6 +575,8 @@ async function runRefreshPipeline({
       graphData.expressionLayer = priorFullGraph.expressionLayer as Record<string, unknown>;
     }
     graphData.expressionFeedback = priorExprFeedback ?? { votes: [], atomNudges: {} };
+
+    graphData.signalMeterSnapshot = signalMeter.signals.map(s => ({ value: s.value, final_score: s.final_score, category: s.category }));
 
     merged.lastSignalHash = newSignalHash;
     await upsertProfile(googleSub, { lastSignalHash: newSignalHash });

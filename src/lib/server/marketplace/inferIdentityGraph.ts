@@ -5,6 +5,7 @@ import type { BehavioralPrecalcResult } from '$lib/server/behavioralPrecalc';
 import { precalcToBundleJson } from '$lib/server/behavioralPrecalc';
 import type { InferenceIdentityCurrent } from '$lib/types/inferenceIdentity';
 import { parseInferenceIdentityCurrent } from './inferenceIdentitySchema';
+import type { DriftVector } from '$lib/server/identityDriftDetector';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 
@@ -51,6 +52,7 @@ export function buildInferenceSignalBundle(
   priorCurrent: InferenceIdentityCurrent | null,
   syncMeta: { meaningfulPlatformSync: boolean; updatedPlatforms: string[] },
   behavioralPrecalc?: BehavioralPrecalcResult | null,
+  driftVector?: DriftVector | null,
 ): string {
   const ig = mergedProfile.instagramIdentity as Record<string, unknown> | undefined;
   const li = mergedProfile.linkedinIdentity as Record<string, unknown> | undefined;
@@ -167,6 +169,12 @@ export function buildInferenceSignalBundle(
       contradictions: behavioralPrecalc.negative_signals
         .filter(n => n.pattern.includes('conflict'))
         .map(n => ({ pattern: n.pattern, resolution: n.implication })),
+    } : null,
+    drift_context: driftVector ? {
+      rising: driftVector.rising.slice(0, 5),
+      fading: driftVector.fading.slice(0, 5),
+      transition: driftVector.transition_signal,
+      intensity: driftVector.drift_intensity,
     } : null,
   };
 
