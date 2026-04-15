@@ -141,19 +141,16 @@ function isDisqualified(creator: CreatorPortrait, brief: BrandBrief): string | n
   const cadence = creator.posting_cadence.toLowerCase();
   if (cadence.includes('inactive') || cadence.includes('rarely')) return 'inactive posting';
 
-  // Graph strength too low
-  if (creator.graph_strength < 30) return 'insufficient portrait data';
+  // Graph strength too low — only disqualify truly empty profiles
+  if (creator.graph_strength < 5) return 'insufficient portrait data';
 
-  // Follower count outside tier
-  const range = TIER_RANGES[brief.budget_tier];
-  if (range) {
-    if (creator.follower_count < range[0] || creator.follower_count > range[1]) {
-      return `follower count outside ${brief.budget_tier} tier range`;
+  // Follower count outside tier — only disqualify if follower count is known and clearly wrong tier
+  if (creator.follower_count > 0) {
+    const range = TIER_RANGES[brief.budget_tier];
+    if (range && creator.follower_count > range[1] * 2) {
+      return `follower count far outside ${brief.budget_tier} tier range`;
     }
   }
-
-  // Not available for deals
-  if (!creator.rates?.available) return 'not available for deals';
 
   // Bad fit signals
   const badFit = brief.bad_fit_signals.map(s => s.toLowerCase());
