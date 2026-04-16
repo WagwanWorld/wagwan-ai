@@ -5,7 +5,7 @@ import type { BrandQueryIntent, MatchResult, ExpandedSignal } from './types';
 // Privacy gate — fetch opted-out users fresh each pipeline run
 // ---------------------------------------------------------------------------
 
-async function getOptedOutUsers(): Promise<Set<string>> {
+export async function getOptedOutUsers(): Promise<Set<string>> {
   const supabase = getServiceSupabase();
   const { data } = await supabase
     .from('profiles')
