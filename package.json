@@ -16,6 +16,7 @@
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@fontsource/bodoni-moda": "^5.2.7",
     "@fontsource/inter": "^5.2.8",
+    "@google-cloud/storage": "^7.19.0",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@lucide/svelte": "^1.7.0",
