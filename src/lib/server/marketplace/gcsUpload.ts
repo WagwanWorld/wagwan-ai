@@ -2,10 +2,24 @@ import { Storage } from '@google-cloud/storage';
 import { env } from '$env/dynamic/private';
 
 function getStorage(): Storage {
-  const keyJson = env.GCS_SERVICE_ACCOUNT_KEY;
-  if (!keyJson) throw new Error('GCS_SERVICE_ACCOUNT_KEY not configured');
-  const credentials = JSON.parse(keyJson);
-  return new Storage({ credentials, projectId: credentials.project_id });
+  const raw = env.GCS_SERVICE_ACCOUNT_KEY;
+  if (!raw) throw new Error('GCS_SERVICE_ACCOUNT_KEY not configured');
+
+  // Vercel may store JSON with real newlines inside the private_key field.
+  // Parse with a two-pass approach: try direct parse, then fix newlines.
+  let credentials: Record<string, unknown>;
+  try {
+    credentials = JSON.parse(raw);
+  } catch {
+    // Replace real newlines with escaped \\n only inside the private_key value
+    const fixed = raw.replace(
+      /"private_key"\s*:\s*"([\s\S]*?)(?<!\\)"/,
+      (_, keyVal: string) => `"private_key":"${keyVal.replace(/\r?\n/g, '\\n')}"`
+    );
+    credentials = JSON.parse(fixed);
+  }
+
+  return new Storage({ credentials, projectId: credentials.project_id as string });
 }
 
 const BUCKET_NAME = 'wagwan-ai';
