@@ -1,3 +1,9 @@
 {
-  "framework": "sveltekit"
+  "framework": "sveltekit",
+  "crons": [
+    {
+      "path": "/api/cron/publish-scheduled",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
