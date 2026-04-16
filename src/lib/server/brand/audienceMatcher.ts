@@ -7,11 +7,21 @@ import type { BrandQueryIntent, MatchResult, ExpandedSignal } from './types';
 
 export async function getOptedOutUsers(): Promise<Set<string>> {
   const supabase = getServiceSupabase();
-  const { data } = await supabase
-    .from('profiles')
-    .select('google_sub')
-    .eq('brand_matching_opt_out', true);
-  return new Set(data?.map((r: any) => r.google_sub) ?? []);
+  const PAGE_SIZE = 1000;
+  const result = new Set<string>();
+  let offset = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('google_sub')
+      .eq('brand_matching_opt_out', true)
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error || !data?.length) break;
+    for (const r of data) result.add(r.google_sub);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,14 +92,23 @@ export async function matchDirectSignals(
 
 function buildDomainQueries(intent: BrandQueryIntent): Array<{ query: string; weight: number }> {
   const queries: Array<{ query: string; weight: number }> = [];
-  if (intent.target_interests?.length)
-    queries.push({ query: intent.target_interests.join(' '), weight: 1.0 });
-  if (intent.target_lifestyle?.length)
-    queries.push({ query: intent.target_lifestyle.join(' '), weight: 0.9 });
+  if (intent.target_interests?.length) {
+    for (const interest of intent.target_interests) {
+      queries.push({ query: interest, weight: 1.0 });
+    }
+  }
+  if (intent.target_lifestyle?.length) {
+    for (const lifestyle of intent.target_lifestyle) {
+      queries.push({ query: lifestyle, weight: 0.9 });
+    }
+  }
   if (intent.target_purchase_category)
     queries.push({ query: intent.target_purchase_category, weight: 1.0 });
-  if (intent.target_career_stage?.length)
-    queries.push({ query: intent.target_career_stage.join(' '), weight: 0.85 });
+  if (intent.target_career_stage?.length) {
+    for (const stage of intent.target_career_stage) {
+      queries.push({ query: stage, weight: 0.85 });
+    }
+  }
   return queries;
 }
 

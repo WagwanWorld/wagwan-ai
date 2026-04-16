@@ -78,6 +78,15 @@ export async function runCorrelationDiscovery(): Promise<void> {
   const correlations: CorrelationInsert[] = [];
   const signalKeys = [...signalPresence.keys()];
 
+  // Safety cap: O(n²) pairwise loop — cap at 1000 signal keys (~500k pairs max)
+  // At production scale, move to a SQL window function or background pg job
+  if (signalKeys.length > 1000) {
+    console.warn(`[correlationDiscovery] Signal key space (${signalKeys.length}) exceeds safe limit. Capping at 1000 keys with highest support.`);
+    // Sort by support count desc before slicing
+    signalKeys.sort((a, b) => (signalPresence.get(b)?.size ?? 0) - (signalPresence.get(a)?.size ?? 0));
+    signalKeys.length = 1000;
+  }
+
   for (let i = 0; i < signalKeys.length; i++) {
     const keyA = signalKeys[i];
     const usersA = signalPresence.get(keyA)!;

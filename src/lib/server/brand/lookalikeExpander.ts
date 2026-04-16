@@ -39,7 +39,8 @@ export async function expandToLookalikes(
   const { data: allUsers } = await supabase
     .from('identity_graphs')
     .select('google_sub, signal_meter')
-    .not('signal_meter', 'is', null);
+    .not('signal_meter', 'is', null)
+    .limit(2000); // v1: full cosine scan — replace with pgvector ANN at scale
 
   const targetCount = totalUsers * expansionFactor;
   const scoredUsers: Array<{ sub: string; similarity: number }> = [];

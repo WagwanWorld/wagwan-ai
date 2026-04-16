@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS brand_queries (
   created_at       timestamptz DEFAULT now()
 );
 
+CREATE INDEX IF NOT EXISTS idx_bq_brand ON brand_queries(brand_id, created_at DESC);
+
 -- ─── brand_audience_matches ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS brand_audience_matches (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),

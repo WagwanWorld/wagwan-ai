@@ -55,27 +55,31 @@ export async function buildUserSignalVectors(
   if (userIds.length === 0) return vectors;
 
   const supabase = getServiceSupabase();
-  const { data } = await supabase
-    .from('identity_graphs')
-    .select('google_sub, signal_meter, inference_identity')
-    .in('google_sub', userIds);
+  const CHUNK_SIZE = 200;
 
-  for (const user of data ?? []) {
-    const vec = new Array(VECTOR_DIMENSIONS.length).fill(0);
-    const signals: Array<{category: string, value: string, final_score: number}> =
-      (user.signal_meter as any)?.signals ?? [];
-    const domains: Array<{id: string, salience_0_100: number}> =
-      (user.inference_identity as any)?.current?.life_domains ?? [];
+  for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
+    const chunk = userIds.slice(i, i + CHUNK_SIZE);
+    const { data } = await supabase
+      .from('identity_graphs')
+      .select('google_sub, signal_meter, inference_identity')
+      .in('google_sub', chunk);
 
-    for (const sig of signals) {
-      const dim = mapSignalToDimension(sig.category, sig.value);
-      if (dim >= 0) vec[dim] = Math.max(vec[dim], sig.final_score ?? 0);
+    for (const user of data ?? []) {
+      const vec = new Array(VECTOR_DIMENSIONS.length).fill(0);
+      const signals: Array<{ category: string; value: string; final_score: number }> =
+        (user.signal_meter as any)?.signals ?? [];
+      const domains: Array<{ id: string; salience_0_100: number }> =
+        (user.inference_identity as any)?.current?.life_domains ?? [];
+      for (const sig of signals) {
+        const dim = mapSignalToDimension(sig.category, sig.value);
+        if (dim >= 0) vec[dim] = Math.max(vec[dim], sig.final_score ?? 0);
+      }
+      for (const domain of domains) {
+        const dim = mapDomainToDimension(domain.id);
+        if (dim >= 0) vec[dim] = Math.max(vec[dim], (domain.salience_0_100 ?? 0) / 100);
+      }
+      vectors.set(user.google_sub, vec);
     }
-    for (const domain of domains) {
-      const dim = mapDomainToDimension(domain.id);
-      if (dim >= 0) vec[dim] = Math.max(vec[dim], (domain.salience_0_100 ?? 0) / 100);
-    }
-    vectors.set(user.google_sub, vec);
   }
 
   return vectors;
@@ -163,7 +167,7 @@ export function kMeansClusters(
   }
 
   const result = new Map<string, string>();
-  users.forEach((u, i) => result.set(u, `cohort_${String.fromCharCode(97 + assignments[i])}`));
+  users.forEach((u, i) => result.set(u, `cohort_${assignments[i] + 1}`));
   return result;
 }
 
@@ -207,49 +211,50 @@ export async function buildLabeledCohorts(
   // Group users by cohort
   const cohortUsers = new Map<string, MatchResult[]>();
   for (const result of rankedResults) {
-    const cohortId = clusterAssignments.get(result.user_google_sub) ?? 'cohort_a';
+    const cohortId = clusterAssignments.get(result.user_google_sub) ?? 'cohort_1';
     if (!cohortUsers.has(cohortId)) cohortUsers.set(cohortId, []);
     cohortUsers.get(cohortId)!.push(result);
   }
 
-  const cohorts: CohortResult[] = [];
+  const cohortEntries = [...cohortUsers.entries()];
+  const cohortResults = await Promise.all(
+    cohortEntries.map(async ([cohortId, users]) => {
+      const cohortVecs = users
+        .map(u => vectors.get(u.user_google_sub))
+        .filter((v): v is number[] => v != null);
 
-  for (const [cohortId, users] of cohortUsers) {
-    const cohortVecs = users
-      .map(u => vectors.get(u.user_google_sub))
-      .filter((v): v is number[] => v != null);
+      // Compute centroid
+      const dim = VECTOR_DIMENSIONS.length;
+      const centroid = cohortVecs.length > 0
+        ? Array.from({ length: dim }, (_, d) =>
+            cohortVecs.reduce((sum, v) => sum + v[d], 0) / cohortVecs.length
+          )
+        : new Array(dim).fill(0);
 
-    // Compute centroid
-    const dim = VECTOR_DIMENSIONS.length;
-    const centroid = cohortVecs.length > 0
-      ? Array.from({ length: dim }, (_, d) =>
-          cohortVecs.reduce((sum, v) => sum + v[d], 0) / cohortVecs.length
-        )
-      : new Array(dim).fill(0);
+      // Build top signals from centroid dimensions
+      const topSignals: WeightedSignal[] = VECTOR_DIMENSIONS
+        .map((name, i) => ({ value: name.replace(/_/g, ' '), category: 'dimension', final_score: centroid[i] }))
+        .filter(s => s.final_score > 0.1)
+        .sort((a, b) => b.final_score - a.final_score)
+        .slice(0, 8);
 
-    // Build top signals from centroid dimensions
-    const topSignals: WeightedSignal[] = VECTOR_DIMENSIONS
-      .map((name, i) => ({ value: name.replace(/_/g, ' '), category: 'dimension', final_score: centroid[i] }))
-      .filter(s => s.final_score > 0.1)
-      .sort((a, b) => b.final_score - a.final_score)
-      .slice(0, 8);
+      const { label, description } = await labelCohort(topSignals, users.length, rawPrompt);
 
-    const { label, description } = await labelCohort(topSignals, users.length, rawPrompt);
+      const avgScore = users.reduce((s, u) => s + u.match_score, 0) / users.length;
+      const avgConf = users.reduce((s, u) => s + u.match_confidence, 0) / users.length;
 
-    const avgScore = users.reduce((s, u) => s + u.match_score, 0) / users.length;
-    const avgConf = users.reduce((s, u) => s + u.match_confidence, 0) / users.length;
-
-    cohorts.push({
-      cohort_id: cohortId,
-      label,
-      description,
-      user_count: users.length,
-      avg_match_score: avgScore,
-      avg_confidence: avgConf,
-      top_signals: topSignals,
-      centroid_vector: centroid,
-    });
-  }
-
-  return cohorts.sort((a, b) => b.user_count - a.user_count);
+      return {
+        cohort_id: cohortId,
+        label,
+        description,
+        user_count: users.length,
+        avg_match_score: avgScore,
+        avg_confidence: avgConf,
+        top_signals: topSignals,
+        centroid_vector: centroid,
+      };
+    })
+  );
+  const cohorts = cohortResults.sort((a, b) => b.user_count - a.user_count);
+  return cohorts;
 }

@@ -32,8 +32,9 @@ export const POST: RequestHandler = async ({ request }) => {
         const result = await runAudienceMatchingPipeline(prompt, brandId, emit);
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, result })}\n\n`));
       } catch (e) {
+        console.error('[brand/match] Pipeline error:', e);
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ error: String(e) })}\n\n`)
+          encoder.encode(`data: ${JSON.stringify({ error: 'Audience matching failed. Please try again.' })}\n\n`)
         );
       } finally {
         controller.close();
