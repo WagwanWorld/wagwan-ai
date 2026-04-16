@@ -1323,6 +1323,16 @@
           matches={matchResults}
           brandName={brandContext.brandName}
           on:startOver={handleStartOver}
+          on:startCampaign={(e) => {
+            const d = e.detail;
+            campaignTitle = d.title;
+            creativeText = d.creativeText;
+            rewardInr = d.rewardInr;
+            channelEmail = d.channels.email;
+            channelInApp = d.channels.in_app;
+            selected = new Set(d.selected);
+            createCampaign();
+          }}
         />
       {/if}
     </div>
