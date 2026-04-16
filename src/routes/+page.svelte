@@ -56,21 +56,6 @@
     { name: 'Rohan K.', handle: '@rohan.lens', followers: '2.3K', earned: '₹8,600', tags: ['Photography', 'Travel'], color: '#A78BFA' },
   ];
 
-  const mockFeedCards = [
-    { type: 'match', brand: 'Zomato', creator: 'Priya S.', reward: '₹3,500', time: '2m ago' },
-    { type: 'payout', creator: 'Arjun M.', amount: '₹2,800', time: '5m ago' },
-    { type: 'post', creator: 'Sneha R.', brand: 'Nykaa', engagement: '4.2K views', time: '8m ago' },
-    { type: 'match', brand: 'Swiggy', creator: 'Karthik V.', reward: '₹2,200', time: '12m ago' },
-    { type: 'payout', creator: 'Ananya D.', amount: '₹5,100', time: '15m ago' },
-    { type: 'post', creator: 'Rohan K.', brand: 'boAt', engagement: '1.8K views', time: '18m ago' },
-    { type: 'match', brand: 'Sugar Cosmetics', creator: 'Priya S.', reward: '₹4,000', time: '22m ago' },
-    { type: 'payout', creator: 'Sneha R.', amount: '₹6,200', time: '25m ago' },
-    { type: 'post', creator: 'Arjun M.', brand: 'Cred', engagement: '3.5K views', time: '28m ago' },
-    { type: 'match', brand: 'Mamaearth', creator: 'Ananya D.', reward: '₹3,100', time: '31m ago' },
-    { type: 'payout', creator: 'Karthik V.', amount: '₹1,900', time: '34m ago' },
-    { type: 'post', creator: 'Priya S.', brand: 'Myntra', engagement: '5.8K views', time: '37m ago' },
-  ];
-
   function readCookie(name: string): string | undefined {
     return document.cookie.split('; ').find(c => c.startsWith(`${name}=`))?.split('=').slice(1).join('=');
   }
@@ -368,34 +353,8 @@
     <div class="landing-g landing-g--c mesh-animate" bind:this={g3}></div>
   </div>
 
-  <!-- Scrolling mock feed background -->
-  <div class="feed-bg" class:ready={visible}>
-    <div class="feed-scroll-track">
-      <div class="feed-scroll-inner">
-        {#each [...mockFeedCards, ...mockFeedCards] as card, i}
-          <div class="feed-card" style="animation-delay: {i * 0.15}s">
-            {#if card.type === 'match'}
-              <div class="feed-card-dot" style="background: #FF4D4D"></div>
-              <span class="feed-card-text"><strong>{card.brand}</strong> matched with {card.creator}</span>
-              <span class="feed-card-badge">{card.reward}</span>
-              <span class="feed-card-time">{card.time}</span>
-            {:else if card.type === 'payout'}
-              <div class="feed-card-dot" style="background: #34D399"></div>
-              <span class="feed-card-text"><strong>{card.creator}</strong> received payout</span>
-              <span class="feed-card-badge feed-card-badge--green">{card.amount}</span>
-              <span class="feed-card-time">{card.time}</span>
-            {:else}
-              <div class="feed-card-dot" style="background: #4D7CFF"></div>
-              <span class="feed-card-text"><strong>{card.creator}</strong> posted for {card.brand}</span>
-              <span class="feed-card-badge feed-card-badge--blue">{card.engagement}</span>
-              <span class="feed-card-time">{card.time}</span>
-            {/if}
-          </div>
-        {/each}
-      </div>
-    </div>
-    <div class="feed-bg-overlay"></div>
-  </div>
+  <!-- Hero background (placeholder — will be replaced with user-provided image/video) -->
+  <div class="hero-bg" class:ready={visible}></div>
 
   <!-- Floating particles -->
   <canvas class="landing-particles" bind:this={canvas}></canvas>
@@ -601,71 +560,16 @@
     filter: blur(90px);
   }
 
-  /* ── Scrolling mock feed background ── */
-  .feed-bg {
+  /* ── Hero background image/video (user will provide asset) ── */
+  .hero-bg {
     position: fixed;
     inset: 0;
     z-index: 1;
-    overflow: hidden;
-    opacity: 0;
-    transition: opacity 2s ease 0.5s;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.5s ease 0.3s;
   }
-  .feed-bg.ready { opacity: 1; }
-
-  .feed-scroll-track {
-    position: absolute;
-    top: -20%;
-    left: 50%;
-    transform: translateX(-50%) rotate(-8deg);
-    width: 420px;
-    height: 140%;
-  }
-
-  .feed-scroll-inner {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    animation: feed-scroll 40s linear infinite;
-  }
-
-  @keyframes feed-scroll {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-50%); }
-  }
-
-  .feed-card {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: var(--glass-medium);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-  }
-  .feed-card-dot {
-    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-  }
-  .feed-card-text { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-  .feed-card-text strong { color: var(--text-primary); font-weight: 600; }
-  .feed-card-badge {
-    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 100px;
-    background: rgba(255, 77, 77, 0.1); color: #FF4D4D;
-  }
-  .feed-card-badge--green { background: rgba(52, 211, 153, 0.1); color: #059669; }
-  .feed-card-badge--blue { background: rgba(77, 124, 255, 0.1); color: #4D7CFF; }
-  .feed-card-time { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
-
-  .feed-bg-overlay {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse at 50% 50%, transparent 20%, var(--bg-primary) 70%),
-      linear-gradient(to bottom, var(--bg-primary) 0%, transparent 15%, transparent 85%, var(--bg-primary) 100%);
-    backdrop-filter: blur(2px);
-  }
+  .hero-bg.ready { opacity: 1; }
 
   /* ── Floating particles ── */
   .landing-particles {
@@ -965,7 +869,6 @@
     .stats-bar { gap: 10px; padding: 10px 16px; }
     .stats-item { font-size: 12px; }
     .creators-grid { grid-template-columns: 1fr; }
-    .feed-scroll-track { width: 300px; }
   }
 
   @media (min-width: 768px) {
