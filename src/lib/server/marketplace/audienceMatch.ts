@@ -146,10 +146,19 @@ export function scoreUserAgainstAudience(
     (typeof row.profile_data?.city === 'string' && String(row.profile_data.city).trim()) ||
     '';
 
+  const followers = typeof graph.igFollowerCount === 'number'
+    ? graph.igFollowerCount
+    : typeof graph.followerCount === 'number'
+      ? graph.followerCount
+      : typeof graph.igFollowers === 'number'
+        ? graph.igFollowers
+        : 0;
+
   return {
     user_google_sub: row.google_sub,
     name,
     city,
+    followers,
     match_score,
     match_score_breakdown: {
       interest_match: Math.round(interest_match * 100) / 100,

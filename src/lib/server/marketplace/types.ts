@@ -22,6 +22,7 @@ export interface AudienceSearchUserRow {
   };
   match_reason: string;
   preview_tags: string[];
+  followers: number;
   /** 0–100 richer identity_graph improves brand match overlap. */
   graph_strength: number;
   graph_strength_label: GraphStrengthLabel;
