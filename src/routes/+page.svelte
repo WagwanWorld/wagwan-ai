@@ -217,7 +217,7 @@
         if (p.x > window.innerWidth + 10) p.x = -10;
         ctx!.beginPath();
         ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(255, 77, 77, ${p.a})`;
+        ctx!.fillStyle = `rgba(255, 255, 255, ${p.a})`;
         ctx!.fill();
       }
       particleRaf = requestAnimationFrame(draw);
@@ -345,7 +345,7 @@
 </script>
 
 {#if shouldShowLanding}
-<div class="landing-root">
+<div class="landing-root" data-app-chrome="dark">
   <!-- Mesh gradient background -->
   <div class="landing-grad" class:ready={visible}>
     <div class="landing-g landing-g--a mesh-animate" bind:this={g1}></div>
@@ -353,8 +353,20 @@
     <div class="landing-g landing-g--c mesh-animate" bind:this={g3}></div>
   </div>
 
-  <!-- Hero background (placeholder — will be replaced with user-provided image/video) -->
-  <div class="hero-bg" class:ready={visible}></div>
+  <!-- Hero background — dark cinematic visual -->
+  <div class="hero-bg" class:ready={visible}>
+    <div class="hero-bg-grain"></div>
+    <div class="hero-bg-glow hero-bg-glow--a"></div>
+    <div class="hero-bg-glow hero-bg-glow--b"></div>
+    <div class="hero-bg-glow hero-bg-glow--c"></div>
+    <div class="hero-bg-lines">
+      <div class="hero-line"></div>
+      <div class="hero-line"></div>
+      <div class="hero-line"></div>
+      <div class="hero-line"></div>
+      <div class="hero-line"></div>
+    </div>
+  </div>
 
   <!-- Floating particles -->
   <canvas class="landing-particles" bind:this={canvas}></canvas>
@@ -362,7 +374,7 @@
   <div class="landing-content" class:ready={visible}>
     {#if !authStarted}
       <nav class="landing-nav">
-        <img src="/logo-black.svg" alt="WagwanAI" class="landing-logo-img" />
+        <img src="/logo-white.svg" alt="WagwanAI" class="landing-logo-img" />
       </nav>
 
       <div class="landing-hero">
@@ -546,21 +558,21 @@
   }
   .landing-g--a {
     width: 120vw; height: 120vw; left: 25%; top: 15%;
-    background: radial-gradient(ellipse at center, oklch(60% 0.28 25 / 0.14) 0%, transparent 65%);
+    background: radial-gradient(ellipse at center, oklch(60% 0.28 25 / 0.22) 0%, transparent 60%);
     filter: blur(80px);
   }
   .landing-g--b {
     width: 90vw; height: 90vw; left: 65%; top: 60%;
-    background: radial-gradient(ellipse at center, oklch(55% 0.22 260 / 0.12) 0%, transparent 65%);
+    background: radial-gradient(ellipse at center, oklch(55% 0.24 260 / 0.20) 0%, transparent 60%);
     filter: blur(70px);
   }
   .landing-g--c {
     width: 140vw; height: 140vw; left: 45%; top: 40%;
-    background: radial-gradient(ellipse at center, oklch(72% 0.20 80 / 0.12) 0%, transparent 68%);
+    background: radial-gradient(ellipse at center, oklch(72% 0.22 80 / 0.16) 0%, transparent 65%);
     filter: blur(90px);
   }
 
-  /* ── Hero background image/video (user will provide asset) ── */
+  /* ── Hero background — dark cinematic ── */
   .hero-bg {
     position: fixed;
     inset: 0;
@@ -568,8 +580,63 @@
     pointer-events: none;
     opacity: 0;
     transition: opacity 1.5s ease 0.3s;
+    overflow: hidden;
   }
   .hero-bg.ready { opacity: 1; }
+
+  /* Film grain texture */
+  .hero-bg-grain {
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.5;
+    mix-blend-mode: overlay;
+  }
+
+  /* Colored glow orbs (on top of mesh gradient for extra richness) */
+  .hero-bg-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    animation: glow-drift 8s ease-in-out infinite alternate;
+  }
+  .hero-bg-glow--a {
+    width: 50vw; height: 50vw;
+    top: -10%; left: -10%;
+    background: rgba(255, 77, 77, 0.15);
+    animation-duration: 10s;
+  }
+  .hero-bg-glow--b {
+    width: 40vw; height: 40vw;
+    bottom: -5%; right: -5%;
+    background: rgba(77, 124, 255, 0.12);
+    animation-duration: 12s;
+    animation-delay: 2s;
+  }
+  .hero-bg-glow--c {
+    width: 35vw; height: 35vw;
+    top: 40%; left: 50%;
+    background: rgba(255, 184, 77, 0.08);
+    animation-duration: 14s;
+    animation-delay: 4s;
+  }
+
+  @keyframes glow-drift {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(30px, -20px) scale(1.1); }
+  }
+
+  /* Subtle grid lines for depth */
+  .hero-bg-lines {
+    position: absolute; inset: 0;
+    display: flex;
+    justify-content: space-evenly;
+    opacity: 0.04;
+  }
+  .hero-line {
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.5) 30%, rgba(255, 255, 255, 0.5) 70%, transparent 100%);
+  }
 
   /* ── Floating particles ── */
   .landing-particles {
@@ -705,8 +772,8 @@
   }
   .landing-auth-btn:active { transform: scale(0.98); }
   .landing-auth-btn.connected {
-    border-color: rgba(5, 150, 105, 0.4);
-    color: #059669; cursor: default;
+    border-color: rgba(74, 222, 128, 0.4);
+    color: #4ade80; cursor: default;
   }
   .landing-auth-btn:disabled { opacity: 0.6; cursor: default; }
   .landing-auth-btn:disabled:hover { transform: none; box-shadow: var(--shadow-tall-card); }
@@ -812,7 +879,7 @@
     font-size: 12px; color: var(--text-secondary);
   }
   .creator-earned {
-    font-size: 13px; font-weight: 700; color: #059669;
+    font-size: 13px; font-weight: 700; color: #4ade80;
   }
   .creator-tags { display: flex; gap: 6px; flex-wrap: wrap; }
   .creator-tag {
@@ -853,7 +920,7 @@
   .auth-name { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0; }
   .auth-card-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px; }
   .auth-card-buttons .landing-auth-btn { width: 100%; justify-content: center; animation: none; }
-  .auth-error { font-size: 13px; color: #e11d48; margin: 0; text-align: center; }
+  .auth-error { font-size: 13px; color: #fb7185; margin: 0; text-align: center; }
   .auth-hint { font-size: 13px; color: var(--text-muted); margin: 0; text-align: center; }
   .auth-skip-link {
     background: none; border: none; color: var(--accent-primary);
