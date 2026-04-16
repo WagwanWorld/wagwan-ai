@@ -9,6 +9,9 @@
   import ArrowClockwise from 'phosphor-svelte/lib/ArrowClockwise';
   import ArrowSquareOut from 'phosphor-svelte/lib/ArrowSquareOut';
   import Broadcast from 'phosphor-svelte/lib/Broadcast';
+  import MagnetStraight from 'phosphor-svelte/lib/MagnetStraight';
+  import Lightning from 'phosphor-svelte/lib/Lightning';
+  import ChartLineUp from 'phosphor-svelte/lib/ChartLineUp';
   import IntegrityScore from '$lib/components/earn/IntegrityScore.svelte';
   import RateCard from '$lib/components/earn/RateCard.svelte';
   import OfferCard from '$lib/components/earn/OfferCard.svelte';
@@ -84,6 +87,7 @@
 
   let showPortraitPreview = false;
   let whatsappLink = '';
+  let showDetails = false;
 
   $: sub = $profile.googleSub;
 
@@ -263,7 +267,6 @@
         body: JSON.stringify({ googleSub: sub, forceInference: true }),
       });
 
-      // Read SSE stream for progress
       const reader = res.body?.getReader();
       if (!reader) { graphRefreshMsg = 'No response stream'; return; }
       const decoder = new TextDecoder();
@@ -357,198 +360,57 @@
   ];
 </script>
 
-<div class="earn mx-auto max-w-2xl px-4 pb-28 pt-8 lg:pb-10">
-  <header class="mb-8">
-    <p class="text-xs font-semibold uppercase tracking-widest text-zinc-500">Earn</p>
-    <h1 class="mt-1 text-2xl font-bold tracking-tight text-zinc-900">Your Offers</h1>
-    <p class="mt-2 text-sm text-zinc-600">
-      See campaigns matched to you, control channels, and track simulated payouts.
-    </p>
-    {#if graphStrength}
-      <IntegrityScore
-        score={graphStrength.score}
-        label={graphStrength.label}
-        breakdown={[
-          { name: 'Google', connected: $profile.googleConnected },
-          { name: 'Instagram', connected: $profile.instagramConnected },
-          { name: 'Spotify', connected: $profile.spotifyConnected },
-          { name: 'Apple Music', connected: $profile.appleMusicConnected },
-          { name: 'LinkedIn', connected: $profile.linkedinConnected },
-        ]}
-      />
-    {/if}
-  </header>
+<div class="earn-page">
+  <!-- Status banner -->
+  <div class="earn-status" class:live={$profile.instagramConnected}>
+    <div class="status-dot"></div>
+    <span>
+      {#if $profile.instagramConnected}
+        You're live in the marketplace
+      {:else}
+        Connect Instagram to start earning
+      {/if}
+    </span>
+    <button
+      class="earn-refresh-btn"
+      aria-label="Refresh"
+      on:click={() => loadAll()}
+    >
+      <ArrowClockwise size={16} class={loading ? 'animate-spin' : ''} />
+    </button>
+  </div>
 
   {#if err}
-    <p class="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</p>
+    <p class="earn-error">{err}</p>
   {/if}
 
-  {#if graphStrength}
-    <section class="mb-8 rounded-2xl border border-violet-200/80 bg-violet-50/40 p-5 shadow-sm backdrop-blur">
-      <h2 class="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-        <Broadcast size={20} class="text-violet-600" weight="light" />
-        Identity signal strength
-      </h2>
-      <p class="mt-2 text-sm text-zinc-600">
-        Campaigns match using your identity graph. Higher strength usually means better, more relevant brand
-        offers—especially when your data is fresh and multi-source.
-      </p>
-      <div class="mt-3 flex flex-wrap items-center gap-3">
-        <span class="text-2xl font-bold tabular-nums text-zinc-900">{graphStrength.score}</span>
-        <span class="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase text-violet-800"
-          >{graphStrength.label}</span
-        >
-        <span class="text-sm text-zinc-600"
-          >{graphStrength.source_count} sources · {graphStrength.freshness_bucket} · {graphStrength.tag_count} tags</span
-        >
-      </div>
-      <div class="mt-3 h-2 overflow-hidden rounded-full bg-zinc-200">
-        <div
-          class="h-full rounded-full bg-gradient-to-r from-violet-600 to-emerald-600"
-          style="width: {Math.min(100, graphStrength.score)}%"
-        ></div>
-      </div>
-      <div class="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          class="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          disabled={refreshingGraph}
-          on:click={() => refreshIdentitySignals()}
-        >
-          {refreshingGraph ? (graphRefreshMsg || 'Refreshing…') : 'Refresh signals from accounts'}
-        </button>
-        <a
-          href="/profile"
-          class="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-800"
-          >Connect more accounts</a
-        >
-      </div>
-      {#if graphRefreshMsg}
-        <p class="mt-2 text-sm text-zinc-700">{graphRefreshMsg}</p>
-      {/if}
-    </section>
-  {/if}
-
-  <RateCard
-    igPostRate={creatorRates.ig_post_rate_inr}
-    igStoryRate={creatorRates.ig_story_rate_inr}
-    igReelRate={creatorRates.ig_reel_rate_inr}
-    whatsappRate={creatorRates.whatsapp_intro_rate_inr}
-    available={creatorRates.available}
-    on:save={saveRates}
-  />
-
-  <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
-    <div class="flex items-center justify-between gap-3">
-      <h2 class="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-        <Wallet size={20} weight="light" class="text-emerald-600" />
- Overview
-      </h2>
-      <button
-        type="button"
-        class="rounded-lg border border-zinc-200 p-2 text-zinc-600 hover:bg-zinc-50"
-        aria-label="Refresh"
-        on:click={() => loadAll()}
-      >
-        <ArrowClockwise size={18} class={loading ? 'animate-spin' : ''} />
-      </button>
+  <!-- Match stats -->
+  <div class="earn-stats">
+    <div class="earn-stat-card">
+      <span class="stat-value">{graphStrength?.source_count ?? 0}</span>
+      <span class="stat-label">Profile views from brands</span>
     </div>
+    <div class="earn-stat-card">
+      <span class="stat-value">{campaigns.length}</span>
+      <span class="stat-label">Matches this week</span>
+    </div>
+    <div class="earn-stat-card">
+      <span class="stat-value">₹{wallet?.summary?.total_inr ?? 0}</span>
+      <span class="stat-label">Lifetime earnings</span>
+    </div>
+  </div>
+
+  <!-- Active campaigns -->
+  <div class="earn-section">
+    <h2 class="earn-section-title">Active campaigns</h2>
     {#if loading}
-      <p class="mt-3 text-sm text-zinc-500">Loading…</p>
-    {:else}
-      <dl class="mt-4 grid grid-cols-3 gap-3 text-center">
-        <div class="rounded-xl bg-zinc-50 py-3">
-          <dt class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Active</dt>
-          <dd class="text-lg font-bold text-zinc-900">{campaigns.length}</dd>
-        </div>
-        <div class="rounded-xl bg-zinc-50 py-3">
-          <dt class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Pending ₹</dt>
-          <dd class="text-lg font-bold text-emerald-700">{wallet?.summary.pending_inr ?? 0}</dd>
-        </div>
-        <div class="rounded-xl bg-zinc-50 py-3">
-          <dt class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Total ₹</dt>
-          <dd class="text-lg font-bold text-zinc-900">{wallet?.summary.total_inr ?? 0}</dd>
-        </div>
-      </dl>
-    {/if}
-  </section>
-
-  <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
-    <h2 class="text-lg font-semibold text-zinc-900">Connected accounts</h2>
-    <p class="mt-1 text-sm text-zinc-600">Last profile update: {$profile.profileUpdatedAt || '—'}</p>
-    <ul class="mt-4 space-y-2">
-      {#each acctRows as a}
-        <li class="flex items-center justify-between rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2 text-sm">
-          <span class="font-medium text-zinc-800">{a.label}</span>
-          <span class={a.ok ? 'text-emerald-600' : 'text-zinc-400'}>{a.ok ? 'Connected' : 'Not connected'}</span>
-        </li>
-      {/each}
-    </ul>
-    <a
-      href="/profile"
-      class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-    >
-      Manage connections <ArrowSquareOut size={14} />
-    </a>
-  </section>
-
-  {#if prefs}
-    <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
-      <h2 class="text-lg font-semibold text-zinc-900">Marketing preferences</h2>
-      <div class="mt-4 space-y-3">
-        <p class="text-xs font-medium uppercase text-zinc-500">Channels</p>
-        <div class="flex flex-wrap gap-2">
-          {#each [['email', 'Email'], ['in_app', 'In-app'], ['whatsapp', 'WhatsApp']] as [k, label]}
-            <button
-              type="button"
-              class="rounded-full border px-3 py-1.5 text-sm transition {prefs.channels?.[k as 'email' | 'in_app' | 'whatsapp']
-                ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
-                : 'border-zinc-200 bg-white text-zinc-600'}"
-              on:click={() => toggleChannel(k as 'email' | 'in_app' | 'whatsapp')}
-            >
-              {label}
-            </button>
-          {/each}
-        </div>
-        <p class="mt-2 text-xs font-medium uppercase text-zinc-500">Categories</p>
-        <div class="flex flex-wrap gap-2">
-          {#each categoryKeys as k}
-            <button
-              type="button"
-              class="rounded-full border px-3 py-1.5 text-sm capitalize transition {prefs.categories?.[k]
-                ? 'border-blue-500 bg-blue-50 text-blue-900'
-                : 'border-zinc-200 bg-white text-zinc-600'}"
-              on:click={() => toggleCategory(k)}
-            >
-              {k}
-            </button>
-          {/each}
-        </div>
-        <label class="mt-2 block text-sm text-zinc-700">
-          Max campaigns / week
-          <input
-            type="number"
-            min="0"
-            max="50"
-            class="ml-2 w-20 rounded-lg border border-zinc-200 px-2 py-1"
-            bind:value={prefs.max_campaigns_per_week}
-          />
-        </label>
-        <button
-          type="button"
-          class="mt-3 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-          on:click={() => savePrefs()}
-        >
-          Save preferences
-        </button>
+      <div class="earn-empty"><p>Loading...</p></div>
+    {:else if campaigns.length === 0}
+      <div class="earn-empty">
+        <p>No campaigns yet. We're finding brands that match your vibe.</p>
       </div>
-    </section>
-  {/if}
-
-  {#if campaigns.length}
-    <div class="earn-section">
-      <h2 class="earn-section-title">Inbound Offers</h2>
-      <div class="earn-offers">
+    {:else}
+      <div class="earn-campaign-list">
         {#each campaigns as campaign}
           <OfferCard
             campaignId={campaign.campaign_id}
@@ -563,8 +425,8 @@
           />
         {/each}
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   {#if whatsappLink}
     <div class="earn-whatsapp">
@@ -573,176 +435,549 @@
     </div>
   {/if}
 
-  <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
-    <h2 class="text-lg font-semibold text-zinc-900">Wallet</h2>
-    <p class="mt-1 text-sm text-zinc-600">Simulated ledger — UPI withdraw coming soon.</p>
-    {#if wallet}
-      <ul class="mt-4 max-h-48 space-y-2 overflow-auto text-sm">
-        {#each wallet.transactions as t}
-          <li class="flex justify-between border-b border-zinc-100 py-2">
-            <span class="text-zinc-700">{t.note || t.status}</span>
-            <span class="font-medium text-zinc-900">₹{t.amount_inr}</span>
-          </li>
-        {/each}
-        {#if !wallet.transactions.length}
-          <li class="text-zinc-500">No transactions yet. Tap “Engage (credit)” on a campaign.</li>
-        {/if}
-      </ul>
-    {/if}
-    <button
-      type="button"
-      class="mt-4 rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700"
-      on:click={() => tryWithdraw()}
-    >
-      Withdraw
-    </button>
-    {#if withdrawMsg}
-      <p class="mt-2 text-sm text-zinc-600">{withdrawMsg}</p>
-    {/if}
-  </section>
-
-  <section class="mb-8 rounded-2xl border border-zinc-200/80 bg-white/70 p-5 shadow-sm backdrop-blur">
-    <h2 class="text-lg font-semibold text-zinc-900">Your snapshot</h2>
-    <p class="mt-1 text-sm text-zinc-600">
-      Personal forecast from your connected accounts—refresh signals to update it. Tags below still power campaign matching.
-    </p>
-    <div class="mt-4 space-y-4">
-      <IdentityIntelligencePanel intelligence={identityIntelligence} />
-      <div class="rounded-xl border border-zinc-100 bg-zinc-50/60 p-3">
-        <label class="block text-xs font-medium text-zinc-700" for="intel-q">Ask the operator view (optional)</label>
-        <input
-          id="intel-q"
-          type="text"
-          class="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm"
-          placeholder="e.g. Should I double down on content or shipping this month?"
-          bind:value={intelligenceQuery}
-        />
-        <button
-          type="button"
-          class="mt-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-amber-700"
-          disabled={intelligenceRunning}
-          on:click={() => runOperatorIntelligence()}
-        >
-          {intelligenceRunning ? 'Working…' : intelligenceQuery.trim() ? 'Run with your question' : 'Regenerate operator view'}
-        </button>
-        {#if intelligenceMsg}
-          <p class="mt-2 text-xs text-zinc-600">{intelligenceMsg}</p>
-        {/if}
+  <!-- How it works -->
+  <div class="earn-section">
+    <h2 class="earn-section-title">How it works</h2>
+    <div class="earn-steps">
+      <div class="earn-step">
+        <div class="step-icon"><MagnetStraight size={24} weight="duotone" /></div>
+        <div>
+          <h3 class="step-title">We match you</h3>
+          <p class="step-desc">Brands are paired with you based on your identity and aesthetic.</p>
+        </div>
       </div>
-      <InferenceIdentityPanel inference={inferenceIdentity} />
-      {#if !loading && !inferenceIdentity}
-        <p class="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-600">
-          No snapshot yet. Tap “Refresh signals from accounts” (server needs
-          <code class="rounded bg-zinc-100 px-1 text-xs">ANTHROPIC_API_KEY</code>).
-        </p>
-      {/if}
+      <div class="earn-step">
+        <div class="step-icon"><Lightning size={24} weight="duotone" /></div>
+        <div>
+          <h3 class="step-title">You approve & post</h3>
+          <p class="step-desc">Review the brief, approve the content, and it goes live.</p>
+        </div>
+      </div>
+      <div class="earn-step">
+        <div class="step-icon"><ChartLineUp size={24} weight="duotone" /></div>
+        <div>
+          <h3 class="step-title">We report, you earn</h3>
+          <p class="step-desc">Analytics sent to the brand automatically. You get paid.</p>
+        </div>
+      </div>
     </div>
-    <p class="mt-6 text-sm text-zinc-600">We also match on these interest tokens:</p>
-    <div class="mt-3 flex flex-wrap gap-2">
-      {#each identityTags as tag}
-        <span class="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-800">{tag}</span>
-      {/each}
-      {#if !identityTags.length}
-        <span class="text-sm text-zinc-500">No tags yet — connect accounts or add interests below.</span>
-      {/if}
-    </div>
-    <label class="mt-4 block text-sm text-zinc-700">
-      Manual interest tags (comma-separated)
-      <textarea
-        class="mt-1 w-full rounded-xl border border-zinc-200 p-2 text-sm"
-        rows="2"
-        bind:value={manualTagInput}
-      ></textarea>
-    </label>
-    <button
-      type="button"
-      class="mt-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white"
-      on:click={() => savePrefs()}
-    >
-      Save tags
-    </button>
-  </section>
+  </div>
 
-  <VisibilityControls
-    musicVisible={visibility.music_visible}
-    instagramVisible={visibility.instagram_visible}
-    careerVisible={visibility.career_visible}
-    lifestyleVisible={visibility.lifestyle_visible}
-    calendarVisible={visibility.calendar_visible}
-    emailVisible={visibility.email_visible}
-    on:save={saveVisibility}
-  />
-
-  <button class="earn-preview-btn" on:click={() => showPortraitPreview = !showPortraitPreview}>
-    {showPortraitPreview ? 'Hide Preview' : 'Preview Your Portrait'}
+  <!-- Details toggle -->
+  <button class="earn-details-toggle" on:click={() => showDetails = !showDetails}>
+    {showDetails ? 'Hide details' : 'Show details'}
   </button>
 
-  {#if showPortraitPreview}
-    <PortraitPreview
-      name={$profile.name}
-      city={$profile.city}
-      archetype=""
-      vibeTags={[]}
-      integrityScore={graphStrength?.score ?? 0}
-      followers={$profile.instagramIdentity?.followersCount ?? 0}
-      posts={$profile.instagramIdentity?.mediaCount ?? 0}
-      rates={creatorRates}
-      visibleSections={Object.entries(visibility).filter(([_, v]) => v).map(([k]) => k.replace('_visible', ''))}
-    />
+  {#if showDetails}
+    <!-- Identity signal strength -->
+    {#if graphStrength}
+      <div class="earn-section">
+        <h2 class="earn-section-title">Identity signal strength</h2>
+        <div class="earn-glass-panel">
+          <div class="signal-header">
+            <Broadcast size={20} weight="light" />
+            <span class="signal-score">{graphStrength.score}</span>
+            <span class="signal-label">{graphStrength.label}</span>
+          </div>
+          <p class="signal-meta">
+            {graphStrength.source_count} sources · {graphStrength.freshness_bucket} · {graphStrength.tag_count} tags
+          </p>
+          <div class="signal-bar-track">
+            <div class="signal-bar-fill" style="width: {Math.min(100, graphStrength.score)}%"></div>
+          </div>
+          <div class="signal-actions">
+            <button
+              class="earn-action-btn"
+              disabled={refreshingGraph}
+              on:click={() => refreshIdentitySignals()}
+            >
+              {refreshingGraph ? (graphRefreshMsg || 'Refreshing...') : 'Refresh signals'}
+            </button>
+            <a href="/profile" class="earn-link">Connect more accounts <ArrowSquareOut size={14} /></a>
+          </div>
+          {#if graphRefreshMsg}
+            <p class="signal-msg">{graphRefreshMsg}</p>
+          {/if}
+        </div>
+      </div>
+    {/if}
+
+    <!-- Rates -->
+    <div class="earn-section">
+      <RateCard
+        igPostRate={creatorRates.ig_post_rate_inr}
+        igStoryRate={creatorRates.ig_story_rate_inr}
+        igReelRate={creatorRates.ig_reel_rate_inr}
+        whatsappRate={creatorRates.whatsapp_intro_rate_inr}
+        available={creatorRates.available}
+        on:save={saveRates}
+      />
+    </div>
+
+    <!-- Wallet -->
+    <div class="earn-section">
+      <h2 class="earn-section-title">Wallet</h2>
+      <div class="earn-glass-panel">
+        <div class="wallet-stats">
+          <div>
+            <span class="wallet-amount">₹{wallet?.summary?.pending_inr ?? 0}</span>
+            <span class="wallet-label">Pending</span>
+          </div>
+          <div>
+            <span class="wallet-amount">₹{wallet?.summary?.withdrawable_inr ?? 0}</span>
+            <span class="wallet-label">Withdrawable</span>
+          </div>
+        </div>
+        {#if wallet?.transactions?.length}
+          <div class="wallet-transactions">
+            {#each wallet.transactions as t}
+              <div class="wallet-tx">
+                <span>{t.note || t.status}</span>
+                <span class="wallet-tx-amount">₹{t.amount_inr}</span>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="wallet-empty">No transactions yet.</p>
+        {/if}
+        <button class="earn-action-btn" on:click={() => tryWithdraw()}>Withdraw</button>
+        {#if withdrawMsg}
+          <p class="signal-msg">{withdrawMsg}</p>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Visibility -->
+    <div class="earn-section">
+      <VisibilityControls
+        musicVisible={visibility.music_visible}
+        instagramVisible={visibility.instagram_visible}
+        careerVisible={visibility.career_visible}
+        lifestyleVisible={visibility.lifestyle_visible}
+        calendarVisible={visibility.calendar_visible}
+        emailVisible={visibility.email_visible}
+        on:save={saveVisibility}
+      />
+    </div>
+
+    <!-- Portrait preview -->
+    <button class="earn-details-toggle" on:click={() => showPortraitPreview = !showPortraitPreview}>
+      {showPortraitPreview ? 'Hide portrait preview' : 'Preview your portrait'}
+    </button>
+    {#if showPortraitPreview}
+      <PortraitPreview
+        name={$profile.name}
+        city={$profile.city}
+        archetype=""
+        vibeTags={[]}
+        integrityScore={graphStrength?.score ?? 0}
+        followers={$profile.instagramIdentity?.followersCount ?? 0}
+        posts={$profile.instagramIdentity?.mediaCount ?? 0}
+        rates={creatorRates}
+        visibleSections={Object.entries(visibility).filter(([_, v]) => v).map(([k]) => k.replace('_visible', ''))}
+      />
+    {/if}
+
+    <!-- Snapshot / Intelligence -->
+    <div class="earn-section">
+      <h2 class="earn-section-title">Your snapshot</h2>
+      <div class="earn-glass-panel">
+        <IdentityIntelligencePanel intelligence={identityIntelligence} />
+        <InferenceIdentityPanel inference={inferenceIdentity} />
+        {#if !loading && !inferenceIdentity}
+          <p class="signal-msg">No snapshot yet. Tap "Refresh signals" above.</p>
+        {/if}
+      </div>
+    </div>
   {/if}
 
-  <p class="text-center text-xs text-zinc-500">
-    Brand tools: <a href="/brands" class="font-medium text-blue-600 hover:underline">/brands</a>
-  </p>
-
   {#if refreshingGraph}
-    <div
-      class="fixed inset-0 z-[1000] flex items-center justify-center bg-zinc-900/35 px-6 backdrop-blur-sm"
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <div
-        class="max-w-sm rounded-2xl border border-zinc-200/90 bg-white/95 p-8 text-center shadow-xl"
-      >
-        <div class="mb-4 flex justify-center text-violet-600">
+    <div class="earn-overlay" role="status" aria-live="polite" aria-busy="true">
+      <div class="earn-overlay-card">
+        <div class="earn-overlay-icon">
           <ArrowClockwise size={28} class="animate-spin" aria-hidden="true" />
         </div>
-        <p class="text-lg font-semibold text-zinc-900">Analysing your profile</p>
-        <p class="mt-2 text-sm text-zinc-600">
-          Running signal analysis across connected accounts. This can take a little while.
-        </p>
+        <p class="earn-overlay-title">Analysing your profile</p>
+        <p class="earn-overlay-desc">Running signal analysis across connected accounts.</p>
       </div>
     </div>
   {/if}
 </div>
 
 <style>
-  .earn :global(a) {
-    text-underline-offset: 2px;
+  .earn-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 20px;
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+    padding-bottom: max(100px, env(safe-area-inset-bottom, 100px));
+    font-family: var(--font-sans);
   }
-  .earn-section { margin-top: 24px; }
+
+  /* ── Status banner ── */
+  .earn-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .earn-status.live { color: var(--text-primary); }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .earn-status.live .status-dot {
+    background: #4cd964;
+    box-shadow: 0 0 8px rgba(76, 217, 100, 0.5);
+  }
+  .earn-refresh-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+  }
+
+  .earn-error {
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.2);
+    color: #ff6b6b;
+    font-size: 13px;
+    margin: 0;
+  }
+
+  /* ── Stats ── */
+  .earn-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .earn-stat-card {
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* ── Sections ── */
   .earn-section-title {
-    font-size: 15px; font-weight: 700; color: var(--text-primary);
-    margin: 0 0 16px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 0 0 14px;
   }
-  .earn-offers { display: flex; flex-direction: column; gap: 16px; }
-  .earn-whatsapp {
-    margin-top: 16px; padding: 16px; border-radius: 14px;
-    background: rgba(77, 124, 255, 0.08); border: 1px solid rgba(77, 124, 255, 0.2);
+
+  .earn-empty {
+    background: var(--glass-light);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 32px 20px;
     text-align: center;
   }
-  .earn-whatsapp-text { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
+  .earn-empty p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .earn-campaign-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── How it works ── */
+  .earn-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .earn-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    background: var(--glass-light);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+  }
+  .step-icon {
+    color: var(--accent-tertiary);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+  }
+  .step-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* ── Details toggle ── */
+  .earn-details-toggle {
+    width: 100%;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--glass-light);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .earn-details-toggle:hover { background: var(--glass-medium); }
+
+  /* ── Glass panel ── */
+  .earn-glass-panel {
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── Signal strength ── */
+  .signal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-primary);
+  }
+  .signal-score {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .signal-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--accent-tertiary);
+    background: rgba(255, 184, 77, 0.1);
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+  .signal-meta {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .signal-bar-track {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+  }
+  .signal-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-tertiary));
+  }
+  .signal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .signal-msg {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  /* ── Action button ── */
+  .earn-action-btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: var(--glass-medium);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .earn-action-btn:hover { background: rgba(255, 255, 255, 0.12); }
+  .earn-action-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .earn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--accent-tertiary);
+    text-decoration: none;
+  }
+  .earn-link:hover { text-decoration: underline; }
+
+  /* ── Wallet ── */
+  .wallet-stats {
+    display: flex;
+    gap: 24px;
+  }
+  .wallet-stats > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .wallet-amount {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+  .wallet-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .wallet-transactions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .wallet-tx {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .wallet-tx-amount {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .wallet-empty {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* ── WhatsApp ── */
+  .earn-whatsapp {
+    padding: 16px;
+    border-radius: 14px;
+    background: rgba(77, 124, 255, 0.08);
+    border: 1px solid rgba(77, 124, 255, 0.2);
+    text-align: center;
+  }
+  .earn-whatsapp-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0 0 12px;
+  }
   .earn-whatsapp-btn {
-    display: inline-block; padding: 10px 24px; border-radius: 100px;
-    background: #25D366; color: white; font-size: 14px; font-weight: 700;
-    text-decoration: none; font-family: inherit;
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 100px;
+    background: #25D366;
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    font-family: inherit;
   }
-  .earn-preview-btn {
-    width: 100%; margin-top: 16px; padding: 12px; border-radius: 14px;
-    background: var(--glass-light); border: 1px solid var(--border-subtle);
-    color: var(--text-secondary); font-size: 13px; font-weight: 600;
-    font-family: inherit; cursor: pointer; transition: background 0.15s;
+
+  /* ── Overlay ── */
+  .earn-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    padding: 24px;
   }
-  .earn-preview-btn:hover { background: var(--glass-medium); }
+  .earn-overlay-card {
+    max-width: 320px;
+    border-radius: 20px;
+    background: var(--glass-medium);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 32px;
+    text-align: center;
+  }
+  .earn-overlay-icon {
+    color: var(--accent-tertiary);
+    margin-bottom: 16px;
+  }
+  .earn-overlay-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px;
+  }
+  .earn-overlay-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 520px) {
+    .earn-stats {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── Animate spin utility ── */
+  :global(.animate-spin) {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 </style>

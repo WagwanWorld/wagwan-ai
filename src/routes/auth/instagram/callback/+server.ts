@@ -38,7 +38,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
   const fromPage = cookies.get('ig_oauth_from') ?? 'onboarding';
   cookies.delete('ig_oauth_from', { path: '/' });
-  const returnBase = fromPage === 'profile' ? '/profile' : '/onboarding';
+  const returnBase = fromPage === 'landing' ? '/' : fromPage === 'profile' ? '/profile' : '/onboarding';
 
   if (err) {
     console.warn('[IG Callback] User denied or error:', err, errReason, errDesc);

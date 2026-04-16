@@ -245,7 +245,7 @@
     } catch {}
     void clearCloudTwinChat(sub);
     profile.reset();
-    goto('/onboarding');
+    goto('/');
   }
 
   function clearTwinMemory() {

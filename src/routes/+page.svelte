@@ -7,12 +7,130 @@
     isAppSessionValid,
     maybeRepairIgOnlyAccountKey,
   } from '$lib/auth/sessionGate';
-  import ProductPreviewCard from '$lib/components/onboarding/ProductPreviewCard.svelte';
+  import { primaryAccountKeyFromOAuthState } from '$lib/auth/accountKey';
+  import type { InstagramIdentity } from '$lib/server/instagram';
+  import type { GoogleIdentity } from '$lib/utils';
+  import MagnetStraight from 'phosphor-svelte/lib/MagnetStraight';
+  import Lightning from 'phosphor-svelte/lib/Lightning';
+  import ChartLineUp from 'phosphor-svelte/lib/ChartLineUp';
+  import Check from 'phosphor-svelte/lib/Check';
 
   let visible = false;
   let g1: HTMLDivElement, g2: HTMLDivElement, g3: HTMLDivElement;
   let raf: number;
   let shouldShowLanding = false;
+
+  // ── Auth state ──
+  let authStarted = false;
+  let googleConnected = false;
+  let googleConnecting = false;
+  let googleIdentity: GoogleIdentity | null = null;
+  let googleTokens: { accessToken: string; refreshToken: string } | null = null;
+  let igConnected = false;
+  let igConnecting = false;
+  let igIdentity: InstagramIdentity | null = null;
+  let igToken = '';
+  let authError = '';
+  let finishing = false;
+
+  $: displayName = googleIdentity?.name?.split(' ')[0] || igIdentity?.displayName?.split(' ')[0] || '';
+  $: displayPicture = googleIdentity?.picture || igIdentity?.profilePicture || '';
+
+  function readCookie(name: string): string | undefined {
+    return document.cookie.split('; ').find(c => c.startsWith(`${name}=`))?.split('=').slice(1).join('=');
+  }
+  function clearCookie(name: string) {
+    document.cookie = `${name}=; Max-Age=0; path=/`;
+  }
+  function cleanParam(key: string) {
+    const u = new URL(window.location.href);
+    u.searchParams.delete(key);
+    window.history.replaceState({}, '', u.toString());
+  }
+
+  function startGoogle() {
+    authStarted = true;
+    googleConnecting = true;
+    window.location.href = '/auth/google?from=landing';
+  }
+
+  function startInstagram() {
+    authStarted = true;
+    igConnecting = true;
+    window.location.href = '/auth/instagram?from=landing';
+  }
+
+  async function finishSetup() {
+    finishing = true;
+    authError = '';
+
+    const accountSub = primaryAccountKeyFromOAuthState({
+      googleConnected,
+      googleIdentity,
+      igConnected,
+      igIdentity,
+    });
+    if (!accountSub) {
+      authError = 'Could not determine your account. Try connecting again.';
+      finishing = false;
+      return;
+    }
+
+    const name = googleIdentity?.name || igIdentity?.displayName || '';
+    const city = igIdentity?.city || '';
+    const interests = igIdentity?.interests?.length ? igIdentity.interests
+      : googleIdentity?.lifestyleSignals?.length ? googleIdentity.lifestyleSignals
+      : ['Music', 'Food', 'Fitness', 'Nightlife'];
+
+    const fullProfile = {
+      googleSub: accountSub,
+      name, city, interests,
+      budget: 'mid' as const,
+      social: 'both' as const,
+      intents: ['Discovering new things', 'Music & culture', 'Food & dining'],
+      setupComplete: true,
+      instagramConnected: igConnected,
+      instagramIdentity: igIdentity,
+      spotifyConnected: false,
+      spotifyIdentity: null,
+      appleMusicConnected: false,
+      appleMusicIdentity: null,
+      youtubeConnected: false,
+      youtubeIdentity: null,
+      googleConnected,
+      googleIdentity,
+      googleAccessToken: googleTokens?.accessToken ?? '',
+      googleRefreshToken: googleTokens?.refreshToken ?? '',
+      linkedinConnected: false,
+      linkedinIdentity: null,
+      savedItems: [] as import('$lib/stores/profile').SavedItem[],
+      savingsTotal: 0,
+      lastVisit: '',
+      profileUpdatedAt: new Date().toISOString(),
+      locationUpdatedAt: '',
+    };
+
+    profile.set(fullProfile);
+
+    const tokens: Record<string, string> = {};
+    if (googleTokens?.accessToken) tokens.googleAccessToken = googleTokens.accessToken;
+    if (googleTokens?.refreshToken) tokens.googleRefreshToken = googleTokens.refreshToken;
+    if (igToken) tokens.instagramToken = igToken;
+
+    fetch('/api/profile/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ googleSub: accountSub, profile: fullProfile, tokens }),
+    }).catch(() => {});
+
+    try {
+      localStorage.removeItem('onboarding_google');
+      localStorage.removeItem('onboarding_ig');
+      localStorage.removeItem('onboarding_ig_token');
+    } catch {}
+
+    void goto('/home', { replaceState: true });
+  }
 
   function startGradient() {
     let prev = 0;
@@ -59,7 +177,74 @@
         }
       }
     } catch {}
+
     shouldShowLanding = true;
+
+    // Handle Google callback
+    const params = new URL(window.location.href).searchParams;
+    if (params.get('google_connected') === '1') {
+      authStarted = true;
+      const idRaw = readCookie('google_identity');
+      const tokRaw = readCookie('google_tokens');
+      if (idRaw) { try { googleIdentity = JSON.parse(decodeURIComponent(idRaw)); } catch {} clearCookie('google_identity'); }
+      if (tokRaw) { try { googleTokens = JSON.parse(decodeURIComponent(tokRaw)); } catch {} clearCookie('google_tokens'); }
+      googleConnected = true;
+      googleConnecting = false;
+      try { localStorage.setItem('onboarding_google', JSON.stringify({ identity: googleIdentity, tokens: googleTokens })); } catch {}
+      cleanParam('google_connected');
+    }
+
+    // Handle Instagram callback
+    if (params.get('ig_connected') === '1') {
+      authStarted = true;
+      const redemptionToken = (params.get('ig_rt') || '').trim() || readCookie('ig_redemption');
+      clearCookie('ig_redemption');
+      cleanParam('ig_connected');
+      cleanParam('ig_rt');
+
+      if (redemptionToken) {
+        igConnected = true;
+        igConnecting = false;
+        fetch(`/api/instagram/identity?token=${encodeURIComponent(redemptionToken)}`)
+          .then(async r => {
+            if (r.ok) {
+              const data = await r.json();
+              igIdentity = data.identity;
+              igToken = data.token || redemptionToken;
+              try {
+                localStorage.setItem('onboarding_ig', JSON.stringify(igIdentity));
+                localStorage.setItem('onboarding_ig_token', igToken);
+              } catch {}
+            } else {
+              authError = 'Could not load Instagram profile — try again.';
+            }
+          })
+          .catch(() => { authError = 'Instagram connection failed.'; });
+      } else {
+        authError = 'Instagram could not finish. Try Connect again.';
+      }
+    }
+
+    // Restore saved auth state from localStorage
+    try {
+      const savedGoogle = localStorage.getItem('onboarding_google');
+      if (savedGoogle) {
+        const parsed = JSON.parse(savedGoogle);
+        googleIdentity = parsed.identity;
+        googleTokens = parsed.tokens;
+        googleConnected = true;
+        authStarted = true;
+      }
+      const savedIg = localStorage.getItem('onboarding_ig');
+      if (savedIg) {
+        igIdentity = JSON.parse(savedIg);
+        igConnected = true;
+        authStarted = true;
+      }
+      const savedIgToken = localStorage.getItem('onboarding_ig_token');
+      if (savedIgToken) igToken = savedIgToken;
+    } catch {}
+
     setTimeout(() => { visible = true; startGradient(); }, 60);
   });
 
@@ -76,38 +261,105 @@
   </div>
 
   <div class="landing-content" class:ready={visible}>
-    <nav class="landing-nav">
-      <img src="/logo-white.svg" alt="WagwanAI" class="landing-logo-img" />
-    </nav>
+    {#if !authStarted}
+      <nav class="landing-nav">
+        <img src="/logo-white.svg" alt="WagwanAI" class="landing-logo-img" />
+      </nav>
 
-    <div class="landing-hero">
-      <h1 class="landing-h1">Your identity,<br>understood.</h1>
-      <p class="landing-sub">
-        Wagwan AI learns who you are from the platforms you use —
-        your music, your posts, your calendar — and gives you
-        personalized recommendations, insights, and a living digital identity.
-      </p>
-      <button class="landing-cta" on:click={() => goto('/onboarding')}>
-        Get Started
-      </button>
-    </div>
+      <div class="landing-hero">
+        <h1 class="landing-h1">Post. Get paid.<br>Your AI handles the&nbsp;rest.</h1>
+        <p class="landing-sub">
+          Wagwan matches you with brands, auto-posts your content, and handles analytics. You just keep being you.
+        </p>
+        <div class="landing-auth-buttons">
+          <button class="landing-auth-btn" on:click={startGoogle}>
+            <img src="/icons/google.svg" alt="" class="auth-icon" />
+            Continue with Google
+          </button>
+          <button class="landing-auth-btn" on:click={startInstagram}>
+            <img src="/icons/instagram.svg" alt="" class="auth-icon" />
+            Continue with Instagram
+          </button>
+        </div>
+        <p class="landing-trust">Join micro-creators already earning</p>
+      </div>
 
-    <div class="landing-section-label">See what you'll get</div>
+      <div class="landing-section-label">How it works</div>
 
-    <div class="landing-previews">
-      <div class="landing-preview-item">
-        <ProductPreviewCard variant="identity" />
-        <p class="landing-preview-caption">Your identity, extracted from your real digital footprint</p>
+      <div class="landing-cards">
+        <div class="landing-card">
+          <div class="landing-card-icon"><MagnetStraight size={28} weight="duotone" /></div>
+          <h3 class="landing-card-title">Auto-matched</h3>
+          <p class="landing-card-desc">Brands find you based on your vibe, not your follower count.</p>
+        </div>
+        <div class="landing-card">
+          <div class="landing-card-icon"><Lightning size={28} weight="duotone" /></div>
+          <h3 class="landing-card-title">Auto-posted</h3>
+          <p class="landing-card-desc">Content suggestions ready to go. Approve and it's live.</p>
+        </div>
+        <div class="landing-card">
+          <div class="landing-card-icon"><ChartLineUp size={28} weight="duotone" /></div>
+          <h3 class="landing-card-title">Auto-reported</h3>
+          <p class="landing-card-desc">Analytics packaged and sent to brands. You don't touch a thing.</p>
+        </div>
       </div>
-      <div class="landing-preview-item">
-        <ProductPreviewCard variant="recommendation" />
-        <p class="landing-preview-caption">Recommendations tuned to who you actually are</p>
+
+    {:else}
+      <div class="auth-card-wrapper">
+        <div class="auth-card">
+          {#if displayPicture}
+            <img src={displayPicture} alt="" class="auth-avatar" />
+          {/if}
+          {#if displayName}
+            <p class="auth-name">{displayName}</p>
+          {/if}
+
+          <div class="auth-card-buttons">
+            <button
+              class="landing-auth-btn"
+              class:connected={googleConnected}
+              disabled={googleConnected || googleConnecting}
+              on:click={startGoogle}
+            >
+              {#if googleConnected}
+                <Check size={18} weight="bold" /> Google connected
+              {:else if googleConnecting}
+                Connecting...
+              {:else}
+                <img src="/icons/google.svg" alt="" class="auth-icon" /> Continue with Google
+              {/if}
+            </button>
+
+            <button
+              class="landing-auth-btn"
+              class:connected={igConnected}
+              disabled={igConnected || igConnecting}
+              on:click={startInstagram}
+            >
+              {#if igConnected}
+                <Check size={18} weight="bold" /> Instagram connected
+              {:else if igConnecting}
+                Connecting...
+              {:else}
+                <img src="/icons/instagram.svg" alt="" class="auth-icon" /> Continue with Instagram
+              {/if}
+            </button>
+          </div>
+
+          {#if authError}
+            <p class="auth-error">{authError}</p>
+          {/if}
+
+          {#if googleConnected && igConnected}
+            <button class="landing-cta" on:click={finishSetup} disabled={finishing}>
+              {#if finishing}Saving...{:else}Start earning{/if}
+            </button>
+          {:else if googleConnected || igConnected}
+            <p class="auth-hint">Connect both for the best brand matches — or <button class="auth-skip-link" on:click={finishSetup}>skip for now</button></p>
+          {/if}
+        </div>
       </div>
-      <div class="landing-preview-item">
-        <ProductPreviewCard variant="chat" />
-        <p class="landing-preview-caption">An AI assistant that already knows your taste</p>
-      </div>
-    </div>
+    {/if}
   </div>
 </div>
 {:else}
@@ -127,6 +379,7 @@
     font-family: var(--font-sans);
   }
 
+  /* ── Gradient backdrop ── */
   .landing-grad {
     position: fixed; inset: 0;
     opacity: 0;
@@ -169,11 +422,13 @@
     pointer-events: none;
   }
 
+  /* ── Content wrapper ── */
   .landing-content {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
+    align-items: center;
     padding: env(safe-area-inset-top, 0px) 28px env(safe-area-inset-bottom, 28px);
     opacity: 0;
     transform: translateY(12px);
@@ -184,53 +439,107 @@
     transform: translateY(0);
   }
 
+  /* ── Nav ── */
   .landing-nav {
     padding: max(20px, env(safe-area-inset-top, 20px)) 0 0;
     flex-shrink: 0;
+    width: 100%;
   }
-  .landing-logo {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-  }
-
   .landing-logo-img {
     height: 18px;
     width: auto;
     opacity: 0.7;
   }
 
+  /* ── Hero ── */
   .landing-hero {
     min-height: 70dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     padding: 48px 0 32px;
+    max-width: 640px;
   }
 
   .landing-h1 {
-    font-family: var(--font-display);
-    font-size: clamp(44px, 12vw, 64px);
+    font-family: var(--font-sans);
+    font-size: clamp(36px, 10vw, 60px);
     font-weight: 800;
-    font-style: italic;
-    line-height: 1.05;
+    line-height: 1.08;
     letter-spacing: -0.03em;
     color: var(--text-primary);
     margin: 0 0 20px;
   }
 
   .landing-sub {
-    font-size: 16px;
+    font-size: 17px;
     color: var(--text-secondary);
     line-height: 1.65;
-    max-width: min(26rem, 100%);
+    max-width: min(28rem, 100%);
     margin: 0 0 36px;
   }
 
+  /* ── Auth buttons ── */
+  .landing-auth-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .landing-auth-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    background: var(--glass-medium);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+  }
+  .landing-auth-btn:hover {
+    transform: scale(1.03);
+    background: var(--glass-heavy, rgba(255, 255, 255, 0.12));
+    box-shadow: 0 0 24px rgba(255, 77, 77, 0.15);
+  }
+  .landing-auth-btn:active { transform: scale(0.98); }
+  .landing-auth-btn.connected {
+    border-color: rgba(76, 217, 100, 0.4);
+    color: #4cd964;
+    cursor: default;
+  }
+  .landing-auth-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .landing-auth-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .auth-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .landing-trust {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* ── CTA ── */
   .landing-cta {
     width: fit-content;
-    padding: 16px 40px;
+    padding: 16px 48px;
     border-radius: 100px;
     background: linear-gradient(135deg, #FF4D4D, #FFB84D);
     border: none;
@@ -241,9 +550,13 @@
     cursor: pointer;
     box-shadow: 0 4px 24px rgba(255, 77, 77, 0.3);
     transition: transform 0.15s, opacity 0.15s;
+    margin-top: 20px;
   }
+  .landing-cta:hover { transform: scale(1.03); }
   .landing-cta:active { transform: scale(0.97); }
+  .landing-cta:disabled { opacity: 0.7; cursor: default; }
 
+  /* ── Section label ── */
   .landing-section-label {
     font-size: 11px;
     font-weight: 700;
@@ -251,31 +564,153 @@
     letter-spacing: 0.08em;
     color: var(--text-muted);
     margin-bottom: 20px;
+    width: 100%;
+    max-width: 54rem;
   }
 
-  .landing-previews {
+  /* ── Value prop cards ── */
+  .landing-cards {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 16px;
     padding-bottom: max(48px, env(safe-area-inset-bottom, 48px));
+    width: 100%;
+    max-width: 54rem;
   }
 
-  .landing-preview-item { display: flex; flex-direction: column; gap: 10px; }
+  .landing-card {
+    background: var(--glass-light);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 28px 24px;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: card-in 0.5s ease forwards;
+  }
+  .landing-card:nth-child(1) { animation-delay: 0.1s; }
+  .landing-card:nth-child(2) { animation-delay: 0.25s; }
+  .landing-card:nth-child(3) { animation-delay: 0.4s; }
 
-  .landing-preview-caption {
-    font-size: 13px;
+  @keyframes card-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .landing-card-icon {
+    color: var(--accent-tertiary);
+    margin-bottom: 12px;
+  }
+
+  .landing-card-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px;
+  }
+
+  .landing-card-desc {
+    font-size: 14px;
     color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.55;
     margin: 0;
   }
 
-  @media (min-width: 768px) {
-    .landing-content {
-      max-width: 54rem;
-      margin: 0 auto;
+  /* ── Auth card (post-click state) ── */
+  .auth-card-wrapper {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+  }
+
+  .auth-card {
+    background: var(--glass-medium);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 48px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    max-width: 400px;
+    width: 100%;
+    animation: card-in 0.4s ease forwards;
+  }
+
+  .auth-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .auth-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .auth-card-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .auth-card-buttons .landing-auth-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .auth-error {
+    font-size: 13px;
+    color: #ff6b6b;
+    margin: 0;
+    text-align: center;
+  }
+
+  .auth-hint {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+    text-align: center;
+  }
+
+  .auth-skip-link {
+    background: none;
+    border: none;
+    color: var(--accent-tertiary);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 520px) {
+    .landing-auth-buttons {
+      flex-direction: column;
       width: 100%;
     }
-    .landing-previews {
+    .landing-auth-btn {
+      justify-content: center;
+    }
+    .auth-card {
+      padding: 36px 24px;
+      margin: 0 16px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .landing-cards {
       grid-template-columns: repeat(3, 1fr);
     }
   }

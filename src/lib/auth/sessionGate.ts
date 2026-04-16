@@ -38,5 +38,5 @@ export function invalidateAndGoToOnboarding(): void {
     /* ignore */
   }
   profile.reset();
-  void goto('/onboarding', { replaceState: true });
+  void goto('/', { replaceState: true });
 }

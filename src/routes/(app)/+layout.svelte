@@ -33,7 +33,7 @@
 
       const session = parsed;
       if (!session?.setupComplete) {
-        goto('/onboarding', { replaceState: true });
+        goto('/', { replaceState: true });
         return;
       }
 
@@ -59,7 +59,7 @@
         return;
       }
     } catch {
-      goto('/onboarding', { replaceState: true });
+      goto('/', { replaceState: true });
       return;
     }
 

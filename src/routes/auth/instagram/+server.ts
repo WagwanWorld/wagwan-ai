@@ -13,7 +13,7 @@ const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const from = url.searchParams.get('from') ?? 'onboarding';
   if (!INSTAGRAM_APP_ID?.trim()) {
-    const dest = from === 'profile' ? '/profile' : '/onboarding';
+    const dest = from === 'landing' ? '/' : from === 'profile' ? '/profile' : '/onboarding';
     throw redirect(302, `${dest}?ig_error=not_configured`);
   }
   const state = crypto.randomUUID();

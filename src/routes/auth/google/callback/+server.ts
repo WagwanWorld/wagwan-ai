@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
   const from = cookies.get('google_oauth_from') ?? 'profile';
   cookies.delete('google_oauth_from', { path: '/' });
-  const returnBase = from === 'onboarding' ? '/onboarding' : '/profile';
+  const returnBase = from === 'landing' ? '/' : from === 'onboarding' ? '/onboarding' : '/profile';
 
   if (error) throw redirect(302, `${returnBase}?error=google_${error}`);
   if (!code || !state || state !== storedState) {
