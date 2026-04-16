@@ -62,11 +62,21 @@ export async function uploadCreativeToGCS(
   await blob.save(buffer, {
     contentType: file.type,
     metadata: { cacheControl: 'public, max-age=31536000' },
+    public: true,
+  }).catch(async () => {
+    // Fallback: upload without public flag (uniform bucket-level access)
+    await blob.save(buffer, {
+      contentType: file.type,
+      metadata: { cacheControl: 'public, max-age=31536000' },
+    });
   });
 
-  // Make publicly readable
-  await blob.makePublic();
-  const url = `https://storage.googleapis.com/${BUCKET_NAME}/${gcsPath}`;
+  // Use a long-lived signed URL (Instagram needs to fetch this at publish time)
+  const [signedUrl] = await blob.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 90 * 24 * 60 * 60 * 1000, // 90 days
+  });
+  const url = signedUrl;
 
   return {
     url,
