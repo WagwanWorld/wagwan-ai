@@ -16,10 +16,11 @@
   import StickyLaunchBar from '$lib/components/brands/StickyLaunchBar.svelte';
   import LaunchModal from '$lib/components/brands/LaunchModal.svelte';
   import ContentStudio from '$lib/components/brands/ContentStudio.svelte';
+  import BrandProfile from '$lib/components/brands/BrandProfile.svelte';
 
   export let data: { brandSessionValid: boolean; brandProfile: Record<string, unknown> | null };
 
-  let portalTab: 'content' | 'creators' = data.brandProfile ? 'content' : 'creators';
+  let portalTab: 'content' | 'creators' | 'profile' = data.brandProfile ? 'content' : 'creators';
 
   // ── Step machine ──
   type Step = 'intake' | 'questions' | 'thinking' | 'confirm' | 'results';
@@ -709,6 +710,11 @@
         class:active={portalTab === 'creators'}
         on:click={() => portalTab = 'creators'}
       >Find Creators</button>
+      <button
+        class="portal-tab"
+        class:active={portalTab === 'profile'}
+        on:click={() => portalTab = 'profile'}
+      >Profile & Insights</button>
     </div>
   {/if}
 
@@ -721,6 +727,10 @@
         ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
         ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
       }} />
+    </div>
+  {:else if portalTab === 'profile' && data.brandProfile}
+    <div class="portal-content-studio">
+      <BrandProfile />
     </div>
   {:else if showManualSearch}
     <div class="manual-search-header">
