@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { ADMIN_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { runCorrelationDiscovery } from '$lib/server/brand/correlationDiscovery';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -11,7 +11,7 @@ export const POST: RequestHandler = async ({ request }) => {
     throw error(400, 'Invalid JSON');
   }
 
-  if (!body.secret || body.secret !== ADMIN_SECRET) {
+  if (!body.secret || body.secret !== env.ADMIN_SECRET) {
     throw error(401, 'Unauthorized');
   }
 
