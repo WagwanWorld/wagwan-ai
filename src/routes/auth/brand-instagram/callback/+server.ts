@@ -10,9 +10,27 @@ import {
   mintBrandSessionCookieValue,
 } from '$lib/server/marketplace/brandSession';
 import { PUBLIC_BASE_URL } from '$env/static/public';
-import pg from 'pg';
+import { env } from '$env/dynamic/private';
 
 const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
+
+async function supabaseQuery(query: string, params: unknown[]): Promise<void> {
+  const url = env.SUPABASE_URL;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase not configured');
+
+  const res = await fetch(`${url}/rest/v1/rpc/`, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({ query, params }),
+  });
+  // RPC won't work without a function, use the REST API directly instead
+}
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const code = url.searchParams.get('code');
@@ -32,24 +50,35 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     const profile = await fetchBrandProfile(token);
     const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 days
 
-    // Upsert into brand_accounts
-    const pool = new pg.Pool({ connectionString: process.env.SUPABASE_DB_URL || process.env.DATABASE_URL });
-    try {
-      await pool.query(
-        `INSERT INTO brand_accounts (ig_user_id, ig_username, ig_name, ig_profile_picture, ig_followers_count, ig_access_token, token_expires_at, last_login_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, now())
-         ON CONFLICT (ig_user_id) DO UPDATE SET
-           ig_username = EXCLUDED.ig_username,
-           ig_name = EXCLUDED.ig_name,
-           ig_profile_picture = EXCLUDED.ig_profile_picture,
-           ig_followers_count = EXCLUDED.ig_followers_count,
-           ig_access_token = EXCLUDED.ig_access_token,
-           token_expires_at = EXCLUDED.token_expires_at,
-           last_login_at = now()`,
-        [profile.id, profile.username, profile.name || '', profile.profile_picture_url || '', profile.followers_count || 0, token, expiresAt],
-      );
-    } finally {
-      await pool.end();
+    const supabaseUrl = env.SUPABASE_URL;
+    const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) throw new Error('Supabase not configured');
+
+    // Upsert into brand_accounts via Supabase REST API
+    const upsertRes = await fetch(`${supabaseUrl}/rest/v1/brand_accounts`, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({
+        ig_user_id: profile.id,
+        ig_username: profile.username,
+        ig_name: profile.name || '',
+        ig_profile_picture: profile.profile_picture_url || '',
+        ig_followers_count: profile.followers_count || 0,
+        ig_access_token: token,
+        token_expires_at: expiresAt.toISOString(),
+        last_login_at: new Date().toISOString(),
+      }),
+    });
+
+    if (!upsertRes.ok) {
+      const errBody = await upsertRes.text().catch(() => '');
+      console.error('[Brand IG Callback] Supabase upsert failed:', upsertRes.status, errBody);
+      throw new Error(`DB upsert failed: ${upsertRes.status}`);
     }
 
     // Set session cookie with ig_user_id

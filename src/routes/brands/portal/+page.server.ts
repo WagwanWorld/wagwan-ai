@@ -3,7 +3,7 @@ import {
   BRAND_SESSION_COOKIE,
   verifyBrandSessionCookieValue,
 } from '$lib/server/marketplace/brandSession';
-import pg from 'pg';
+import { env } from '$env/dynamic/private';
 
 export const load: PageServerLoad = async ({ cookies }) => {
   const raw = cookies.get(BRAND_SESSION_COOKIE);
@@ -13,15 +13,22 @@ export const load: PageServerLoad = async ({ cookies }) => {
   let brandProfile = null;
   if (isValid && igUserId && igUserId !== '__legacy__') {
     try {
-      const pool = new pg.Pool({ connectionString: process.env.SUPABASE_DB_URL || process.env.DATABASE_URL });
-      try {
-        const { rows: [brand] } = await pool.query(
-          `SELECT ig_user_id, ig_username, ig_name, ig_profile_picture, ig_followers_count FROM brand_accounts WHERE ig_user_id = $1`,
-          [igUserId],
+      const supabaseUrl = env.SUPABASE_URL;
+      const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${encodeURIComponent(igUserId)}&select=ig_user_id,ig_username,ig_name,ig_profile_picture,ig_followers_count&limit=1`,
+          {
+            headers: {
+              apikey: supabaseKey,
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+          },
         );
-        brandProfile = brand || null;
-      } finally {
-        await pool.end();
+        if (res.ok) {
+          const rows = await res.json();
+          brandProfile = rows[0] || null;
+        }
       }
     } catch {}
   }
