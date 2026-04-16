@@ -19,6 +19,10 @@
   let g1: HTMLDivElement, g2: HTMLDivElement, g3: HTMLDivElement;
   let raf: number;
   let shouldShowLanding = false;
+  let canvas: HTMLCanvasElement;
+  let particleRaf: number;
+  let cardsVisible = false;
+  let cardsEl: HTMLDivElement;
 
   // ── Auth state ──
   let authStarted = false;
@@ -132,29 +136,92 @@
     void goto('/home', { replaceState: true });
   }
 
+  // ── Mesh gradient animation (faster + more dramatic) ──
   function startGradient() {
-    let prev = 0;
     function tick(ts: number) {
-      prev = ts;
       const t = ts * 0.001;
       if (g1) {
-        const x = Math.sin(t * 0.107) * 22 + Math.sin(t * 0.229) * 10;
-        const y = Math.cos(t * 0.091) * 18 + Math.cos(t * 0.173) * 8;
+        const x = Math.sin(t * 0.15) * 28 + Math.sin(t * 0.32) * 14;
+        const y = Math.cos(t * 0.12) * 24 + Math.cos(t * 0.24) * 10;
         g1.style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`;
       }
       if (g2) {
-        const x = Math.sin(t * 0.173 + 1.3) * 28 + Math.cos(t * 0.293) * 12;
-        const y = Math.cos(t * 0.131 + 0.8) * 22 + Math.sin(t * 0.211) * 9;
+        const x = Math.sin(t * 0.24 + 1.3) * 34 + Math.cos(t * 0.41) * 16;
+        const y = Math.cos(t * 0.18 + 0.8) * 28 + Math.sin(t * 0.29) * 12;
         g2.style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`;
       }
       if (g3) {
-        const x = Math.sin(t * 0.059 + 0.5) * 14 + Math.cos(t * 0.089) * 7;
-        const y = Math.cos(t * 0.047 + 1.2) * 16 + Math.sin(t * 0.079) * 6;
+        const x = Math.sin(t * 0.08 + 0.5) * 18 + Math.cos(t * 0.12) * 10;
+        const y = Math.cos(t * 0.065 + 1.2) * 20 + Math.sin(t * 0.11) * 8;
         g3.style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`;
       }
       raf = requestAnimationFrame(tick);
     }
     raf = requestAnimationFrame(tick);
+  }
+
+  // ── Floating particles ──
+  interface Particle { x: number; y: number; vx: number; vy: number; r: number; a: number }
+
+  function startParticles() {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    function resize() {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx!.scale(dpr, dpr);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const particles: Particle[] = [];
+    for (let i = 0; i < 45; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: -(Math.random() * 0.4 + 0.1),
+        r: Math.random() * 1.5 + 0.5,
+        a: Math.random() * 0.3 + 0.1,
+      });
+    }
+
+    function draw() {
+      ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.y < -10) { p.y = window.innerHeight + 10; p.x = Math.random() * window.innerWidth; }
+        if (p.x < -10) p.x = window.innerWidth + 10;
+        if (p.x > window.innerWidth + 10) p.x = -10;
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(255, 77, 77, ${p.a})`;
+        ctx!.fill();
+      }
+      particleRaf = requestAnimationFrame(draw);
+    }
+    draw();
+  }
+
+  // ── Scroll-triggered card reveal ──
+  function observeCards() {
+    if (!cardsEl) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          cardsVisible = true;
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    obs.observe(cardsEl);
   }
 
   onMount(() => {
@@ -245,48 +312,62 @@
       if (savedIgToken) igToken = savedIgToken;
     } catch {}
 
-    setTimeout(() => { visible = true; startGradient(); }, 60);
+    setTimeout(() => {
+      visible = true;
+      startGradient();
+      startParticles();
+      observeCards();
+    }, 60);
   });
 
-  onDestroy(() => { if (raf) cancelAnimationFrame(raf); });
+  onDestroy(() => {
+    if (raf) cancelAnimationFrame(raf);
+    if (particleRaf) cancelAnimationFrame(particleRaf);
+  });
 </script>
 
 {#if shouldShowLanding}
 <div class="landing-root">
+  <!-- Mesh gradient background -->
   <div class="landing-grad" class:ready={visible}>
     <div class="landing-g landing-g--a mesh-animate" bind:this={g1}></div>
     <div class="landing-g landing-g--b mesh-animate" bind:this={g2}></div>
     <div class="landing-g landing-g--c mesh-animate" bind:this={g3}></div>
-    <div class="landing-vignette" aria-hidden="true"></div>
   </div>
+
+  <!-- Floating particles -->
+  <canvas class="landing-particles" bind:this={canvas}></canvas>
 
   <div class="landing-content" class:ready={visible}>
     {#if !authStarted}
       <nav class="landing-nav">
-        <img src="/logo-white.svg" alt="WagwanAI" class="landing-logo-img" />
+        <img src="/logo-black.svg" alt="WagwanAI" class="landing-logo-img" />
       </nav>
 
       <div class="landing-hero">
-        <h1 class="landing-h1">Post. Get paid.<br>Your AI handles the&nbsp;rest.</h1>
+        <h1 class="landing-h1">
+          <span class="shimmer-text">Post. Get paid.</span><br>
+          <span class="shimmer-text shimmer-text--delay">Your AI handles the&nbsp;rest.</span>
+        </h1>
         <p class="landing-sub">
           Wagwan matches you with brands, auto-posts your content, and handles analytics. You just keep being you.
         </p>
         <div class="landing-auth-buttons">
-          <button class="landing-auth-btn" on:click={startGoogle}>
+          <button class="landing-auth-btn glow-breathe" on:click={startGoogle}>
             <img src="/icons/google.svg" alt="" class="auth-icon" />
             Continue with Google
           </button>
-          <button class="landing-auth-btn" on:click={startInstagram}>
+          <button class="landing-auth-btn glow-breathe glow-breathe--delay" on:click={startInstagram}>
             <img src="/icons/instagram.svg" alt="" class="auth-icon" />
             Continue with Instagram
           </button>
         </div>
-        <p class="landing-trust">Join micro-creators already earning</p>
+        <p class="landing-trust" class:ready={visible}>Join micro-creators already earning</p>
       </div>
 
       <div class="landing-section-label">How it works</div>
 
-      <div class="landing-cards">
+      <div class="landing-cards" bind:this={cardsEl} class:cards-visible={cardsVisible}>
         <div class="landing-card">
           <div class="landing-card-icon"><MagnetStraight size={28} weight="duotone" /></div>
           <h3 class="landing-card-title">Auto-matched</h3>
@@ -305,6 +386,7 @@
       </div>
 
     {:else}
+      <!-- Auth card state -->
       <div class="auth-card-wrapper">
         <div class="auth-card">
           {#if displayPicture}
@@ -379,11 +461,11 @@
     font-family: var(--font-sans);
   }
 
-  /* ── Gradient backdrop ── */
+  /* ── Mesh gradient (more vivid) ── */
   .landing-grad {
     position: fixed; inset: 0;
     opacity: 0;
-    transition: opacity 2s ease;
+    transition: opacity 1.5s ease;
     pointer-events: none;
     z-index: 0;
   }
@@ -396,43 +478,43 @@
     transform: translate(-50%, -50%);
   }
   .landing-g--a {
-    width: 110vw; height: 110vw;
-    left: 30%; top: 20%;
-    background: radial-gradient(ellipse at center, var(--ambient-blue) 0%, transparent 70%);
-    filter: blur(calc(72px * var(--mesh-blur-scale, 1)));
-    opacity: calc(0.52 * var(--mesh-orb-opacity-scale, 1));
+    width: 120vw; height: 120vw;
+    left: 25%; top: 15%;
+    background: radial-gradient(ellipse at center, oklch(60% 0.28 25 / 0.14) 0%, transparent 65%);
+    filter: blur(80px);
   }
   .landing-g--b {
-    width: 85vw; height: 85vw;
-    left: 60%; top: 55%;
-    background: radial-gradient(ellipse at center, var(--ambient-red) 0%, transparent 70%);
-    filter: blur(calc(64px * var(--mesh-blur-scale, 1)));
-    opacity: calc(0.32 * var(--mesh-orb-opacity-scale, 1));
+    width: 90vw; height: 90vw;
+    left: 65%; top: 60%;
+    background: radial-gradient(ellipse at center, oklch(55% 0.22 260 / 0.12) 0%, transparent 65%);
+    filter: blur(70px);
   }
   .landing-g--c {
-    width: 130vw; height: 130vw;
-    left: 40%; top: 35%;
-    background: radial-gradient(ellipse at center, var(--ambient-gold) 0%, transparent 72%);
-    filter: blur(calc(90px * var(--mesh-blur-scale, 1)));
-    opacity: calc(0.38 * var(--mesh-orb-opacity-scale, 1));
+    width: 140vw; height: 140vw;
+    left: 45%; top: 40%;
+    background: radial-gradient(ellipse at center, oklch(72% 0.20 80 / 0.12) 0%, transparent 68%);
+    filter: blur(90px);
   }
-  .landing-vignette {
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse at 50% 50%, transparent 40%, color-mix(in srgb, var(--bg-primary) 82%, #000) 100%);
+
+  /* ── Floating particles canvas ── */
+  .landing-particles {
+    position: fixed; inset: 0;
     pointer-events: none;
+    z-index: 1;
+    opacity: 0.6;
   }
 
   /* ── Content wrapper ── */
   .landing-content {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: env(safe-area-inset-top, 0px) 28px env(safe-area-inset-bottom, 28px);
     opacity: 0;
-    transform: translateY(12px);
-    transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
+    transform: translateY(16px);
+    transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
   }
   .landing-content.ready {
     opacity: 1;
@@ -446,46 +528,73 @@
     width: 100%;
   }
   .landing-logo-img {
-    height: 18px;
+    height: 20px;
     width: auto;
-    opacity: 0.7;
+    opacity: 0.8;
   }
 
   /* ── Hero ── */
   .landing-hero {
-    min-height: 70dvh;
+    min-height: 72dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
     padding: 48px 0 32px;
-    max-width: 640px;
+    max-width: 680px;
   }
 
   .landing-h1 {
     font-family: var(--font-sans);
-    font-size: clamp(36px, 10vw, 60px);
+    font-size: clamp(38px, 11vw, 64px);
     font-weight: 800;
-    line-height: 1.08;
-    letter-spacing: -0.03em;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
     color: var(--text-primary);
-    margin: 0 0 20px;
+    margin: 0 0 24px;
+  }
+
+  /* ── Shimmer gradient text ── */
+  .shimmer-text {
+    display: inline-block;
+    background: linear-gradient(
+      90deg,
+      var(--text-primary) 0%,
+      var(--text-primary) 40%,
+      #FF4D4D 50%,
+      #FFB84D 55%,
+      var(--text-primary) 60%,
+      var(--text-primary) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  .shimmer-text--delay {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
   }
 
   .landing-sub {
     font-size: 17px;
     color: var(--text-secondary);
-    line-height: 1.65;
+    line-height: 1.7;
     max-width: min(28rem, 100%);
-    margin: 0 0 36px;
+    margin: 0 0 40px;
   }
 
-  /* ── Auth buttons ── */
+  /* ── Auth buttons with breathing glow ── */
   .landing-auth-buttons {
     display: flex;
     gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
   }
 
   .landing-auth-btn {
@@ -495,25 +604,24 @@
     padding: 14px 28px;
     border-radius: 14px;
     background: var(--glass-medium);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-subtle);
     color: var(--text-primary);
     font-size: 15px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: var(--shadow-tall-card);
   }
   .landing-auth-btn:hover {
-    transform: scale(1.03);
-    background: var(--glass-heavy, rgba(255, 255, 255, 0.12));
-    box-shadow: 0 0 24px rgba(255, 77, 77, 0.15);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-card-hover);
+    border-color: rgba(255, 77, 77, 0.25);
   }
   .landing-auth-btn:active { transform: scale(0.98); }
   .landing-auth-btn.connected {
-    border-color: rgba(76, 217, 100, 0.4);
-    color: #4cd964;
+    border-color: rgba(5, 150, 105, 0.4);
+    color: #059669;
     cursor: default;
   }
   .landing-auth-btn:disabled {
@@ -522,7 +630,20 @@
   }
   .landing-auth-btn:disabled:hover {
     transform: none;
-    box-shadow: none;
+    box-shadow: var(--shadow-tall-card);
+  }
+
+  /* Breathing glow animation */
+  .glow-breathe {
+    animation: breathe 2.8s ease-in-out infinite;
+  }
+  .glow-breathe--delay {
+    animation-delay: 1.4s;
+  }
+
+  @keyframes breathe {
+    0%, 100% { box-shadow: var(--shadow-tall-card); }
+    50% { box-shadow: 0 4px 28px rgba(255, 77, 77, 0.18), 0 0 0 1px rgba(255, 77, 77, 0.08); }
   }
 
   .auth-icon {
@@ -530,10 +651,16 @@
     height: 20px;
   }
 
+  /* ── Trust line (delayed fade-in) ── */
   .landing-trust {
     font-size: 13px;
     color: var(--text-muted);
     margin: 0;
+    opacity: 0;
+    transition: opacity 1s ease 1.2s;
+  }
+  .landing-trust.ready {
+    opacity: 1;
   }
 
   /* ── CTA ── */
@@ -549,10 +676,13 @@
     font-family: inherit;
     cursor: pointer;
     box-shadow: 0 4px 24px rgba(255, 77, 77, 0.3);
-    transition: transform 0.15s, opacity 0.15s;
+    transition: transform 0.2s, box-shadow 0.2s;
     margin-top: 20px;
   }
-  .landing-cta:hover { transform: scale(1.03); }
+  .landing-cta:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 32px rgba(255, 77, 77, 0.4);
+  }
   .landing-cta:active { transform: scale(0.97); }
   .landing-cta:disabled { opacity: 0.7; cursor: default; }
 
@@ -568,7 +698,7 @@
     max-width: 54rem;
   }
 
-  /* ── Value prop cards ── */
+  /* ── Value prop cards (scroll-triggered) ── */
   .landing-cards {
     display: grid;
     grid-template-columns: 1fr;
@@ -579,26 +709,30 @@
   }
 
   .landing-card {
-    background: var(--glass-light);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
+    background: var(--glass-medium);
+    border: 1px solid var(--border-subtle);
+    border-radius: 18px;
     padding: 28px 24px;
+    box-shadow: var(--shadow-tall-card);
     opacity: 0;
-    transform: translateY(16px);
-    animation: card-in 0.5s ease forwards;
+    transform: translateY(32px);
+    transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.2s ease;
   }
-  .landing-card:nth-child(1) { animation-delay: 0.1s; }
-  .landing-card:nth-child(2) { animation-delay: 0.25s; }
-  .landing-card:nth-child(3) { animation-delay: 0.4s; }
+  .landing-card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
 
-  @keyframes card-in {
-    to { opacity: 1; transform: translateY(0); }
+  /* Scroll-triggered stagger */
+  .cards-visible .landing-card {
+    opacity: 1;
+    transform: translateY(0);
   }
+  .cards-visible .landing-card:nth-child(1) { transition-delay: 0s; }
+  .cards-visible .landing-card:nth-child(2) { transition-delay: 0.15s; }
+  .cards-visible .landing-card:nth-child(3) { transition-delay: 0.3s; }
 
   .landing-card-icon {
-    color: var(--accent-tertiary);
+    color: var(--accent-primary);
     margin-bottom: 12px;
   }
 
@@ -626,10 +760,8 @@
   }
 
   .auth-card {
-    background: var(--glass-medium);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--glass-strong, var(--glass-medium));
+    border: 1px solid var(--border-subtle);
     border-radius: 24px;
     padding: 48px 40px;
     display: flex;
@@ -638,7 +770,13 @@
     gap: 16px;
     max-width: 400px;
     width: 100%;
-    animation: card-in 0.4s ease forwards;
+    box-shadow: var(--shadow-tall-card);
+    animation: card-rise 0.5s ease forwards;
+  }
+
+  @keyframes card-rise {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   .auth-avatar {
@@ -646,7 +784,8 @@
     height: 64px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 2px solid var(--border-subtle);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
 
   .auth-name {
@@ -667,11 +806,12 @@
   .auth-card-buttons .landing-auth-btn {
     width: 100%;
     justify-content: center;
+    animation: none;
   }
 
   .auth-error {
     font-size: 13px;
-    color: #ff6b6b;
+    color: #e11d48;
     margin: 0;
     text-align: center;
   }
@@ -686,7 +826,7 @@
   .auth-skip-link {
     background: none;
     border: none;
-    color: var(--accent-tertiary);
+    color: var(--accent-primary);
     font-size: 13px;
     font-family: inherit;
     cursor: pointer;
