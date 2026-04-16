@@ -14,6 +14,10 @@
   import Lightning from 'phosphor-svelte/lib/Lightning';
   import ChartLineUp from 'phosphor-svelte/lib/ChartLineUp';
   import Check from 'phosphor-svelte/lib/Check';
+  import InstagramLogo from 'phosphor-svelte/lib/InstagramLogo';
+  import TrendUp from 'phosphor-svelte/lib/TrendUp';
+  import Users from 'phosphor-svelte/lib/Users';
+  import CurrencyInr from 'phosphor-svelte/lib/CurrencyInr';
 
   let visible = false;
   let g1: HTMLDivElement, g2: HTMLDivElement, g3: HTMLDivElement;
@@ -22,7 +26,9 @@
   let canvas: HTMLCanvasElement;
   let particleRaf: number;
   let cardsVisible = false;
+  let creatorsVisible = false;
   let cardsEl: HTMLDivElement;
+  let creatorsEl: HTMLDivElement;
 
   // ── Auth state ──
   let authStarted = false;
@@ -39,6 +45,31 @@
 
   $: displayName = googleIdentity?.name?.split(' ')[0] || igIdentity?.displayName?.split(' ')[0] || '';
   $: displayPicture = googleIdentity?.picture || igIdentity?.profilePicture || '';
+
+  // ── Mock data ──
+  const mockCreators = [
+    { name: 'Priya S.', handle: '@priya.vibes', followers: '8.2K', earned: '₹24,500', tags: ['Food', 'Travel'], color: '#FF6B6B' },
+    { name: 'Arjun M.', handle: '@arjunmakes', followers: '3.1K', earned: '₹11,200', tags: ['Tech', 'Lifestyle'], color: '#4D7CFF' },
+    { name: 'Sneha R.', handle: '@sneha.daily', followers: '12.4K', earned: '₹38,700', tags: ['Fashion', 'Beauty'], color: '#FFB84D' },
+    { name: 'Karthik V.', handle: '@karthik.eats', followers: '5.7K', earned: '₹18,300', tags: ['Food', 'Nightlife'], color: '#FF4D4D' },
+    { name: 'Ananya D.', handle: '@ananya.fit', followers: '9.8K', earned: '₹31,000', tags: ['Fitness', 'Wellness'], color: '#34D399' },
+    { name: 'Rohan K.', handle: '@rohan.lens', followers: '2.3K', earned: '₹8,600', tags: ['Photography', 'Travel'], color: '#A78BFA' },
+  ];
+
+  const mockFeedCards = [
+    { type: 'match', brand: 'Zomato', creator: 'Priya S.', reward: '₹3,500', time: '2m ago' },
+    { type: 'payout', creator: 'Arjun M.', amount: '₹2,800', time: '5m ago' },
+    { type: 'post', creator: 'Sneha R.', brand: 'Nykaa', engagement: '4.2K views', time: '8m ago' },
+    { type: 'match', brand: 'Swiggy', creator: 'Karthik V.', reward: '₹2,200', time: '12m ago' },
+    { type: 'payout', creator: 'Ananya D.', amount: '₹5,100', time: '15m ago' },
+    { type: 'post', creator: 'Rohan K.', brand: 'boAt', engagement: '1.8K views', time: '18m ago' },
+    { type: 'match', brand: 'Sugar Cosmetics', creator: 'Priya S.', reward: '₹4,000', time: '22m ago' },
+    { type: 'payout', creator: 'Sneha R.', amount: '₹6,200', time: '25m ago' },
+    { type: 'post', creator: 'Arjun M.', brand: 'Cred', engagement: '3.5K views', time: '28m ago' },
+    { type: 'match', brand: 'Mamaearth', creator: 'Ananya D.', reward: '₹3,100', time: '31m ago' },
+    { type: 'payout', creator: 'Karthik V.', amount: '₹1,900', time: '34m ago' },
+    { type: 'post', creator: 'Priya S.', brand: 'Myntra', engagement: '5.8K views', time: '37m ago' },
+  ];
 
   function readCookie(name: string): string | undefined {
     return document.cookie.split('; ').find(c => c.startsWith(`${name}=`))?.split('=').slice(1).join('=');
@@ -136,7 +167,7 @@
     void goto('/home', { replaceState: true });
   }
 
-  // ── Mesh gradient animation (faster + more dramatic) ──
+  // ── Mesh gradient animation ──
   function startGradient() {
     function tick(ts: number) {
       const t = ts * 0.001;
@@ -187,7 +218,7 @@
         vx: (Math.random() - 0.5) * 0.3,
         vy: -(Math.random() * 0.4 + 0.1),
         r: Math.random() * 1.5 + 0.5,
-        a: Math.random() * 0.3 + 0.1,
+        a: Math.random() * 0.25 + 0.08,
       });
     }
 
@@ -209,19 +240,21 @@
     draw();
   }
 
-  // ── Scroll-triggered card reveal ──
-  function observeCards() {
-    if (!cardsEl) return;
+  // ── Scroll-triggered reveals ──
+  function observeElements() {
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          cardsVisible = true;
-          obs.disconnect();
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            if (entry.target === cardsEl) cardsVisible = true;
+            if (entry.target === creatorsEl) creatorsVisible = true;
+          }
         }
       },
-      { threshold: 0.15 },
+      { threshold: 0.1 },
     );
-    obs.observe(cardsEl);
+    if (cardsEl) obs.observe(cardsEl);
+    if (creatorsEl) obs.observe(creatorsEl);
   }
 
   onMount(() => {
@@ -292,7 +325,7 @@
       }
     }
 
-    // Restore saved auth state from localStorage
+    // Restore saved auth state
     try {
       const savedGoogle = localStorage.getItem('onboarding_google');
       if (savedGoogle) {
@@ -316,7 +349,7 @@
       visible = true;
       startGradient();
       startParticles();
-      observeCards();
+      observeElements();
     }, 60);
   });
 
@@ -333,6 +366,35 @@
     <div class="landing-g landing-g--a mesh-animate" bind:this={g1}></div>
     <div class="landing-g landing-g--b mesh-animate" bind:this={g2}></div>
     <div class="landing-g landing-g--c mesh-animate" bind:this={g3}></div>
+  </div>
+
+  <!-- Scrolling mock feed background -->
+  <div class="feed-bg" class:ready={visible}>
+    <div class="feed-scroll-track">
+      <div class="feed-scroll-inner">
+        {#each [...mockFeedCards, ...mockFeedCards] as card, i}
+          <div class="feed-card" style="animation-delay: {i * 0.15}s">
+            {#if card.type === 'match'}
+              <div class="feed-card-dot" style="background: #FF4D4D"></div>
+              <span class="feed-card-text"><strong>{card.brand}</strong> matched with {card.creator}</span>
+              <span class="feed-card-badge">{card.reward}</span>
+              <span class="feed-card-time">{card.time}</span>
+            {:else if card.type === 'payout'}
+              <div class="feed-card-dot" style="background: #34D399"></div>
+              <span class="feed-card-text"><strong>{card.creator}</strong> received payout</span>
+              <span class="feed-card-badge feed-card-badge--green">{card.amount}</span>
+              <span class="feed-card-time">{card.time}</span>
+            {:else}
+              <div class="feed-card-dot" style="background: #4D7CFF"></div>
+              <span class="feed-card-text"><strong>{card.creator}</strong> posted for {card.brand}</span>
+              <span class="feed-card-badge feed-card-badge--blue">{card.engagement}</span>
+              <span class="feed-card-time">{card.time}</span>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    </div>
+    <div class="feed-bg-overlay"></div>
   </div>
 
   <!-- Floating particles -->
@@ -352,6 +414,25 @@
         <p class="landing-sub">
           Wagwan matches you with brands, auto-posts your content, and handles analytics. You just keep being you.
         </p>
+
+        <!-- Stats bar -->
+        <div class="stats-bar">
+          <div class="stats-item">
+            <Users size={16} weight="bold" />
+            <span><strong>2,400+</strong> creators</span>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stats-item">
+            <CurrencyInr size={16} weight="bold" />
+            <span><strong>₹14L+</strong> paid out</span>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stats-item">
+            <TrendUp size={16} weight="bold" />
+            <span><strong>180+</strong> brands</span>
+          </div>
+        </div>
+
         <div class="landing-auth-buttons">
           <button class="landing-auth-btn glow-breathe" on:click={startGoogle}>
             <img src="/icons/google.svg" alt="" class="auth-icon" />
@@ -383,6 +464,39 @@
           <h3 class="landing-card-title">Auto-reported</h3>
           <p class="landing-card-desc">Analytics packaged and sent to brands. You don't touch a thing.</p>
         </div>
+      </div>
+
+      <!-- Creator showcase -->
+      <div class="landing-section-label">Creators earning right now</div>
+
+      <div class="creators-grid" bind:this={creatorsEl} class:creators-visible={creatorsVisible}>
+        {#each mockCreators as creator, i}
+          <div class="creator-card" style="--delay: {i * 0.1}s">
+            <div class="creator-avatar" style="background: {creator.color}">
+              {creator.name.charAt(0)}
+            </div>
+            <div class="creator-info">
+              <span class="creator-name">{creator.name}</span>
+              <span class="creator-handle">{creator.handle}</span>
+            </div>
+            <div class="creator-meta">
+              <div class="creator-stat">
+                <InstagramLogo size={13} />
+                <span>{creator.followers}</span>
+              </div>
+              <div class="creator-earned">{creator.earned} earned</div>
+            </div>
+            <div class="creator-tags">
+              {#each creator.tags as tag}
+                <span class="creator-tag">{tag}</span>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+
+      <div class="landing-footer">
+        <p>Built for everyday creators in India</p>
       </div>
 
     {:else}
@@ -446,9 +560,7 @@
 </div>
 {:else}
 <div style="flex:1; display:flex; align-items:center; justify-content:center;">
-  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF4D4D,#FFB84D);display:flex;align-items:center;justify-content:center;font-size:22px;" class="pulse-glow">
-    ✦
-  </div>
+  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF4D4D,#FFB84D);display:flex;align-items:center;justify-content:center;font-size:22px;" class="pulse-glow">✦</div>
 </div>
 {/if}
 
@@ -461,7 +573,7 @@
     font-family: var(--font-sans);
   }
 
-  /* ── Mesh gradient (more vivid) ── */
+  /* ── Mesh gradient ── */
   .landing-grad {
     position: fixed; inset: 0;
     opacity: 0;
@@ -470,44 +582,103 @@
     z-index: 0;
   }
   .landing-grad.ready { opacity: 1; }
-
   .landing-g {
-    position: absolute;
-    border-radius: 50%;
-    will-change: transform;
-    transform: translate(-50%, -50%);
+    position: absolute; border-radius: 50%; will-change: transform; transform: translate(-50%, -50%);
   }
   .landing-g--a {
-    width: 120vw; height: 120vw;
-    left: 25%; top: 15%;
+    width: 120vw; height: 120vw; left: 25%; top: 15%;
     background: radial-gradient(ellipse at center, oklch(60% 0.28 25 / 0.14) 0%, transparent 65%);
     filter: blur(80px);
   }
   .landing-g--b {
-    width: 90vw; height: 90vw;
-    left: 65%; top: 60%;
+    width: 90vw; height: 90vw; left: 65%; top: 60%;
     background: radial-gradient(ellipse at center, oklch(55% 0.22 260 / 0.12) 0%, transparent 65%);
     filter: blur(70px);
   }
   .landing-g--c {
-    width: 140vw; height: 140vw;
-    left: 45%; top: 40%;
+    width: 140vw; height: 140vw; left: 45%; top: 40%;
     background: radial-gradient(ellipse at center, oklch(72% 0.20 80 / 0.12) 0%, transparent 68%);
     filter: blur(90px);
   }
 
-  /* ── Floating particles canvas ── */
+  /* ── Scrolling mock feed background ── */
+  .feed-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 2s ease 0.5s;
+    pointer-events: none;
+  }
+  .feed-bg.ready { opacity: 1; }
+
+  .feed-scroll-track {
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%) rotate(-8deg);
+    width: 420px;
+    height: 140%;
+  }
+
+  .feed-scroll-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: feed-scroll 40s linear infinite;
+  }
+
+  @keyframes feed-scroll {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+
+  .feed-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--glass-medium);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .feed-card-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .feed-card-text { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .feed-card-text strong { color: var(--text-primary); font-weight: 600; }
+  .feed-card-badge {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 100px;
+    background: rgba(255, 77, 77, 0.1); color: #FF4D4D;
+  }
+  .feed-card-badge--green { background: rgba(52, 211, 153, 0.1); color: #059669; }
+  .feed-card-badge--blue { background: rgba(77, 124, 255, 0.1); color: #4D7CFF; }
+  .feed-card-time { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+
+  .feed-bg-overlay {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 50%, transparent 20%, var(--bg-primary) 70%),
+      linear-gradient(to bottom, var(--bg-primary) 0%, transparent 15%, transparent 85%, var(--bg-primary) 100%);
+    backdrop-filter: blur(2px);
+  }
+
+  /* ── Floating particles ── */
   .landing-particles {
     position: fixed; inset: 0;
     pointer-events: none;
-    z-index: 1;
-    opacity: 0.6;
+    z-index: 2;
+    opacity: 0.5;
   }
 
-  /* ── Content wrapper ── */
+  /* ── Content ── */
   .landing-content {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -516,26 +687,18 @@
     transform: translateY(16px);
     transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
   }
-  .landing-content.ready {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .landing-content.ready { opacity: 1; transform: translateY(0); }
 
   /* ── Nav ── */
   .landing-nav {
     padding: max(20px, env(safe-area-inset-top, 20px)) 0 0;
-    flex-shrink: 0;
-    width: 100%;
+    flex-shrink: 0; width: 100%;
   }
-  .landing-logo-img {
-    height: 20px;
-    width: auto;
-    opacity: 0.8;
-  }
+  .landing-logo-img { height: 20px; width: auto; opacity: 0.8; }
 
   /* ── Hero ── */
   .landing-hero {
-    min-height: 72dvh;
+    min-height: 74dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -555,27 +718,16 @@
     margin: 0 0 24px;
   }
 
-  /* ── Shimmer gradient text ── */
+  /* Shimmer text */
   .shimmer-text {
     display: inline-block;
-    background: linear-gradient(
-      90deg,
-      var(--text-primary) 0%,
-      var(--text-primary) 40%,
-      #FF4D4D 50%,
-      #FFB84D 55%,
-      var(--text-primary) 60%,
-      var(--text-primary) 100%
-    );
+    background: linear-gradient(90deg, var(--text-primary) 0%, var(--text-primary) 40%, #FF4D4D 50%, #FFB84D 55%, var(--text-primary) 60%, var(--text-primary) 100%);
     background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
+    -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: shimmer 3s ease-in-out infinite;
   }
-  .shimmer-text--delay {
-    animation-delay: 0.4s;
-  }
+  .shimmer-text--delay { animation-delay: 0.4s; }
 
   @keyframes shimmer {
     0% { background-position: 100% 0; }
@@ -587,10 +739,39 @@
     color: var(--text-secondary);
     line-height: 1.7;
     max-width: min(28rem, 100%);
-    margin: 0 0 40px;
+    margin: 0 0 28px;
   }
 
-  /* ── Auth buttons with breathing glow ── */
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: var(--glass-medium);
+    border: 1px solid var(--border-subtle);
+    border-radius: 100px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-tall-card);
+  }
+  .stats-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .stats-item strong {
+    color: var(--text-primary);
+    font-weight: 800;
+  }
+  .stats-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border-subtle);
+  }
+
+  /* ── Auth buttons ── */
   .landing-auth-buttons {
     display: flex;
     gap: 12px;
@@ -603,7 +784,7 @@
     gap: 10px;
     padding: 14px 28px;
     border-radius: 14px;
-    background: var(--glass-medium);
+    background: var(--glass-strong, var(--glass-medium));
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
     font-size: 15px;
@@ -621,237 +802,174 @@
   .landing-auth-btn:active { transform: scale(0.98); }
   .landing-auth-btn.connected {
     border-color: rgba(5, 150, 105, 0.4);
-    color: #059669;
-    cursor: default;
+    color: #059669; cursor: default;
   }
-  .landing-auth-btn:disabled {
-    opacity: 0.6;
-    cursor: default;
-  }
-  .landing-auth-btn:disabled:hover {
-    transform: none;
-    box-shadow: var(--shadow-tall-card);
-  }
+  .landing-auth-btn:disabled { opacity: 0.6; cursor: default; }
+  .landing-auth-btn:disabled:hover { transform: none; box-shadow: var(--shadow-tall-card); }
 
-  /* Breathing glow animation */
-  .glow-breathe {
-    animation: breathe 2.8s ease-in-out infinite;
-  }
-  .glow-breathe--delay {
-    animation-delay: 1.4s;
-  }
+  .glow-breathe { animation: breathe 2.8s ease-in-out infinite; }
+  .glow-breathe--delay { animation-delay: 1.4s; }
 
   @keyframes breathe {
     0%, 100% { box-shadow: var(--shadow-tall-card); }
     50% { box-shadow: 0 4px 28px rgba(255, 77, 77, 0.18), 0 0 0 1px rgba(255, 77, 77, 0.08); }
   }
 
-  .auth-icon {
-    width: 20px;
-    height: 20px;
-  }
+  .auth-icon { width: 20px; height: 20px; }
 
-  /* ── Trust line (delayed fade-in) ── */
   .landing-trust {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin: 0;
-    opacity: 0;
-    transition: opacity 1s ease 1.2s;
+    font-size: 13px; color: var(--text-muted); margin: 0;
+    opacity: 0; transition: opacity 1s ease 1.2s;
   }
-  .landing-trust.ready {
-    opacity: 1;
-  }
+  .landing-trust.ready { opacity: 1; }
 
   /* ── CTA ── */
   .landing-cta {
-    width: fit-content;
-    padding: 16px 48px;
-    border-radius: 100px;
+    width: fit-content; padding: 16px 48px; border-radius: 100px;
     background: linear-gradient(135deg, #FF4D4D, #FFB84D);
-    border: none;
-    color: white;
-    font-size: 16px;
-    font-weight: 700;
-    font-family: inherit;
-    cursor: pointer;
+    border: none; color: white; font-size: 16px; font-weight: 700;
+    font-family: inherit; cursor: pointer;
     box-shadow: 0 4px 24px rgba(255, 77, 77, 0.3);
     transition: transform 0.2s, box-shadow 0.2s;
     margin-top: 20px;
   }
-  .landing-cta:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 8px 32px rgba(255, 77, 77, 0.4);
-  }
+  .landing-cta:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 32px rgba(255, 77, 77, 0.4); }
   .landing-cta:active { transform: scale(0.97); }
   .landing-cta:disabled { opacity: 0.7; cursor: default; }
 
   /* ── Section label ── */
   .landing-section-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-    margin-bottom: 20px;
-    width: 100%;
-    max-width: 54rem;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-muted);
+    margin-bottom: 20px; width: 100%; max-width: 54rem;
   }
 
-  /* ── Value prop cards (scroll-triggered) ── */
+  /* ── Value prop cards ── */
   .landing-cards {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding-bottom: max(48px, env(safe-area-inset-bottom, 48px));
-    width: 100%;
-    max-width: 54rem;
+    display: grid; grid-template-columns: 1fr; gap: 16px;
+    width: 100%; max-width: 54rem; margin-bottom: 48px;
   }
-
   .landing-card {
-    background: var(--glass-medium);
+    background: var(--glass-strong, var(--glass-medium));
     border: 1px solid var(--border-subtle);
-    border-radius: 18px;
-    padding: 28px 24px;
+    border-radius: 18px; padding: 28px 24px;
     box-shadow: var(--shadow-tall-card);
-    opacity: 0;
-    transform: translateY(32px);
+    opacity: 0; transform: translateY(32px);
     transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.2s ease;
   }
-  .landing-card:hover {
-    box-shadow: var(--shadow-card-hover);
-  }
-
-  /* Scroll-triggered stagger */
-  .cards-visible .landing-card {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .landing-card:hover { box-shadow: var(--shadow-card-hover); }
+  .cards-visible .landing-card { opacity: 1; transform: translateY(0); }
   .cards-visible .landing-card:nth-child(1) { transition-delay: 0s; }
   .cards-visible .landing-card:nth-child(2) { transition-delay: 0.15s; }
   .cards-visible .landing-card:nth-child(3) { transition-delay: 0.3s; }
 
-  .landing-card-icon {
-    color: var(--accent-primary);
-    margin-bottom: 12px;
+  .landing-card-icon { color: var(--accent-primary); margin-bottom: 12px; }
+  .landing-card-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
+  .landing-card-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin: 0; }
+
+  /* ── Creator showcase ── */
+  .creators-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    width: 100%;
+    max-width: 54rem;
+    margin-bottom: 48px;
   }
 
-  .landing-card-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 6px;
-  }
-
-  .landing-card-desc {
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.55;
-    margin: 0;
-  }
-
-  /* ── Auth card (post-click state) ── */
-  .auth-card-wrapper {
-    min-height: 100dvh;
+  .creator-card {
+    background: var(--glass-strong, var(--glass-medium));
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 20px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 0;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--shadow-tall-card);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.5s ease var(--delay), transform 0.5s ease var(--delay), box-shadow 0.2s ease;
+  }
+  .creator-card:hover { box-shadow: var(--shadow-card-hover); }
+  .creators-visible .creator-card { opacity: 1; transform: translateY(0); }
+
+  .creator-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 16px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .creator-info { display: flex; flex-direction: column; gap: 1px; }
+  .creator-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .creator-handle { font-size: 12px; color: var(--text-muted); }
+  .creator-meta { display: flex; align-items: center; gap: 12px; }
+  .creator-stat {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .creator-earned {
+    font-size: 13px; font-weight: 700; color: #059669;
+  }
+  .creator-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .creator-tag {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 100px;
+    background: var(--accent-soft); color: var(--accent-primary);
   }
 
+  /* ── Footer ── */
+  .landing-footer {
+    padding: 32px 0 max(48px, env(safe-area-inset-bottom, 48px));
+    text-align: center;
+  }
+  .landing-footer p { font-size: 12px; color: var(--text-muted); margin: 0; }
+
+  /* ── Auth card ── */
+  .auth-card-wrapper {
+    min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 48px 0;
+  }
   .auth-card {
     background: var(--glass-strong, var(--glass-medium));
     border: 1px solid var(--border-subtle);
-    border-radius: 24px;
-    padding: 48px 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    max-width: 400px;
-    width: 100%;
+    border-radius: 24px; padding: 48px 40px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    max-width: 400px; width: 100%;
     box-shadow: var(--shadow-tall-card);
     animation: card-rise 0.5s ease forwards;
   }
-
   @keyframes card-rise {
     from { opacity: 0; transform: translateY(24px) scale(0.97); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
-
   .auth-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    object-fit: cover;
+    width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
     border: 2px solid var(--border-subtle);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
-
-  .auth-name {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-  }
-
-  .auth-card-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    margin-top: 8px;
-  }
-
-  .auth-card-buttons .landing-auth-btn {
-    width: 100%;
-    justify-content: center;
-    animation: none;
-  }
-
-  .auth-error {
-    font-size: 13px;
-    color: #e11d48;
-    margin: 0;
-    text-align: center;
-  }
-
-  .auth-hint {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin: 0;
-    text-align: center;
-  }
-
+  .auth-name { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0; }
+  .auth-card-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px; }
+  .auth-card-buttons .landing-auth-btn { width: 100%; justify-content: center; animation: none; }
+  .auth-error { font-size: 13px; color: #e11d48; margin: 0; text-align: center; }
+  .auth-hint { font-size: 13px; color: var(--text-muted); margin: 0; text-align: center; }
   .auth-skip-link {
-    background: none;
-    border: none;
-    color: var(--accent-primary);
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
+    background: none; border: none; color: var(--accent-primary);
+    font-size: 13px; font-family: inherit; cursor: pointer;
+    text-decoration: underline; padding: 0;
   }
 
   /* ── Responsive ── */
   @media (max-width: 520px) {
-    .landing-auth-buttons {
-      flex-direction: column;
-      width: 100%;
-    }
-    .landing-auth-btn {
-      justify-content: center;
-    }
-    .auth-card {
-      padding: 36px 24px;
-      margin: 0 16px;
-    }
+    .landing-auth-buttons { flex-direction: column; width: 100%; }
+    .landing-auth-btn { justify-content: center; }
+    .auth-card { padding: 36px 24px; margin: 0 16px; }
+    .stats-bar { gap: 10px; padding: 10px 16px; }
+    .stats-item { font-size: 12px; }
+    .creators-grid { grid-template-columns: 1fr; }
+    .feed-scroll-track { width: 300px; }
   }
 
   @media (min-width: 768px) {
-    .landing-cards {
-      grid-template-columns: repeat(3, 1fr);
-    }
+    .landing-cards { grid-template-columns: repeat(3, 1fr); }
+    .creators-grid { grid-template-columns: repeat(3, 1fr); }
   }
 </style>
