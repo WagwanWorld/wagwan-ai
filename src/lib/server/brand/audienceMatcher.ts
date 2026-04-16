@@ -12,7 +12,7 @@ export async function getOptedOutUsers(): Promise<Set<string>> {
   let offset = 0;
   while (true) {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('google_sub')
       .eq('brand_matching_opt_out', true)
       .range(offset, offset + PAGE_SIZE - 1);

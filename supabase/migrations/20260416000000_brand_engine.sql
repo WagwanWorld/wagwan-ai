@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS brand_cohorts (
 );
 
 -- ─── Privacy column on profiles ──────────────────────────────────────────────
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS brand_matching_opt_out boolean DEFAULT false;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS brand_matching_opt_out boolean DEFAULT false;
 
 -- ─── Cultural seed data for correlation_index ────────────────────────────────
 INSERT INTO correlation_index
