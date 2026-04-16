@@ -11,37 +11,41 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /**
- * Brand APIs: signed httpOnly cookie (from /api/brands/login), or X-Brand-Key, or allowlisted google_sub.
- * Env: `BRAND_PORTAL_SECRET`, `BRAND_ALLOWLIST_GOOGLE_SUBS` — see `.env.example` (Brand portal).
+ * Assert brand access. Returns the brand's ig_user_id if authenticated via IG session.
+ * Falls back to X-Brand-Key header or allowlisted google_sub for legacy/API access.
  */
-export function assertBrandAccess(request: Request, bodyGoogleSub?: string | null): void {
+export function assertBrandAccess(request: Request, bodyGoogleSub?: string | null): string | null {
   const secret = (env.BRAND_PORTAL_SECRET ?? '').trim();
   const allowRaw = (env.BRAND_ALLOWLIST_GOOGLE_SUBS ?? '').trim();
   const allow = allowRaw
-    ? allowRaw
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean)
+    ? allowRaw.split(',').map(s => s.trim()).filter(Boolean)
     : [];
 
+  // Check IG session cookie (v2 with ig_user_id)
   const sessionRaw = getBrandSessionFromRequest(request);
-  if (verifyBrandSessionCookieValue(sessionRaw)) {
-    return;
+  const igUserId = verifyBrandSessionCookieValue(sessionRaw);
+  if (igUserId && igUserId !== '__legacy__') {
+    return igUserId;
+  }
+  // Legacy v1 session (password-based)
+  if (igUserId === '__legacy__') {
+    return null;
   }
 
+  // X-Brand-Key header fallback
   const headerKey = request.headers.get('x-brand-key')?.trim() ?? '';
-
   if (secret && headerKey && safeEqual(headerKey, secret)) {
-    return;
+    return null;
   }
 
+  // Allowlisted google_sub fallback
   const sub = (bodyGoogleSub ?? '').trim();
   if (sub && allow.length && allow.includes(sub)) {
-    return;
+    return null;
   }
 
   if (!secret && !allow.length) {
-    throw error(503, 'Brand portal not configured (set BRAND_PORTAL_SECRET or BRAND_ALLOWLIST_GOOGLE_SUBS)');
+    throw error(503, 'Brand portal not configured');
   }
 
   throw error(401, 'Brand access denied');
