@@ -3,8 +3,9 @@
 
   // ── Types ──────────────────────────────────────────────────────────────────
   interface TopSignal {
-    signal: string;
-    score: number;
+    value: string;
+    category: string;
+    final_score: number;
   }
 
   interface Cohort {
@@ -25,9 +26,9 @@
     cohorts: Cohort[];
     tier_breakdown: Record<number, number>;
     top_users: unknown[];
-    signal_coverage: { searched: number; matched: number };
+    signal_coverage: { total_signals_searched: number; signals_with_matches: unknown[] };
     processing_ms: number;
-    correlation_expansions: number;
+    correlation_expansions: unknown[];
   }
 
   interface ProgressStep {
@@ -61,6 +62,7 @@
   // Expanding state
   let expandingCohortId = '';
   let expandResults: Record<string, unknown> = {};
+  let queryId = '';
 
   // Correlation explorer
   let corrSignal = '';
@@ -152,6 +154,7 @@
 
             if (data.done && data.result) {
               result = data.result as MatchResult;
+              queryId = data.result.query_id ?? '';
               isRunning = false;
               setTimeout(() => { resultsVisible = true; }, 50);
               return;
@@ -179,7 +182,7 @@
       const res = await fetch('/api/brand/expand', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cohort_id: cohortId, brand_id: 'demo', multiplier: 3 }),
+        body: JSON.stringify({ query_id: queryId, confirmed_cohort_ids: [cohortId], expansion_factor: 3 }),
       });
       if (!res.ok) return;
       expandResults = { ...expandResults, [cohortId]: await res.json() };
@@ -206,7 +209,13 @@
         return;
       }
       const data = await res.json();
-      corrResults = data.correlations ?? data ?? [];
+      corrResults = (data.correlates ?? []).map((r: any) => ({
+        signal: r.signal_b,
+        category: r.signal_b_cat,
+        lift: r.lift,
+        confidence: r.confidence,
+        support: r.support_count,
+      }));
     } catch (err) {
       corrError = err instanceof Error ? err.message : 'Failed to fetch correlations.';
     } finally {
@@ -385,14 +394,14 @@ Gen Z gamers in Southeast Asia who stream on Twitch and buy limited-edition snea
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
               <path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
             </svg>
-            {result.signal_coverage.matched}/{result.signal_coverage.searched} signals
+            {result.signal_coverage.signals_with_matches.length}/{result.signal_coverage.total_signals_searched} signals
           </span>
-          {#if result.correlation_expansions > 0}
+          {#if result.correlation_expansions.length > 0}
             <span class="summary-meta summary-meta--accent">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <path d="M2 10c2-4 6-8 8-8M6 6l4-4-4 0M10 6V2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              {result.correlation_expansions} expansions
+              {result.correlation_expansions.length} expansions
             </span>
           {/if}
         </div>
@@ -443,8 +452,8 @@ Gen Z gamers in Southeast Asia who stream on Twitch and buy limited-edition snea
                 <div class="signal-chips">
                   {#each cohort.top_signals.slice(0, 3) as sig}
                     <span class="signal-chip">
-                      <span class="signal-chip-name">{sig.signal}</span>
-                      <span class="signal-chip-score">{scoreLabel(sig.score)}</span>
+                      <span class="signal-chip-name">{sig.value}</span>
+                      <span class="signal-chip-score">{scoreLabel(sig.final_score)}</span>
                     </span>
                   {/each}
                 </div>

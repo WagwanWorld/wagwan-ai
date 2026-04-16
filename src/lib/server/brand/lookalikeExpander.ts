@@ -1,6 +1,7 @@
 import { getServiceSupabase } from '$lib/server/supabase';
 import { VECTOR_DIMENSIONS, buildVectorFromSignalMeter, cosineSimilarity } from './cohortBuilder';
 import type { LookalikeResult } from './types';
+import { getOptedOutUsers } from './audienceMatcher';
 
 export async function expandToLookalikes(
   confirmedCohortIds: string[],
@@ -43,8 +44,10 @@ export async function expandToLookalikes(
   const targetCount = totalUsers * expansionFactor;
   const scoredUsers: Array<{ sub: string; similarity: number }> = [];
 
+  const optedOut = await getOptedOutUsers();
   for (const user of allUsers ?? []) {
     if (excludeSet.has(user.google_sub)) continue;
+    if (optedOut.has(user.google_sub)) continue;
     const vec = buildVectorFromSignalMeter(user.signal_meter);
     const similarity = cosineSimilarity(vec, mergedCentroid);
     if (similarity > 0.55) scoredUsers.push({ sub: user.google_sub, similarity });

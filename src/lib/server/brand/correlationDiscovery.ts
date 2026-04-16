@@ -118,7 +118,7 @@ export async function runCorrelationDiscovery(): Promise<void> {
         signal_b: sigAValue, signal_b_cat: metaA.category,
         correlation_r: computePearsonR(usersB, usersA, N),
         support_count: intersection,
-        lift: supportAB / supportB,
+        lift: (supportAB / supportB) / supportA,
         confidence: supportAB / supportB,
         domain_distance: domainDist,
       });

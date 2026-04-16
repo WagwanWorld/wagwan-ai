@@ -59,7 +59,7 @@ export async function runAudienceMatchingPipeline(
 
   // Step 5: Tier 4 — correlation-based
   let t4Results: MatchResult[] = [];
-  if (intent.min_tier <= 4 || matchedSoFar.size < 30) {
+  if (intent.min_tier >= 4 || matchedSoFar.size < 30) {
     t4Results = await matchCorrelatedSignals(expandedSignals, matchedSoFar, optedOut);
     t4Results.forEach((r) => matchedSoFar.add(r.user_google_sub));
     onProgress?.('matching', matchedSoFar.size);
@@ -67,7 +67,7 @@ export async function runAudienceMatchingPipeline(
 
   // Step 6: Tier 5 — loose associations
   let t5Results: MatchResult[] = [];
-  if (matchedSoFar.size < 20 || intent.min_tier <= 5) {
+  if (matchedSoFar.size < 20 || intent.min_tier >= 5) {
     t5Results = await matchLooseAssociations(intent, expandedSignals, matchedSoFar, optedOut);
     onProgress?.('matching', matchedSoFar.size + t5Results.length);
   }
