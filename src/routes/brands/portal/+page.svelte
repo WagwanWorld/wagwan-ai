@@ -11,6 +11,10 @@
   import Sparkle from 'phosphor-svelte/lib/Sparkle';
   import Note from 'phosphor-svelte/lib/Note';
   import X from 'phosphor-svelte/lib/X';
+  import DashboardSummaryBar from '$lib/components/brands/DashboardSummaryBar.svelte';
+  import CreatorCard from '$lib/components/brands/CreatorCard.svelte';
+  import StickyLaunchBar from '$lib/components/brands/StickyLaunchBar.svelte';
+  import LaunchModal from '$lib/components/brands/LaunchModal.svelte';
 
   export let data: { brandSessionValid: boolean };
 
@@ -191,6 +195,7 @@
     match_score: number;
     match_reason: string;
     preview_tags: string[];
+    followers: number;
     graph_strength: number;
     graph_strength_label: string;
     rates?: {
@@ -199,7 +204,6 @@
       ig_reel_rate_inr?: number;
       available?: boolean;
     };
-    graph_strength_score?: number;
   }> = [];
 
   let keyTraits: Array<{ tag: string; count: number }> = [];
@@ -296,6 +300,16 @@
     });
     return out.slice(0, 3);
   })();
+
+  $: manualSelectedUsers = users.filter(u => selected.has(u.user_google_sub));
+  $: manualTotalReach = manualSelectedUsers.reduce((s, u) => s + (u.followers || 0), 0);
+  $: manualEstimatedCost = manualSelectedUsers.reduce((s, u) => s + (u.rates?.ig_post_rate_inr ?? 0), 0) || null;
+  $: manualAvgMatchScore = users.length ? users.reduce((s, u) => s + u.match_score, 0) / users.length : 0;
+  $: manualCostBreakdown = {
+    posts: manualSelectedUsers.filter(u => u.rates?.ig_post_rate_inr).length,
+    stories: manualSelectedUsers.filter(u => u.rates?.ig_story_rate_inr).length,
+    reels: manualSelectedUsers.filter(u => u.rates?.ig_reel_rate_inr).length,
+  };
 
   onMount(() => {
     const t = setInterval(() => {
@@ -833,113 +847,28 @@
                 <SignOut size={14} /> Out
               </button>
             {/if}
-            <button
-              type="button"
-              class="launch-btn rounded-xl px-6 py-2.5 text-sm font-semibold transition-[transform,box-shadow] duration-300 hover:scale-[1.02]"
-              on:click={() => (campaignPanelOpen = true)}
-            >
-              Launch campaign
-            </button>
           </div>
         </div>
 
-        <!-- Overview + mosaic -->
-        <div class="grid gap-6 lg:grid-cols-12">
-          <div
-            class="overview-panel lg:col-span-5 rounded-2xl p-6 backdrop-blur-md transition-[border,box-shadow] duration-300 {users.length === 0
-              ? 'opacity-60'
-              : ''}"
-          >
-            <div class="flex items-center gap-2 accent-secondary">
-              <Sparkle size={18} weight="light" />
-              <span class="text-xs font-medium uppercase tracking-wider">Overview</span>
-            </div>
-            <div class="mt-4 space-y-4 text-sm">
-              <div class="overview-row flex justify-between py-2">
-                <span>Engagement</span>
-                <span class="overview-value font-medium">{estimatedEngagement || '—'}</span>
-              </div>
-              <div class="overview-row flex justify-between py-2">
-                <span>Est. investment</span>
-                <span class="overview-value font-medium">
-                  {#if estimatedCost != null}₹{estimatedCost.toLocaleString()} @ ₹{rewardInr}{:else}—{/if}
-                </span>
-              </div>
-              <div class="overview-row overview-row-last flex justify-between py-2">
-                <span>Avg. signal</span>
-                <span class="overview-value font-medium">{avgGraphStrength}/100</span>
-              </div>
-            </div>
-            {#if structured && (structured.interests.length || structured.behaviors.length)}
-              <div class="mt-5 flex flex-wrap gap-2">
-                {#each structured.interests.slice(0, 6) as t}
-                  <span class="interest-tag rounded-full px-2.5 py-1 text-[11px]"
-                    >{t}</span
-                  >
-                {/each}
-                {#each structured.behaviors.slice(0, 4) as b}
-                  <span class="behavior-tag rounded-full px-2.5 py-1 text-[11px]"
-                    >{b}</span
-                  >
-                {/each}
-              </div>
-            {/if}
-          </div>
+        <!-- Dashboard summary -->
+        <DashboardSummaryBar
+          creatorCount={users.length}
+          selectedCount={selected.size}
+          totalReach={manualTotalReach}
+          estimatedCost={manualEstimatedCost}
+          avgMatchScore={manualAvgMatchScore}
+          {keyTraits}
+          {pctHighStrength}
+        />
 
-          <div class="lg:col-span-7">
-            <p class="section-label mb-3 text-[11px] font-medium uppercase tracking-wider">The mosaic</p>
-            <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-              {#each users.slice(0, 12) as u}
-                <div
-                  class="mosaic-tile group relative aspect-square overflow-hidden rounded-xl transition-all duration-300 hover:z-10 hover:scale-[1.04]"
-                  style:background={tileGradient(u.user_google_sub)}
-                  title={u.name}
-                >
-                  <div
-                    class="mosaic-initials absolute inset-0 flex items-center justify-center text-lg font-semibold"
-                  >
-                    {initials(u.name)}
-                  </div>
-                  <div
-                    class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                  ></div>
-                </div>
-              {/each}
-            </div>
-          </div>
-        </div>
-
-        <!-- Insight floats -->
-        {#if insightCards.length}
-          <div class="grid gap-4 sm:grid-cols-3">
-            {#each insightCards as card}
-              <div
-                class="insight-card rounded-2xl p-5 transition-all duration-300"
-              >
-                <p class="insight-stat text-2xl font-semibold tabular-nums">{card.stat}</p>
-                <p class="insight-title mt-1 text-sm font-medium">{card.title}</p>
-                <p class="insight-caption mt-2 text-xs leading-relaxed">{card.caption}</p>
-              </div>
-            {/each}
-          </div>
-        {/if}
-
-        {#if rankStrengthBoostApplied}
-          <p class="accent-secondary text-center text-xs opacity-80">Signal-strength rank boost is enabled.</p>
-        {/if}
-
+        <!-- Audience intelligence -->
         {#if users.length > 0}
-          <div
-            class="audience-intel-panel rounded-2xl p-6"
-          >
+          <div class="audience-intel-panel rounded-2xl p-6">
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p class="intel-label text-[11px] font-semibold uppercase tracking-wider">
-                  Audience intelligence
-                </p>
+                <p class="intel-label text-[11px] font-semibold uppercase tracking-wider">Audience intelligence</p>
                 <p class="text-secondary mt-2 max-w-xl text-sm">
-                  Monetization read on this pull — goals, friction, converting content, paid wedge. Uses selected rows
-                  if any, otherwise the top 24 matches.
+                  Monetization read — goals, friction, converting content. Uses selected rows if any, otherwise top 24.
                 </p>
               </div>
               <button
@@ -948,7 +877,7 @@
                 class="generate-intel-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-lg transition-opacity disabled:opacity-50"
                 on:click={() => runAudienceIntelligence()}
               >
-                {audienceIntelLoading ? 'Generating…' : 'Generate'}
+                {audienceIntelLoading ? 'Generating\u2026' : 'Generate'}
               </button>
             </div>
             {#if audienceIntelErr}
@@ -980,107 +909,28 @@
           </div>
         {/if}
 
-        <!-- Member deck (cards, not table) -->
+        <!-- Creator cards -->
         <div>
           <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p class="text-muted text-sm">
-              <span class="text-primary">{selected.size}</span> selected · tap cards to curate
+              <span class="text-primary">{selected.size}</span> selected &middot; click to expand, checkbox to select
             </p>
             <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="toolbar-btn rounded-lg px-3 py-1 text-xs"
-                on:click={() => selectTop(10)}>Top 10</button
-              >
-              <button
-                type="button"
-                class="toolbar-btn rounded-lg px-3 py-1 text-xs"
-                on:click={() => selectTop(25)}>Top 25</button
-              >
+              <button type="button" class="toolbar-btn rounded-lg px-3 py-1 text-xs" on:click={() => selectTop(10)}>Top 10</button>
+              <button type="button" class="toolbar-btn rounded-lg px-3 py-1 text-xs" on:click={() => selectTop(25)}>Top 25</button>
+              <button type="button" class="toolbar-btn rounded-lg px-3 py-1 text-xs" on:click={() => { selected = new Set(users.map(u => u.user_google_sub)); }}>All</button>
             </div>
           </div>
-          {#if memberBriefErr}
-            <p class="mb-2 text-center text-xs text-red-400/90">{memberBriefErr}</p>
-          {/if}
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {#each users as u}
-              <div
-                class="member-card flex flex-col overflow-hidden rounded-2xl border transition-all duration-300 {selected.has(
-                  u.user_google_sub,
-                )
-                  ? 'member-card-selected'
-                  : 'member-card-default'}"
-              >
-                <button
-                  type="button"
-                  class="flex w-full flex-col p-4 text-left"
-                  on:click={() => toggleRow(u.user_google_sub)}
-                >
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="member-avatar flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                        style:background={tileGradient(u.user_google_sub)}
-                      >
-                        {initials(u.name)}
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-primary truncate font-medium">{u.name}</p>
-                        <p class="text-muted truncate text-xs">{u.city || '—'}</p>
-                      </div>
-                    </div>
-                    <span
-                      class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {u.graph_strength_label ===
-                      'high'
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : u.graph_strength_label === 'medium'
-                          ? 'bg-amber-500/20 text-amber-200'
-                          : 'bg-zinc-500/20 text-zinc-400'}"
-                    >
-                      {typeof u.graph_strength === 'number' ? u.graph_strength : '—'}
-                    </span>
-                  </div>
-                  <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="accent-secondary tabular-nums opacity-90">Match {u.match_score}</span>
-                    <span class="text-muted max-w-[65%] truncate">{u.preview_tags.join(' · ')}</span>
-                  </div>
-                  <p class="text-muted mt-2 line-clamp-2 text-xs leading-relaxed">{u.match_reason}</p>
-                  {#if u.rates?.available}
-                    <div class="brand-user-rates">
-                      {#if u.rates.ig_post_rate_inr}<span>📸 ₹{u.rates.ig_post_rate_inr}</span>{/if}
-                      {#if u.rates.ig_story_rate_inr}<span>📱 ₹{u.rates.ig_story_rate_inr}</span>{/if}
-                      {#if u.rates.ig_reel_rate_inr}<span>🎬 ₹{u.rates.ig_reel_rate_inr}</span>{/if}
-                    </div>
-                  {/if}
-                </button>
-                <div class="member-card-footer px-4 py-3">
-                  <button
-                    type="button"
-                    disabled={memberBriefLoading === u.user_google_sub}
-                    class="accent-tertiary inline-flex items-center gap-1.5 text-xs font-medium opacity-90 transition-colors hover:opacity-100 disabled:opacity-50"
-                    on:click={() => loadMemberBrief(u)}
-                  >
-                    <Note size={14} />
-                    {memberBriefLoading === u.user_google_sub ? 'Brief…' : 'Member brief'}
-                  </button>
-                  {#if memberBriefBySub[u.user_google_sub]}
-                    <div class="brief-body mt-3 space-y-2 text-xs leading-relaxed">
-                      <p>
-                        <span class="brief-label font-semibold">Now · </span>
-                        {memberBriefBySub[u.user_google_sub].happening_now}
-                      </p>
-                      <p>
-                        <span class="brief-label font-semibold">Next · </span>
-                        {memberBriefBySub[u.user_google_sub].do_next}
-                      </p>
-                      <p>
-                        <span class="brief-label font-semibold">Missing · </span>
-                        {memberBriefBySub[u.user_google_sub].missing}
-                      </p>
-                    </div>
-                  {/if}
-                </div>
-              </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            {#each users as u (u.user_google_sub)}
+              <CreatorCard
+                user={u}
+                selected={selected.has(u.user_google_sub)}
+                brief={memberBriefBySub[u.user_google_sub] ?? null}
+                briefLoading={memberBriefLoading === u.user_google_sub}
+                on:toggle={(e) => toggleRow(e.detail)}
+                on:loadBrief={(e) => loadMemberBrief(users.find(x => x.user_google_sub === e.detail))}
+              />
             {/each}
           </div>
         </div>
@@ -1088,147 +938,34 @@
     </div>
   {/if}
 
-  <!-- Campaign slide-over (manual search mode only) -->
+  {#if inResultsMode && users.length > 0}
+    <StickyLaunchBar
+      selectedCount={selected.size}
+      totalCount={users.length}
+      totalReach={manualTotalReach}
+      estimatedCost={manualEstimatedCost}
+      costBreakdown={manualCostBreakdown}
+      on:launch={() => campaignPanelOpen = true}
+      on:startOver={confirmNewScene}
+    />
+  {/if}
+
   {#if campaignPanelOpen}
-    <div
-      class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm transition-opacity duration-300"
-      role="presentation"
-      on:click={() => (campaignPanelOpen = false)}
-    ></div>
-    <aside
-      class="campaign-aside fixed inset-y-0 right-0 z-[90] flex w-full max-w-md flex-col"
-      aria-label="Campaign launch"
-    >
-      <div
-        class="campaign-header flex items-center justify-between px-5 py-4"
-      >
-        <h3 class="text-primary text-sm font-semibold tracking-wide">Launch campaign</h3>
-        <button
-          type="button"
-          class="campaign-close-btn rounded-lg p-1.5 transition-colors"
-          on:click={() => (campaignPanelOpen = false)}
-          aria-label="Close"
-        >
-          <X size={20} />
-        </button>
-      </div>
-      <div class="flex-1 overflow-y-auto px-5 py-5">
-        <p class="section-label block text-xs font-medium uppercase tracking-wider">Channels</p>
-        <div class="mt-3 space-y-3">
-          <label
-            class="campaign-option flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-colors"
-          >
-            <span class="text-primary text-sm">In-app</span>
-            <input type="checkbox" bind:checked={channelInApp} class="accent-[var(--accent-secondary)]" />
-          </label>
-          <label
-            class="campaign-option flex cursor-pointer items-center justify-between rounded-xl px-4 py-3 transition-colors"
-          >
-            <span class="text-primary text-sm">Email</span>
-            <input type="checkbox" bind:checked={channelEmail} class="accent-[var(--accent-secondary)]" />
-          </label>
-          <div
-            class="campaign-option campaign-option-disabled flex cursor-not-allowed items-center justify-between rounded-xl px-4 py-3 opacity-50"
-          >
-            <span class="text-muted text-sm">WhatsApp</span>
-            <span class="text-muted text-[10px] font-medium uppercase tracking-wide">Soon</span>
-          </div>
-        </div>
-
-        <p class="section-label mt-8 block text-xs font-medium uppercase tracking-wider">
-          Reward · ₹ per person
-        </p>
-        <div class="mt-3">
-          <input
-            type="range"
-            min="10"
-            max="500"
-            step="10"
-            bind:value={rewardInr}
-            class="slider-aud h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-800"
-          />
-          <div class="text-muted mt-1 flex justify-between text-xs">
-            <span>₹10</span>
-            <span class="text-primary font-medium">₹{rewardInr}</span>
-            <span>₹500</span>
-          </div>
-        </div>
-
-        <label
-          class="section-label mt-8 block text-xs font-medium uppercase tracking-wider"
-          for="panel-brand-name">Brand</label
-        >
-        <input
-          id="panel-brand-name"
-          class="campaign-input mt-2 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-          bind:value={brandName}
-        />
-
-        <label
-          class="section-label mt-6 block text-xs font-medium uppercase tracking-wider"
-          for="panel-campaign-title">Campaign title</label
-        >
-        <input
-          id="panel-campaign-title"
-          class="campaign-input mt-2 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-          bind:value={campaignTitle}
-          placeholder="Drop name"
-        />
-
-        <p class="section-label mt-6 block text-xs font-medium uppercase tracking-wider">Creative</p>
-        <div
-          class="creative-drop mt-2 rounded-xl px-4 py-8 text-center transition-colors {dropActive
-            ? 'creative-drop-active'
-            : ''}"
-          role="button"
-          tabindex="0"
-          on:click={() => document.getElementById('creative-file')?.click()}
-          on:keydown={(e) => e.key === 'Enter' && document.getElementById('creative-file')?.click()}
-          on:dragenter={() => (dropActive = true)}
-          on:dragleave={() => (dropActive = false)}
-          on:dragover={(e) => e.preventDefault()}
-          on:drop={onCreativeDrop}
-        >
-          <p class="text-muted text-xs">Drop copy (.txt) or write below</p>
-          {#if creativeDropHint}
-            <p class="accent-secondary mt-1 text-[11px] opacity-80">{creativeDropHint}</p>
-          {/if}
-          <input
-            id="creative-file"
-            type="file"
-            accept=".txt,.md,text/plain"
-            class="hidden"
-            on:change={onCreativeFilePick}
-          />
-        </div>
-        <textarea
-          class="campaign-input mt-3 min-h-[100px] w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-          bind:value={creativeText}
-          placeholder="Your line, offer, or story…"
-        ></textarea>
-
-        {#if !data.brandSessionValid}
-          <p class="mt-6 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-200/90">
-            <a href={loginNext} class="font-semibold text-amber-100 underline">Sign in</a>
-            with your portal secret to push this live.
-          </p>
-        {/if}
-
-        {#if campaignMsg}
-          <p class="text-secondary mt-4 text-sm">{campaignMsg}</p>
-        {/if}
-      </div>
-      <div class="campaign-footer p-5">
-        <button
-          type="button"
-          disabled={!data.brandSessionValid}
-          class="launch-btn w-full rounded-xl py-3.5 text-sm font-semibold transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
-          on:click={() => createCampaign()}
-        >
-          Launch campaign · {selected.size} people
-        </button>
-      </div>
-    </aside>
+    <LaunchModal
+      selectedCount={selected.size}
+      estimatedCost={manualEstimatedCost}
+      {brandName}
+      on:confirm={(e) => {
+        const d = e.detail;
+        campaignTitle = d.title;
+        creativeText = d.creativeText;
+        rewardInr = d.rewardInr;
+        channelEmail = d.channels.email;
+        channelInApp = d.channels.in_app;
+        createCampaign();
+      }}
+      on:close={() => campaignPanelOpen = false}
+    />
   {/if}
 
   {:else}
