@@ -27,19 +27,35 @@ export function maybeStaleGraphRefresh(googleSub: string, graphStale: boolean): 
   })
     .then(async (res) => {
       if (!res.ok) return;
-      const data = (await res.json().catch(() => null)) as {
-        updated?: Record<string, unknown>;
-        updatedAt?: string;
-      } | null;
-      if (!data?.updatedAt) return;
+      // Read SSE stream, extract final result
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalData: Record<string, unknown> | null = null;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+            if (msg.done) finalData = msg;
+          } catch {}
+        }
+      }
+      if (!finalData?.updatedAt) return;
       try {
         const { profile } = await import('$lib/stores/profile');
         const patch =
-          data.updated && typeof data.updated === 'object' ? data.updated : {};
+          finalData.updated && typeof finalData.updated === 'object' ? (finalData.updated as Record<string, unknown>) : {};
         profile.update((p) => ({
           ...p,
           ...patch,
-          profileUpdatedAt: data.updatedAt!,
+          profileUpdatedAt: finalData!.updatedAt as string,
         }));
       } catch {
         /* ignore store update failures */

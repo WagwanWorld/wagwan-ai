@@ -111,12 +111,15 @@ export const POST: RequestHandler = async ({ request }) => {
       const send = (step: string) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ step })}\n\n`)); } catch {}
       };
+      const sendPartial = (data: Record<string, unknown>) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ partial: true, ...data })}\n\n`)); } catch {}
+      };
       const sendResult = (data: Record<string, unknown>) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, ...data })}\n\n`)); } catch {}
       };
 
       try {
-        await runRefreshPipeline({ send, sendResult, googleSub, tokens, profileData, expired, updated, forceInference, forceIntelligence, userQuery, row: row! });
+        await runRefreshPipeline({ send, sendPartial, sendResult, googleSub, tokens, profileData, expired, updated, forceInference, forceIntelligence, userQuery, row: row! });
       } catch (e) {
         console.error('[RefreshSignals] Pipeline error:', e);
         sendResult({ ok: false, error: e instanceof Error ? e.message : 'Unknown error' });
@@ -136,6 +139,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 async function runRefreshPipeline({
   send,
+  sendPartial,
   sendResult,
   googleSub,
   tokens,
@@ -148,6 +152,7 @@ async function runRefreshPipeline({
   row,
 }: {
   send: (step: string) => void;
+  sendPartial: (data: Record<string, unknown>) => void;
   sendResult: (data: Record<string, unknown>) => void;
   googleSub: string;
   tokens: Awaited<ReturnType<typeof getTokens>>;
@@ -397,9 +402,38 @@ async function runRefreshPipeline({
       Number.isFinite(inferredMs) &&
       Date.now() - inferredMs < effectiveThrottleMs;
     const shouldInfer = keyOk && !hashUnchanged && (forceInference || meaningfulPlatformSync || !priorWrap || !recent);
-    if (hashUnchanged && !forceInference) {
-      send('Signals unchanged — skipping inference');
+
+    // ── Early return: send partial result so client updates immediately ──
+    if (hashUnchanged && !forceInference && !forceIntelligence && !userQuery) {
+      send('Signals unchanged — nothing new to analyze');
+      graphData = { ...base };
+      if (priorFullGraph.inferenceIdentity != null) graphData.inferenceIdentity = priorFullGraph.inferenceIdentity;
+      if (priorFullGraph.identityIntelligence != null) graphData.identityIntelligence = priorFullGraph.identityIntelligence;
+      if (priorFullGraph.identitySnapshot != null) graphData.identitySnapshot = priorFullGraph.identitySnapshot;
+      if (priorFullGraph.hyperInference != null) graphData.hyperInference = priorFullGraph.hyperInference;
+      if (priorFullGraph.identitySynthesis != null) graphData.identitySynthesis = priorFullGraph.identitySynthesis;
+      if (priorFullGraph.expressionLayer != null) graphData.expressionLayer = priorFullGraph.expressionLayer;
+      graphData.expressionFeedback = priorFullGraph.expressionFeedback ?? { votes: [], atomNudges: {} };
+      graphData.memoryGraph = priorFullGraph.memoryGraph ?? null;
+      graphData.signalMeterSnapshot = signalMeter.signals.map(s => ({ value: s.value, final_score: s.final_score, category: s.category }));
+      await upsertIdentityGraph(googleSub, graphData, summaryStr);
+      send('Done — your signals are fresh ✓');
+      sendResult({
+        ok: true, updated, expired, identityGraph: graphData, identitySummary: summaryStr,
+        updatedAt: new Date().toISOString(),
+        inferenceRan: false, inferenceRevision: priorWrap?.revision ?? null,
+        inferenceInferredAt: priorWrap?.inferredAt ?? null,
+        intelligenceRan: false, snapshotRan: false, hyperInferenceRan: false,
+      });
+      return;
     }
+
+    // ── Send partial result with platform data so client updates immediately ──
+    sendPartial({
+      ok: true, updated, expired,
+      updatedAt: new Date().toISOString(),
+    });
+    send('Platform data synced — running deep analysis…');
 
     let inferenceIdentity: unknown = priorFullGraph.inferenceIdentity;
 
@@ -516,14 +550,21 @@ async function runRefreshPipeline({
       hyperInference: graphData.hyperInference,
     });
 
+    // ── Run synthesis + expression in parallel (both depend on intel/snap/hyper above) ──
+    const priorExprFeedback = priorFullGraph.expressionFeedback as ExpressionFeedbackState | undefined;
     if (keyOk && shouldRunIntelligence) {
+      send('Synthesizing portrait + expression…');
       const recencyForSynth = buildRecencyContext({
         profileData: merged as Record<string, unknown>,
         updatedPlatformKeys: Object.keys(updated),
       });
-      send('Synthesizing your full portrait…');
-      try {
-        const synthesis = await runIdentitySynthesisFromInputs({
+      const graphForExpression: IdentityGraph = {
+        ...graph,
+        inferenceIdentity: graphData.inferenceIdentity as IdentityGraph['inferenceIdentity'],
+        hyperInference: graphData.hyperInference as IdentityGraph['hyperInference'],
+      };
+      const [synthResult, exprResult] = await Promise.allSettled([
+        runIdentitySynthesisFromInputs({
           graph,
           identitySummary: summaryStr,
           inferenceCurrent: inferenceCurrentForIntel,
@@ -534,45 +575,52 @@ async function runRefreshPipeline({
           signalMeter: (graphData.signalMeter as SignalMeterOutput | undefined) ?? signalMeter,
           memoryGraph: graphData.memoryGraph ?? null,
           userQuery,
-        });
-        if (synthesis) {
-          graphData.identitySynthesis = synthesis as unknown as Record<string, unknown>;
-        } else if (priorFullGraph.identitySynthesis != null) {
-          graphData.identitySynthesis = priorFullGraph.identitySynthesis as Record<string, unknown>;
-        }
-      } catch (e) {
-        console.error('[RefreshSignals] identitySynthesis:', e instanceof Error ? e.message : e);
-        if (priorFullGraph.identitySynthesis != null) {
-          graphData.identitySynthesis = priorFullGraph.identitySynthesis as Record<string, unknown>;
-        }
-      }
-    }
-
-    const priorExprFeedback = priorFullGraph.expressionFeedback as ExpressionFeedbackState | undefined;
-    if (keyOk) {
-      try {
-        const graphForExpression: IdentityGraph = {
-          ...graph,
-          inferenceIdentity: graphData.inferenceIdentity as IdentityGraph['inferenceIdentity'],
-          hyperInference: graphData.hyperInference as IdentityGraph['hyperInference'],
-        };
-        send('Building your expression layer…');
-        const exprLayer = await buildExpressionLayer({
+        }),
+        buildExpressionLayer({
           mergedProfile: merged,
           graph: graphForExpression,
           identitySummary: summaryStr,
           signalMeter,
           feedback: priorExprFeedback,
-        });
-        graphData.expressionLayer = exprLayer as unknown as Record<string, unknown>;
-      } catch (e) {
-        console.error('[RefreshSignals] expressionLayer:', e instanceof Error ? e.message : e);
-        if (priorFullGraph.expressionLayer) {
-          graphData.expressionLayer = priorFullGraph.expressionLayer as Record<string, unknown>;
-        }
+        }),
+      ]);
+      if (synthResult.status === 'fulfilled' && synthResult.value) {
+        graphData.identitySynthesis = synthResult.value as unknown as Record<string, unknown>;
+      } else {
+        if (synthResult.status === 'rejected') console.error('[RefreshSignals] identitySynthesis:', synthResult.reason);
+        if (priorFullGraph.identitySynthesis != null) graphData.identitySynthesis = priorFullGraph.identitySynthesis as Record<string, unknown>;
       }
-    } else if (priorFullGraph.expressionLayer) {
-      graphData.expressionLayer = priorFullGraph.expressionLayer as Record<string, unknown>;
+      if (exprResult.status === 'fulfilled' && exprResult.value) {
+        graphData.expressionLayer = exprResult.value as unknown as Record<string, unknown>;
+      } else {
+        if (exprResult.status === 'rejected') console.error('[RefreshSignals] expressionLayer:', exprResult.reason);
+        if (priorFullGraph.expressionLayer) graphData.expressionLayer = priorFullGraph.expressionLayer as Record<string, unknown>;
+      }
+    } else {
+      // No intelligence run — carry forward prior layers
+      if (keyOk) {
+        try {
+          const graphForExpression: IdentityGraph = {
+            ...graph,
+            inferenceIdentity: graphData.inferenceIdentity as IdentityGraph['inferenceIdentity'],
+            hyperInference: graphData.hyperInference as IdentityGraph['hyperInference'],
+          };
+          send('Building your expression layer…');
+          const exprLayer = await buildExpressionLayer({
+            mergedProfile: merged,
+            graph: graphForExpression,
+            identitySummary: summaryStr,
+            signalMeter,
+            feedback: priorExprFeedback,
+          });
+          graphData.expressionLayer = exprLayer as unknown as Record<string, unknown>;
+        } catch (e) {
+          console.error('[RefreshSignals] expressionLayer:', e instanceof Error ? e.message : e);
+          if (priorFullGraph.expressionLayer) graphData.expressionLayer = priorFullGraph.expressionLayer as Record<string, unknown>;
+        }
+      } else if (priorFullGraph.expressionLayer) {
+        graphData.expressionLayer = priorFullGraph.expressionLayer as Record<string, unknown>;
+      }
     }
     graphData.expressionFeedback = priorExprFeedback ?? { votes: [], atomNudges: {} };
 

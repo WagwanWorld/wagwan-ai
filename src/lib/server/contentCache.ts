@@ -18,6 +18,7 @@ const TTL: Record<string, number> = {
   suggested_reads: 604_800,
   calendar_context: 3_600,
   music_artwork: 2_592_000,
+  rich_recs: 86_400,
 };
 
 function redisKey(googleSub: string, contentType: string): string {

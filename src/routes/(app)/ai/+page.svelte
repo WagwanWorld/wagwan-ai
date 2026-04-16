@@ -40,6 +40,7 @@
     startMicLevelMonitor,
   } from '$lib/voice/speech';
   import { ChatUserBubble, ChatSuggestionChips, ChatComposerPill } from '$lib/chat';
+  import { renderChatMd } from '$lib/utils/chatMarkdown';
 
 
   type TwinUiState = 'idle' | 'listening' | 'thinking' | 'speaking';
@@ -858,7 +859,7 @@
           {/if}
 
         {:else}
-          <div class="msg-text">{msg.text}</div>
+          <div class="msg-text">{@html renderChatMd(msg.text || '')}</div>
 
           <!-- TTS -->
           {#if isSpeechSynthesisSupported()}
@@ -1318,6 +1319,21 @@
   .msg-text :global(b) {
     font-family: var(--font-display);
     font-style: italic;
+  }
+  .msg-text :global(a) {
+    color: var(--accent-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .msg-text :global(.chat-bullet) {
+    color: var(--accent-primary);
+    font-weight: 600;
+    margin-right: 2px;
+  }
+  .msg-text :global(.chat-num) {
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-right: 2px;
   }
 
   .msg-error {

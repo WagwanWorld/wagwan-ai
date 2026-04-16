@@ -262,13 +262,36 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ googleSub: sub, forceInference: true }),
       });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        graphRefreshMsg = (j as { error?: string }).error || 'Refresh failed';
-        return;
+
+      // Read SSE stream for progress
+      const reader = res.body?.getReader();
+      if (!reader) { graphRefreshMsg = 'No response stream'; return; }
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalData: Record<string, unknown> | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+            if (msg.step) graphRefreshMsg = msg.step;
+            if (msg.done) finalData = msg;
+          } catch {}
+        }
       }
-      graphRefreshMsg = 'Signals updated. Brand match quality usually improves with fresher data.';
-      await loadAll();
+
+      if (finalData?.ok) {
+        graphRefreshMsg = 'Signals updated. Brand match quality usually improves with fresher data.';
+        await loadAll();
+      } else {
+        graphRefreshMsg = (finalData?.error as string) || 'Refresh failed';
+      }
     } catch {
       graphRefreshMsg = 'Network error';
     } finally {
@@ -392,7 +415,7 @@
           disabled={refreshingGraph}
           on:click={() => refreshIdentitySignals()}
         >
-          {refreshingGraph ? 'Refreshing…' : 'Refresh signals from accounts'}
+          {refreshingGraph ? (graphRefreshMsg || 'Refreshing…') : 'Refresh signals from accounts'}
         </button>
         <a
           href="/profile"

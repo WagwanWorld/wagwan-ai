@@ -19,7 +19,7 @@ export interface MovieResult {
   rating: number;
 }
 
-export async function searchMovie(title: string): Promise<MovieResult | null> {
+async function searchMovieTmdb(title: string): Promise<MovieResult | null> {
   const key = env.TMDB_API_KEY?.trim();
   if (!key) return null;
   try {
@@ -43,6 +43,40 @@ export async function searchMovie(title: string): Promise<MovieResult | null> {
   }
 }
 
+async function searchMovieWikipedia(title: string): Promise<MovieResult | null> {
+  try {
+    const slug = title.replace(/\s+/g, '_').replace(/[^\w_()'-]/g, '');
+    // Try "Title (film)", then "Title (TV series)", then plain title
+    for (const query of [`${slug}_(film)`, `${slug}_(TV_series)`, slug]) {
+      const res = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const thumb = data.thumbnail?.source || data.originalimage?.source;
+      if (!thumb) continue;
+      // Upscale Wikipedia thumbnail to ~300px wide
+      const posterUrl = thumb.replace(/\/\d+px-/, '/300px-');
+      return {
+        title: data.title || title,
+        posterUrl,
+        overview: (data.extract || '').slice(0, 150),
+        year: '',
+        rating: 0,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function searchMovie(title: string): Promise<MovieResult | null> {
+  // Try TMDB first (better data), fall back to Wikipedia (free, no key)
+  return await searchMovieTmdb(title) ?? await searchMovieWikipedia(title);
+}
+
 export async function searchMovies(titles: string[]): Promise<Record<string, MovieResult>> {
   const results: Record<string, MovieResult> = {};
   await Promise.all(
@@ -64,6 +98,22 @@ export interface BookResult {
   buyUrl: string;
 }
 
+async function searchBookOpenLibrary(title: string, author?: string): Promise<string> {
+  try {
+    const q = author ? `${title} ${author}` : title;
+    const res = await fetch(
+      `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=1`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) return '';
+    const data = await res.json();
+    const coverId = data.docs?.[0]?.cover_i;
+    return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : '';
+  } catch {
+    return '';
+  }
+}
+
 export async function searchBook(title: string, author?: string): Promise<BookResult | null> {
   try {
     const q = author ? `${title} ${author}` : title;
@@ -75,14 +125,14 @@ export async function searchBook(title: string, author?: string): Promise<BookRe
     const data = await res.json();
     const vol = data.items?.[0]?.volumeInfo;
     if (!vol) return null;
-    const coverUrl = vol.imageLinks?.thumbnail || vol.imageLinks?.smallThumbnail || '';
-    if (!coverUrl) return null;
-    // Upgrade to HTTPS
-    const secureCover = coverUrl.replace(/^http:/, 'https:');
+    let coverUrl = vol.imageLinks?.thumbnail || vol.imageLinks?.smallThumbnail || '';
+    if (coverUrl) coverUrl = coverUrl.replace(/^http:/, 'https:');
+    // Fall back to Open Library if Google Books has no cover
+    if (!coverUrl) coverUrl = await searchBookOpenLibrary(title, author);
     return {
       title: vol.title || title,
       author: vol.authors?.[0] || author || '',
-      coverUrl: secureCover,
+      coverUrl,
       description: (vol.description || '').slice(0, 120),
       buyUrl: `https://www.amazon.in/s?k=${encodeURIComponent(`${vol.title} ${vol.authors?.[0] || ''}`)}`,
     };

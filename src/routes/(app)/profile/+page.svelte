@@ -55,6 +55,7 @@
 
   let refreshing = false;
   let refreshResult: { expired: string[] } | null = null;
+  let refreshStatus = '';
   let connectError = '';
 
   let graphStrength: {
@@ -119,12 +120,12 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ googleSub: $profile.googleSub, profile: { ...$profile, city: next } }),
       });
-      // Refresh signals with new location
+      // Refresh signals with new location (fire-and-forget, consume SSE stream)
       fetch('/api/refresh-signals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ googleSub: $profile.googleSub, forceInference: true }),
-      }).catch(() => {});
+      }).then(r => r.body?.getReader().read()).catch(() => {});
       locationSaved = true;
       setTimeout(() => { locationSaved = false; }, 3000);
     } catch {} finally {
@@ -281,6 +282,7 @@
     refreshing = true;
     refreshResult = null;
     refreshError = '';
+    refreshStatus = 'Starting…';
 
     try {
       const res = await fetch('/api/refresh-signals', {
@@ -290,32 +292,65 @@
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        refreshError = data.error || 'Failed to refresh signals';
+        const text = await res.text();
+        try { refreshError = JSON.parse(text).error || 'Failed to refresh signals'; } catch { refreshError = 'Failed to refresh signals'; }
         return;
       }
 
-      const data = await res.json();
-      refreshResult = { expired: data.expired ?? [] };
+      // Read SSE stream for progress updates
+      const reader = res.body?.getReader();
+      if (!reader) { refreshError = 'No response stream'; return; }
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalData: Record<string, unknown> | null = null;
 
-      if (data.updated) {
-        profile.update(p => ({
-          ...p,
-          ...(data.updated as Partial<typeof p>),
-          profileUpdatedAt: data.updatedAt || new Date().toISOString(),
-        }));
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+            if (msg.step) refreshStatus = msg.step;
+            if (msg.partial && msg.updated) {
+              // Apply platform data immediately so UI refreshes fast
+              profile.update(p => ({
+                ...p,
+                ...(msg.updated as Partial<typeof p>),
+                profileUpdatedAt: (msg.updatedAt as string) || new Date().toISOString(),
+              }));
+            }
+            if (msg.done) finalData = msg;
+          } catch {}
+        }
       }
 
-      // Clear feed caches so next visit gets fresh content
-      try {
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('wagwan_home_') || k.startsWith('wagwan_google_'))
-          .forEach(k => localStorage.removeItem(k));
-      } catch {}
+      if (finalData && finalData.ok) {
+        refreshResult = { expired: (finalData.expired as string[]) ?? [] };
+        if (finalData.updated) {
+          profile.update(p => ({
+            ...p,
+            ...(finalData!.updated as Partial<typeof p>),
+            profileUpdatedAt: (finalData!.updatedAt as string) || new Date().toISOString(),
+          }));
+        }
+        // Clear feed caches so next visit gets fresh content
+        try {
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('wagwan_home_') || k.startsWith('wagwan_google_'))
+            .forEach(k => localStorage.removeItem(k));
+        } catch {}
+      } else {
+        refreshError = (finalData?.error as string) || 'Refresh failed — please try again.';
+      }
     } catch {
       refreshError = 'Network error — please try again.';
     } finally {
       refreshing = false;
+      refreshStatus = '';
       void loadGraphStrength();
     }
   }
@@ -744,7 +779,7 @@
     {#if connectedCount > 0 && $profile.googleSub}
       <button class="pf-refresh-btn" on:click={refreshSignals} disabled={refreshing}>
         <span class="pf-refresh-icon" class:spinning={refreshing}><ArrowClockwise size={14} /></span>
-        {refreshing ? 'Analyzing signals…' : 'Refresh signals'}
+        {refreshing ? (refreshStatus || 'Analyzing signals…') : 'Refresh signals'}
       </button>
       {#if refreshResult}
         <div class="pf-refresh-result">
@@ -955,7 +990,7 @@
       <div class="pf-analyse-card">
         <span class="pf-analyse-icon spinning" aria-hidden="true"><ArrowClockwise size={28} /></span>
         <p class="pf-analyse-title">Analysing your profile</p>
-        <p class="pf-analyse-sub">Pulling fresh signals from connected accounts. This can take a little while.</p>
+        <p class="pf-analyse-sub">{refreshStatus || 'Pulling fresh signals from connected accounts…'}</p>
       </div>
     </div>
   {/if}
@@ -1388,6 +1423,12 @@
   }
   .pf-refresh-icon.spinning {
     animation: spin 1s linear infinite;
+  }
+  .pf-refresh-status {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-align: center;
   }
   @keyframes spin {
     from { transform: rotate(0deg); }

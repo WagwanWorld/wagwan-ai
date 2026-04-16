@@ -146,6 +146,13 @@
     z-index: 10;
   }
 
+  /* Push below the fixed mobile top bar (52px) */
+  @media (max-width: 767px) {
+    .actions {
+      top: 60px;
+    }
+  }
+
   .action-btn {
     font-family: var(--font-sans, 'Geist', system-ui, sans-serif);
     font-size: 10px;

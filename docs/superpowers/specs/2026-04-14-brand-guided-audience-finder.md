@@ -106,3 +106,4 @@ Each step shows a subtle animation while active, then a checkmark when done. Rea
 - Creator scoring algorithm changes
 - New database tables
 - Enrichment API for website/IG scraping (stub it, implement later)
+

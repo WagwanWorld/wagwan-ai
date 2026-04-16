@@ -48,8 +48,14 @@
           {#if item.image}
             <img class="rec-img" src={item.image} alt={item.title} loading="lazy" />
           {:else}
-            <div class="rec-img-fallback">
-              <span>{item.title.charAt(0)}</span>
+            <div class="rec-img-fallback" style="--fallback-hue: {(item.title.charCodeAt(0) * 37) % 360}">
+              <span class="rec-fallback-icon">{
+                item.tag === 'Movie' ? '🎬' :
+                item.tag === 'Book' ? '📖' :
+                item.tag === 'Track' || item.tag === 'Artist' ? '🎵' :
+                item.tag === 'Restaurant' ? '🍽️' : '✨'
+              }</span>
+              <span class="rec-fallback-title">{item.title}</span>
             </div>
           {/if}
           {#if item.tag}
@@ -161,13 +167,32 @@
   .rec-img-fallback {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(77,124,255,0.15), rgba(255,77,77,0.1));
+    background: linear-gradient(
+      145deg,
+      hsl(var(--fallback-hue, 220) 45% 18%),
+      hsl(calc(var(--fallback-hue, 220) + 40) 35% 12%)
+    );
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    padding: 16px 12px;
+    text-align: center;
+  }
+  .rec-fallback-icon {
     font-size: 28px;
-    font-weight: 800;
-    color: var(--text-muted);
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+  }
+  .rec-fallback-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .rec-tag {

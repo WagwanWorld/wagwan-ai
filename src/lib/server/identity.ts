@@ -320,10 +320,10 @@ export function buildIdentityGraph(profile: RawProfile): IdentityGraph {
   const hasInstagram = Boolean(ig?.username || ig?.rawSummary);
 
   const city =
-    ig?.city?.trim() ||
     profile.city?.trim() ||
+    ig?.city?.trim() ||
     li?.location?.trim() ||
-    'Mumbai';
+    'India';
 
   const budget = (profile.budget as 'low' | 'mid' | 'high') ?? 'mid';
 

@@ -8,3 +8,4 @@ node_modules
 
 # Vendored OrioSearch clone (use `npm run orio` to fetch + start)
 orio-search/
+.vercel

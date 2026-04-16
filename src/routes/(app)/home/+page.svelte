@@ -19,7 +19,7 @@
   import TrajectoryCard from '$lib/components/home/TrajectoryCard.svelte';
   import CalendarToday from '$lib/components/home/CalendarToday.svelte';
   import MorningBrief from '$lib/components/home/MorningBrief.svelte';
-  import SuggestedReads from '$lib/components/home/SuggestedReads.svelte';
+  import RecommendationStrip from '$lib/components/home/RecommendationStrip.svelte';
   import QuickAskBar from '$lib/components/home/QuickAskBar.svelte';
   import type { IdentitySnapshotWrapper } from '$lib/types/identitySnapshot';
   import type { IdentityIntelligenceWrapper } from '$lib/types/identityIntelligence';
@@ -66,6 +66,8 @@
   } from '$lib/stores/homePersonaSessionCache';
   import { getCurrentContext } from '$lib/stores/contextStore';
   import { ensureMatchReason } from '$lib/utils/matchReason';
+
+  import { renderChatMd } from '$lib/utils/chatMarkdown';
 
   // ── Time ──────────────────────────────────────────────────────────────────
   const DATE_STR = new Date().toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'short' });
@@ -1078,10 +1080,26 @@
         .then(r => r.json())
         .then(data => {
           if (data.news) morningNews = data.news;
-          if (data.reads) morningReads = data.reads;
         })
         .catch(() => {})
         .finally(() => { briefLoading = false; });
+    }
+
+    // Fetch rich recs
+    if (briefSub) {
+      fetch('/api/home/rich-recs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSub: briefSub, profile: $profile }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.movies) recMovies = data.movies;
+          if (data.books) recBooks = data.books;
+          if (data.music) recMusic = data.music;
+          if (data.restaurants) recRestaurants = data.restaurants;
+        })
+        .catch(() => {});
     }
 
     homePromptTimer = setInterval(() => {
@@ -1609,9 +1627,15 @@
 
   // ── Morning page data ──
   let morningNews: { headline: string; summary: string; source: string; url: string; relevance: string }[] = [];
-  let morningReads: { title: string; author: string; type: string; why: string; url: string }[] = [];
   let morningGreeting = '';
   let briefLoading = false;
+
+  // ── Rich recommendations ──
+  type RecItem = { image: string; title: string; subtitle: string; tag: string; matchReason: string; ctaLabel: string; ctaUrl: string };
+  let recMovies: RecItem[] = [];
+  let recBooks: RecItem[] = [];
+  let recMusic: RecItem[] = [];
+  let recRestaurants: RecItem[] = [];
 
   $: {
     const h = new Date().getHours();
@@ -1870,6 +1894,43 @@
             </NarrativeSection>
           {/if}
 
+          <!-- ── Rich Recommendations ── -->
+          {#if recMovies.length}
+            <RecommendationStrip
+              title="Watch Tonight"
+              emoji="🎬"
+              variant="tall"
+              items={recMovies}
+            />
+          {/if}
+
+          {#if recMusic.length}
+            <RecommendationStrip
+              title="Listen Now"
+              emoji="🎵"
+              variant="square"
+              items={recMusic}
+            />
+          {/if}
+
+          {#if recBooks.length}
+            <RecommendationStrip
+              title="Read Next"
+              emoji="📚"
+              variant="tall"
+              items={recBooks}
+            />
+          {/if}
+
+          {#if recRestaurants.length}
+            <RecommendationStrip
+              title="Eat Here"
+              emoji="🍽️"
+              variant="wide"
+              items={recRestaurants}
+            />
+          {/if}
+
           <!-- ── 📰 Your Brief ── -->
           {#if morningNews.length}
             <NarrativeSection emoji="📰" label="Your Brief" vertical>
@@ -1877,12 +1938,6 @@
             </NarrativeSection>
           {/if}
 
-          <!-- ── 📚 Reads For You ── -->
-          {#if morningReads.length}
-            <NarrativeSection emoji="📚" label="Reads For You">
-              <SuggestedReads reads={morningReads} />
-            </NarrativeSection>
-          {/if}
 
           <!-- ── 📱 How You Show Up ── -->
           {#if socialNarrative || socialBarData.length}
@@ -1908,32 +1963,6 @@
             </NarrativeSection>
           {/if}
 
-          <!-- ── 🎬 What You Watch ── -->
-          {#if youtubeNarrative || youtubeChannels.length || youtubeCategories.length}
-            <NarrativeSection emoji="🎬" label="What You Watch">
-              {#if youtubeCategories.length}
-                <div class="narrative-card">
-                  <div class="narrative-card-label">Content Mix</div>
-                  <MiniBarChart bars={youtubeCategories} />
-                </div>
-              {/if}
-              {#if youtubeChannels.length}
-                <div class="narrative-card">
-                  <div class="narrative-card-label">Channels</div>
-                  <div class="yt-channels">
-                    {#each youtubeChannels as ch}
-                      <span class="yt-channel-pill">{ch}</span>
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-              {#if youtubeNarrative}
-                <div class="narrative-card">
-                  <p class="narrative-text">{youtubeNarrative}</p>
-                </div>
-              {/if}
-            </NarrativeSection>
-          {/if}
 
           <!-- ── 🧭 Where You're Headed ── -->
           {#if trajectoryOneLiner || trajectoryScores.some(s => s.value > 0) || trajectoryPredictions.length}
@@ -2014,7 +2043,7 @@
                   class:home-chat-bubble--user={message.role === 'user'}
                   class:home-chat-bubble--shimmer={message.role === 'ai' && message.loading}
                 >
-                  {message.text}{#if message.loading}<span class="home-chat-caret"></span>{/if}
+                  {#if message.role === 'ai'}{@html renderChatMd(message.text || '')}{#if message.loading}<span class="home-chat-caret"></span>{/if}{:else}{message.text}{/if}
                 </div>
                 {#if message.role === 'ai' && message.cards?.length}
                   <div class="home-chat-cards">
@@ -2407,6 +2436,27 @@
 
   .home-chat-bubble--shimmer {
     animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  /* Markdown inside AI bubbles */
+  .home-chat-bubble :global(strong) {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .home-chat-bubble :global(a) {
+    color: var(--accent-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .home-chat-bubble :global(.chat-bullet) {
+    color: var(--accent-primary);
+    font-weight: 600;
+    margin-right: 2px;
+  }
+  .home-chat-bubble :global(.chat-num) {
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-right: 2px;
   }
 
   .home-chat-caret {
