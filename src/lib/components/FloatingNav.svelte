@@ -2,11 +2,13 @@
   import { page } from '$app/stores';
   import House from 'phosphor-svelte/lib/House';
   import ChatCircle from 'phosphor-svelte/lib/ChatCircle';
+  import CurrencyCircleDollar from 'phosphor-svelte/lib/CurrencyCircleDollar';
   import UserCircle from 'phosphor-svelte/lib/UserCircle';
 
   $: path = $page.url.pathname;
   $: homeActive = path === '/home';
   $: chatActive = path === '/ai' || path.startsWith('/chat/');
+  $: earnActive = path === '/earn';
   $: profileActive = path === '/profile';
 </script>
 
@@ -36,6 +38,16 @@
   >
     <ChatCircle size={22} weight={chatActive ? 'fill' : 'regular'} />
     <span class="bottom-tab__label">Chat</span>
+  </a>
+  <a
+    href="/earn"
+    class="bottom-tab"
+    class:bottom-tab--active={earnActive}
+    aria-label="Earn"
+    aria-current={earnActive ? 'page' : undefined}
+  >
+    <CurrencyCircleDollar size={22} weight={earnActive ? 'fill' : 'regular'} />
+    <span class="bottom-tab__label">Earn</span>
   </a>
   <a
     href="/profile"
