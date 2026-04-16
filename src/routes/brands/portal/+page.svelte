@@ -15,8 +15,11 @@
   import CreatorCard from '$lib/components/brands/CreatorCard.svelte';
   import StickyLaunchBar from '$lib/components/brands/StickyLaunchBar.svelte';
   import LaunchModal from '$lib/components/brands/LaunchModal.svelte';
+  import ContentStudio from '$lib/components/brands/ContentStudio.svelte';
 
-  export let data: { brandSessionValid: boolean };
+  export let data: { brandSessionValid: boolean; brandProfile: Record<string, unknown> | null };
+
+  let portalTab: 'content' | 'creators' = data.brandProfile ? 'content' : 'creators';
 
   // ── Step machine ──
   type Step = 'intake' | 'questions' | 'thinking' | 'confirm' | 'results';
@@ -693,7 +696,33 @@
 </script>
 
 <div class="brand-studio">
-  {#if showManualSearch}
+  <!-- Tab toggle: Content Studio vs Find Creators -->
+  {#if data.brandProfile}
+    <div class="portal-tabs">
+      <button
+        class="portal-tab"
+        class:active={portalTab === 'content'}
+        on:click={() => portalTab = 'content'}
+      >Content Studio</button>
+      <button
+        class="portal-tab"
+        class:active={portalTab === 'creators'}
+        on:click={() => portalTab = 'creators'}
+      >Find Creators</button>
+    </div>
+  {/if}
+
+  {#if portalTab === 'content' && data.brandProfile}
+    <div class="portal-content-studio">
+      <ContentStudio brandProfile={{
+        ig_user_id: String(data.brandProfile.ig_user_id || ''),
+        ig_username: String(data.brandProfile.ig_username || ''),
+        ig_name: String(data.brandProfile.ig_name || ''),
+        ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
+        ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
+      }} />
+    </div>
+  {:else if showManualSearch}
     <div class="manual-search-header">
       <button class="back-to-chat" on:click={() => showManualSearch = false}>
         Back to AI matching
@@ -1643,4 +1672,25 @@
     transition: color 0.2s;
   }
   .confirm-back:hover { color: var(--text-secondary); }
+
+  /* ── Portal tabs ── */
+  .portal-tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    background: var(--panel-surface); border-radius: 12px; padding: 4px;
+  }
+  .portal-tab {
+    flex: 1; padding: 10px 16px; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600; font-family: inherit;
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .portal-tab.active {
+    background: var(--glass-medium); color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .portal-content-studio {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 0 16px 80px;
+  }
 </style>
