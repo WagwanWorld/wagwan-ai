@@ -10,7 +10,7 @@
     ig_profile_picture: string; ig_followers_count: number;
   };
 
-  let uploads: Array<{ url: string; mediaType: string; fileName: string }> = [];
+  let uploads: Array<{ url: string; mediaType: string; postType: string; fileName: string }> = [];
   let planPosts: Array<{
     gcsUrl: string; mediaType: string; caption: string; hashtags: string[];
     scheduledAt: string; reasoning: string; status: string;
