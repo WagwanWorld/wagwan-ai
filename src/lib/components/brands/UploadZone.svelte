@@ -4,7 +4,7 @@
   import ImageSquare from 'phosphor-svelte/lib/ImageSquare';
   import VideoCamera from 'phosphor-svelte/lib/VideoCamera';
   import FilmReel from 'phosphor-svelte/lib/FilmReel';
-  import CircleWavyCheck from 'phosphor-svelte/lib/CircleWavyCheck';
+  import ClockCountdown from 'phosphor-svelte/lib/ClockCountdown';
   import Trash from 'phosphor-svelte/lib/Trash';
   import Images from 'phosphor-svelte/lib/Images';
 
@@ -23,7 +23,7 @@
   const postTypes = [
     { id: 'IMAGE' as const, label: 'Feed Post', icon: ImageSquare, size: '1080 × 1080', ratio: '1:1' },
     { id: 'REELS' as const, label: 'Reel', icon: FilmReel, size: '1080 × 1920', ratio: '9:16' },
-    { id: 'STORIES' as const, label: 'Story', icon: CircleWavyCheck, size: '1080 × 1920', ratio: '9:16' },
+    { id: 'STORIES' as const, label: 'Story', icon: ClockCountdown, size: '1080 × 1920', ratio: '9:16' },
     { id: 'CAROUSEL' as const, label: 'Carousel', icon: Images, size: '1080 × 1080', ratio: '1:1' },
     { id: 'VIDEO' as const, label: 'Video Post', icon: VideoCamera, size: '1080 × 1080', ratio: '1:1 or 16:9' },
   ];
