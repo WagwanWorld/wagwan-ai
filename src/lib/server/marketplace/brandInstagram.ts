@@ -2,7 +2,7 @@ import { INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET } from '$env/static/private';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
 const BRAND_REDIRECT_URI = `${PUBLIC_BASE_URL}/auth/brand-instagram/callback`;
-const BRAND_SCOPES = 'instagram_business_basic,instagram_business_content_publish,instagram_manage_insights,instagram_manage_comments';
+const BRAND_SCOPES = 'instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights,instagram_business_manage_comments';
 
 export function getBrandInstagramAuthUrl(state: string): string {
   const params = new URLSearchParams({
