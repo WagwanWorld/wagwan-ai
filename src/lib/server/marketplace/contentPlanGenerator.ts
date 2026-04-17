@@ -17,6 +17,7 @@ export async function generateContentPlan(
   brandProfile: { username: string; name: string; followersCount: number },
   recentPosts: Array<{ caption: string; timestamp: string; likeCount: number; commentsCount: number; mediaType: string }>,
   insightsData: { onlineFollowers?: Record<string, number[]>; topPostingHours?: number[] } | null,
+  brandIdentity?: Record<string, unknown> | null,
 ): Promise<ContentPlanItem[]> {
   const postHistory = recentPosts.slice(0, 10).map(p =>
     `- [${p.mediaType}] ${p.timestamp} | ${p.likeCount} likes, ${p.commentsCount} comments | "${(p.caption || '').slice(0, 100)}"`
@@ -77,6 +78,19 @@ export async function generateContentPlan(
     type: 'text',
     text: `You are a social media strategist for @${brandProfile.username} (${brandProfile.name}, ${brandProfile.followersCount} followers).
 
+${brandIdentity ? `BRAND IDENTITY (extracted from their Instagram):
+- Aesthetic: ${(brandIdentity as any).aesthetic || 'unknown'}
+- Food vibe: ${(brandIdentity as any).foodVibe || 'n/a'}
+- Lifestyle: ${(brandIdentity as any).lifestyle || 'n/a'}
+- Interests: ${JSON.stringify((brandIdentity as any).interests || [])}
+- Caption style: ${(brandIdentity as any).captionStyle || 'unknown'}
+- Personality: ${JSON.stringify((brandIdentity as any).personality || {})}
+- Visual identity: ${JSON.stringify((brandIdentity as any).visual?.palette || (brandIdentity as any).visual?.mood || 'unknown')}
+- Engagement tier: ${(brandIdentity as any).igCreatorTier || 'unknown'}
+- Bio: ${(brandIdentity as any).bio || ''}
+
+USE THIS BRAND IDENTITY to match the tone, voice, and style of captions. The caption should feel like it was written by the brand's own social media manager — same energy, same language patterns, same emoji usage.
+` : ''}
 Look at each image to understand the vibe and theme, then write a short caption that fits.
 
 RECENT POST HISTORY (last 10 posts):

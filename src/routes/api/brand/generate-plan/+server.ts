@@ -18,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
   const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   const brandRes = await fetch(
-    `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${igUserId}&select=ig_username,ig_name,ig_followers_count,ig_access_token&limit=1`,
+    `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${igUserId}&select=ig_username,ig_name,ig_followers_count,ig_access_token,brand_identity&limit=1`,
     {
       headers: {
         apikey: supabaseKey,
@@ -65,6 +65,7 @@ export const POST: RequestHandler = async ({ request }) => {
     { username: brand.ig_username, name: brand.ig_name, followersCount: brand.ig_followers_count },
     recentPosts,
     insightsData,
+    brand.brand_identity || null,
   );
 
   return json({ ok: true, plan });

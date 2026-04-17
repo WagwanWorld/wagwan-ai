@@ -11,9 +11,9 @@ export const GET: RequestHandler = async ({ request }) => {
   const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseKey) throw error(500, 'Supabase not configured');
 
-  // Get brand token
+  // Get brand token + stored identity
   const brandRes = await fetch(
-    `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${encodeURIComponent(igUserId)}&select=ig_access_token,ig_username,ig_name,ig_profile_picture,ig_followers_count&limit=1`,
+    `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${encodeURIComponent(igUserId)}&select=ig_access_token,ig_username,ig_name,ig_profile_picture,ig_followers_count,brand_identity,identity_updated_at&limit=1`,
     { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
   );
   const brands = await brandRes.json();
@@ -90,5 +90,7 @@ export const GET: RequestHandler = async ({ request }) => {
       published: publishedCount,
       total: scheduledPosts.length,
     },
+    brandIdentity: brand.brand_identity || null,
+    identityUpdatedAt: brand.identity_updated_at || null,
   });
 };
