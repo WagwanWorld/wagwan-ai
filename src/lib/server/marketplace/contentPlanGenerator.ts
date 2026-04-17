@@ -77,7 +77,7 @@ export async function generateContentPlan(
     type: 'text',
     text: `You are a social media strategist for @${brandProfile.username} (${brandProfile.name}, ${brandProfile.followersCount} followers).
 
-I've shown you the creative images above. Analyze what's IN each image — the text, colors, mood, subject matter — and write captions that directly relate to the visual content.
+Look at each image to understand the vibe and theme, then write a short caption that fits.
 
 RECENT POST HISTORY (last 10 posts):
 ${postHistory || 'No recent posts available.'}
@@ -85,13 +85,20 @@ ${postHistory || 'No recent posts available.'}
 AUDIENCE INSIGHTS:
 ${insightsSummary}
 
-TASK: Create an optimal posting schedule for these ${creatives.length} creatives. For EACH creative:
-1. Write a caption that specifically describes and relates to what's shown in the image. Do NOT write generic captions — reference the actual visual content.
-2. Suggest 5-8 relevant hashtags WITHOUT the # symbol (just the word, e.g. "wagwan" not "#wagwan")
-3. Pick the best date/time to post (space them out, avoid posting more than 2/day)
-4. Explain your reasoning briefly
+RULES FOR CAPTIONS:
+- Keep it SHORT. 1-2 lines max. No essays.
+- Match the energy of the image but don't describe it literally. Don't say "this image shows..." or reference colors/text in the image.
+- Write like a brand social media manager — punchy, casual, confident.
+- Minimal emojis (0-2 max). No emoji spam.
+- End with a subtle CTA or question if it fits naturally. Skip it if it doesn't.
 
-Respond ONLY with a JSON array:
+TASK: For each creative, provide:
+1. A short, punchy caption (1-2 lines)
+2. 5-7 hashtags WITHOUT the # symbol (e.g. "wagwan" not "#wagwan")
+3. Best date/time to post
+4. Brief reasoning
+
+JSON array only:
 [
   {
     "creativeIndex": 0,
@@ -103,12 +110,7 @@ Respond ONLY with a JSON array:
   }
 ]
 
-IMPORTANT:
-- Hashtags must NOT include the # symbol
-- Captions must directly reference what's visible in the image
-- Use IST timezone
-- Start scheduling from tomorrow
-- Only output the JSON array, no other text.`,
+Use IST timezone. Start from tomorrow. Only output JSON.`,
   });
 
   const response = await anthropic.messages.create({
