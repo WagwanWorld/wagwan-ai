@@ -68,6 +68,103 @@
   import { ensureMatchReason } from '$lib/utils/matchReason';
 
   import { renderChatMd } from '$lib/utils/chatMarkdown';
+  import CurrencyInr from 'phosphor-svelte/lib/CurrencyInr';
+  import Briefcase from 'phosphor-svelte/lib/Briefcase';
+  import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
+  import XCircle from 'phosphor-svelte/lib/XCircle';
+  import Clock from 'phosphor-svelte/lib/Clock';
+
+  // ── Creator Dashboard state ───────────────────────────────────────────────
+  type Campaign = {
+    campaign_id: string;
+    brand_name: string;
+    title: string;
+    creative_text: string;
+    reward_inr: number;
+    match_reason: string;
+    match_score: number;
+    created_at: string;
+  };
+
+  let dashLoading = true;
+  let dashCampaigns: Campaign[] = [];
+  let dashWallet: {
+    summary: { total_inr: number; pending_inr: number; withdrawable_inr: number };
+    transactions: Array<{ id: string; amount_inr: number; status: string; note: string; created_at: string }>;
+  } | null = null;
+  let dashAcceptedBrands: string[] = [];
+  let dashRespondingId = '';
+
+  async function loadDashboard() {
+    const sub = $profile.googleSub?.trim();
+    if (!sub) { dashLoading = false; return; }
+    try {
+      const [cRes, wRes] = await Promise.all([
+        fetch(`/api/user/campaigns?sub=${encodeURIComponent(sub)}`),
+        fetch(`/api/user/wallet?sub=${encodeURIComponent(sub)}`),
+      ]);
+      const cJson = await cRes.json();
+      const wJson = await wRes.json();
+      if (cJson.ok) dashCampaigns = cJson.campaigns ?? [];
+      if (wJson.ok) dashWallet = wJson;
+      // Load accepted brands from transaction notes
+      if (dashWallet?.transactions?.length) {
+        const brands = new Set<string>();
+        for (const tx of dashWallet.transactions) {
+          if (tx.note) brands.add(tx.note.replace(/^Payment.*?from\s+/i, '').trim());
+        }
+        dashAcceptedBrands = [...brands].filter(Boolean).slice(0, 8);
+      }
+    } catch { /* non-fatal */ }
+    dashLoading = false;
+  }
+
+  async function acceptCampaign(campaignId: string) {
+    const sub = $profile.googleSub?.trim();
+    if (!sub || dashRespondingId) return;
+    dashRespondingId = campaignId;
+    const campaign = dashCampaigns.find(c => String(c.campaign_id) === String(campaignId));
+    try {
+      await fetch('/api/creator/brief-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sub, campaignId, action: 'accept',
+          brandName: campaign?.brand_name || '',
+          briefText: campaign?.creative_text || '',
+        }),
+      });
+      dashCampaigns = dashCampaigns.filter(c => String(c.campaign_id) !== String(campaignId));
+      if (campaign?.brand_name) dashAcceptedBrands = [...dashAcceptedBrands, campaign.brand_name];
+    } catch { /* */ }
+    dashRespondingId = '';
+  }
+
+  async function declineCampaign(campaignId: string) {
+    const sub = $profile.googleSub?.trim();
+    if (!sub || dashRespondingId) return;
+    dashRespondingId = campaignId;
+    try {
+      await fetch('/api/creator/brief-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sub, campaignId, action: 'decline' }),
+      });
+      dashCampaigns = dashCampaigns.filter(c => String(c.campaign_id) !== String(campaignId));
+    } catch { /* */ }
+    dashRespondingId = '';
+  }
+
+  $: totalEarned = dashWallet?.summary?.total_inr ?? 0;
+  $: pendingAmount = dashWallet?.summary?.pending_inr ?? 0;
+  $: withdrawable = dashWallet?.summary?.withdrawable_inr ?? 0;
+  $: activeBriefs = dashCampaigns.length;
+
+  function formatInr(n: number): string {
+    if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+    if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
+    return `₹${n.toLocaleString('en-IN')}`;
+  }
 
   // ── Time ──────────────────────────────────────────────────────────────────
   const DATE_STR = new Date().toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'short' });
@@ -1018,6 +1115,7 @@
 
     // Stale-while-revalidate: refresh from API without skeleton when cache had a snapshot
     void loadPersona();
+    void loadDashboard();
     twinMemKey = twinMemKeyForProfile($profile);
     twinMem = loadTwinMemory(twinMemKey);
     memoryKey = memoryKeyForProfile($profile);
@@ -1858,6 +1956,128 @@
         />
 
         <div class="home-feed-pad">
+          <!-- ════════════════════════════════════════════
+               CREATOR DASHBOARD — earnings, requests, portfolio
+               ════════════════════════════════════════════ -->
+
+          <!-- Earnings summary -->
+          <section class="dash-section">
+            <div class="dash-earnings">
+              <div class="dash-earn-card">
+                <div class="dash-earn-label">Total earned</div>
+                <div class="dash-earn-value">{formatInr(totalEarned)}</div>
+              </div>
+              <div class="dash-earn-card">
+                <div class="dash-earn-label">Pending</div>
+                <div class="dash-earn-value dash-earn-value--pending">{formatInr(pendingAmount)}</div>
+              </div>
+              <div class="dash-earn-card">
+                <div class="dash-earn-label">Withdrawable</div>
+                <div class="dash-earn-value dash-earn-value--green">{formatInr(withdrawable)}</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Brand Requests -->
+          <section class="dash-section">
+            <h2 class="dash-section-title">
+              <Briefcase size={16} weight="bold" />
+              Brand requests
+              {#if activeBriefs > 0}
+                <span class="dash-count">{activeBriefs}</span>
+              {/if}
+            </h2>
+            {#if dashLoading}
+              <div class="dash-empty">Loading briefs...</div>
+            {:else if dashCampaigns.length === 0}
+              <div class="dash-empty">
+                <p>No pending requests right now.</p>
+                <p class="dash-empty-sub">New brand matches will appear here when they find you.</p>
+              </div>
+            {:else}
+              <div class="dash-briefs">
+                {#each dashCampaigns as campaign (campaign.campaign_id)}
+                  <div class="dash-brief">
+                    <div class="dash-brief-top">
+                      <div class="dash-brief-brand">{campaign.brand_name}</div>
+                      <div class="dash-brief-amount">{formatInr(campaign.reward_inr)}</div>
+                    </div>
+                    <div class="dash-brief-title">{campaign.title}</div>
+                    <div class="dash-brief-text">{campaign.creative_text.slice(0, 120)}{campaign.creative_text.length > 120 ? '...' : ''}</div>
+                    {#if campaign.match_reason}
+                      <div class="dash-brief-match">
+                        <span class="dash-match-score">{Math.round(campaign.match_score * 100)}% match</span>
+                        <span class="dash-match-reason">{campaign.match_reason}</span>
+                      </div>
+                    {/if}
+                    <div class="dash-brief-actions">
+                      <button
+                        class="dash-brief-btn dash-brief-btn--accept"
+                        disabled={dashRespondingId === String(campaign.campaign_id)}
+                        on:click={() => acceptCampaign(String(campaign.campaign_id))}
+                      >
+                        <CheckCircle size={16} weight="bold" />
+                        Accept
+                      </button>
+                      <button
+                        class="dash-brief-btn dash-brief-btn--decline"
+                        disabled={dashRespondingId === String(campaign.campaign_id)}
+                        on:click={() => declineCampaign(String(campaign.campaign_id))}
+                      >
+                        <XCircle size={16} weight="bold" />
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </section>
+
+          <!-- Brand Portfolio -->
+          {#if dashAcceptedBrands.length > 0}
+            <section class="dash-section">
+              <h2 class="dash-section-title">
+                <CheckCircle size={16} weight="bold" />
+                Brand portfolio
+              </h2>
+              <div class="dash-portfolio">
+                {#each dashAcceptedBrands as brand}
+                  <div class="dash-portfolio-chip">{brand}</div>
+                {/each}
+              </div>
+            </section>
+          {/if}
+
+          <!-- Recent Transactions -->
+          {#if dashWallet?.transactions?.length}
+            <section class="dash-section">
+              <h2 class="dash-section-title">
+                <Clock size={16} weight="bold" />
+                Recent activity
+              </h2>
+              <div class="dash-transactions">
+                {#each dashWallet.transactions.slice(0, 5) as tx (tx.id)}
+                  <div class="dash-tx">
+                    <div class="dash-tx-info">
+                      <span class="dash-tx-note">{tx.note || 'Transaction'}</span>
+                      <span class="dash-tx-date">{new Date(tx.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                    </div>
+                    <div class="dash-tx-amount" class:dash-tx-amount--pending={tx.status === 'pending'}>
+                      {tx.status === 'pending' ? '⏳' : ''}
+                      {formatInr(tx.amount_inr)}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </section>
+          {/if}
+
+          <!-- Divider before lifestyle content -->
+          {#if dashCampaigns.length > 0 || dashAcceptedBrands.length > 0 || (dashWallet?.summary?.total_inr ?? 0) > 0}
+            <div class="dash-divider"></div>
+          {/if}
+
           <!-- ── 📅 Today ── -->
           {#if calEvents.length || $profile.googleConnected}
             <NarrativeSection emoji="📅" label="Today">
@@ -2145,6 +2365,296 @@
 
   .home-feed-pad {
     padding: 0 0 24px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     CREATOR DASHBOARD STYLES
+     ══════════════════════════════════════════════════════════ */
+
+  .dash-section {
+    margin-bottom: 24px;
+  }
+
+  .dash-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted, #8A8A90);
+    margin: 0 0 14px;
+    padding: 0 4px;
+  }
+
+  .dash-count {
+    background: var(--accent-primary, #E8464A);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 100px;
+    letter-spacing: 0;
+  }
+
+  /* Earnings row */
+  .dash-earnings {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .dash-earn-card {
+    background: var(--glass-light, rgba(255,255,255,0.03));
+    border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+    border-radius: 14px;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .dash-earn-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #6A6A72);
+  }
+
+  .dash-earn-value {
+    font-family: 'Bodoni Moda', 'PP Mori', Georgia, serif;
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 700;
+    color: var(--text-primary, #EDEDEF);
+    letter-spacing: -0.02em;
+  }
+
+  .dash-earn-value--pending { color: var(--g-metric-cadence, #D9C26E); }
+  .dash-earn-value--green { color: #4ade80; }
+
+  /* Empty state */
+  .dash-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-muted, #6A6A72);
+    font-size: 13px;
+    background: var(--glass-light, rgba(255,255,255,0.02));
+    border: 1px solid var(--border-subtle, rgba(255,255,255,0.04));
+    border-radius: 14px;
+  }
+
+  .dash-empty p { margin: 0; }
+  .dash-empty-sub { font-size: 12px; color: var(--text-muted, #4A4A50); margin-top: 6px !important; }
+
+  /* Brief cards */
+  .dash-briefs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dash-brief {
+    background: var(--glass-light, rgba(255,255,255,0.03));
+    border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+    border-radius: 16px;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.2s ease;
+  }
+
+  .dash-brief:hover {
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  .dash-brief-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .dash-brief-brand {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary, #EDEDEF);
+  }
+
+  .dash-brief-amount {
+    font-family: 'Bodoni Moda', 'PP Mori', Georgia, serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #4ade80;
+    letter-spacing: -0.02em;
+  }
+
+  .dash-brief-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary, #8A8A90);
+  }
+
+  .dash-brief-text {
+    font-size: 12px;
+    color: var(--text-muted, #6A6A72);
+    line-height: 1.5;
+  }
+
+  .dash-brief-match {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .dash-match-score {
+    color: var(--g-metric-engagement, #7FC8A9);
+    font-weight: 700;
+  }
+
+  .dash-match-reason {
+    color: var(--text-muted, #4A4A50);
+  }
+
+  .dash-brief-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .dash-brief-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+  }
+
+  .dash-brief-btn--accept {
+    background: rgba(74, 222, 128, 0.1);
+    color: #4ade80;
+    border-color: rgba(74, 222, 128, 0.15);
+  }
+
+  .dash-brief-btn--accept:hover {
+    background: rgba(74, 222, 128, 0.18);
+    border-color: rgba(74, 222, 128, 0.3);
+  }
+
+  .dash-brief-btn--decline {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted, #6A6A72);
+    border-color: rgba(255,255,255,0.04);
+  }
+
+  .dash-brief-btn--decline:hover {
+    background: rgba(251, 113, 133, 0.08);
+    color: #fb7185;
+    border-color: rgba(251, 113, 133, 0.15);
+  }
+
+  .dash-brief-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  /* Brand portfolio */
+  .dash-portfolio {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .dash-portfolio-chip {
+    padding: 8px 16px;
+    border-radius: 100px;
+    background: var(--glass-light, rgba(255,255,255,0.03));
+    border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #EDEDEF);
+  }
+
+  /* Transactions */
+  .dash-transactions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .dash-tx {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 10px;
+    transition: background 0.15s ease;
+  }
+
+  .dash-tx:hover {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .dash-tx-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .dash-tx-note {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #EDEDEF);
+  }
+
+  .dash-tx-date {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted, #4A4A50);
+  }
+
+  .dash-tx-amount {
+    font-family: 'Bodoni Moda', 'PP Mori', Georgia, serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #4ade80;
+    letter-spacing: -0.01em;
+  }
+
+  .dash-tx-amount--pending {
+    color: var(--g-metric-cadence, #D9C26E);
+  }
+
+  /* Divider */
+  .dash-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.03);
+    margin: 8px 0 24px;
+  }
+
+  @media (max-width: 520px) {
+    .dash-earnings {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .dash-earn-card {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+    }
+    .dash-earn-value { font-size: 22px; }
   }
 
   .home-section {
