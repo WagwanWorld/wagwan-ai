@@ -1116,6 +1116,7 @@
     // Stale-while-revalidate: refresh from API without skeleton when cache had a snapshot
     void loadPersona();
     void loadDashboard();
+    void loadEcosystemBrands();
     twinMemKey = twinMemKeyForProfile($profile);
     twinMem = loadTwinMemory(twinMemKey);
     memoryKey = memoryKeyForProfile($profile);
@@ -1775,26 +1776,46 @@
   $: displayMovies = recMovies.length >= 4 ? recMovies : seedMovies;
   $: displayBooks = recBooks.length >= 4 ? recBooks : seedBooks;
 
-  // ── Brands in ecosystem ──
-  type EcoBrand = { name: string; category: string; logo_color: string };
-  let ecoBrands: EcoBrand[] = [
-    { name: 'Razorpay', category: 'Fintech', logo_color: '#2B84EA' },
-    { name: 'Zerodha', category: 'Fintech', logo_color: '#387ED1' },
-    { name: 'CRED', category: 'Fintech', logo_color: '#1A1A2E' },
-    { name: 'Meesho', category: 'E-commerce', logo_color: '#E91E63' },
-    { name: 'PhonePe', category: 'Payments', logo_color: '#5F259F' },
-    { name: 'Swiggy', category: 'Food', logo_color: '#FC8019' },
-    { name: 'Zomato', category: 'Food', logo_color: '#E23744' },
-    { name: 'Freshworks', category: 'SaaS', logo_color: '#26BF65' },
-    { name: 'Postman', category: 'DevTools', logo_color: '#FF6C37' },
-    { name: 'Chargebee', category: 'SaaS', logo_color: '#FF6C37' },
-    { name: 'Boat', category: 'Consumer', logo_color: '#E63B2E' },
-    { name: 'Sugar Cosmetics', category: 'Beauty', logo_color: '#C71585' },
-    { name: 'Mamaearth', category: 'Wellness', logo_color: '#4CAF50' },
-    { name: 'Lenskart', category: 'Retail', logo_color: '#1E88E5' },
-    { name: 'Urban Company', category: 'Services', logo_color: '#1A1A2E' },
-    { name: 'Cult.fit', category: 'Fitness', logo_color: '#FF5722' },
-  ];
+  // ── Brands in ecosystem (from DB) ──
+  type EcoBrand = { username: string; name: string; picture: string | null; followers: number; category: string };
+  let ecoBrands: EcoBrand[] = [];
+  let ecoBrandsLoading = true;
+
+  async function loadEcosystemBrands() {
+    try {
+      const res = await fetch('/api/creator/ecosystem-brands');
+      const data = await res.json();
+      if (data.ok && data.brands?.length) ecoBrands = data.brands;
+    } catch { /* non-fatal */ }
+    ecoBrandsLoading = false;
+  }
+
+  // ── Social metrics ──
+  $: igFollowers = $profile.instagramIdentity?.followersCount ?? 0;
+  $: igMediaCount = $profile.instagramIdentity?.mediaCount ?? 0;
+  $: igUsername = $profile.instagramIdentity?.username ?? '';
+  $: igEngagement = (() => {
+    const ig = $profile.instagramIdentity as any;
+    if (ig?.avgEngagementRate) return (ig.avgEngagementRate * 100).toFixed(1);
+    if (ig?.engagementRate) return (ig.engagementRate * 100).toFixed(1);
+    return '—';
+  })();
+
+  // ── Personality data ──
+  $: personalityTraits = (() => {
+    const vibe = personaSnapshot?.payload?.vibe ?? [];
+    const mode = personaSnapshot?.payload?.current_mode ?? '';
+    const archetype = personaSnapshot?.payload?.archetype ?? '';
+    const interests = $profile.interests ?? [];
+    const traits: { label: string; value: string }[] = [];
+    if (archetype) traits.push({ label: 'ARCHETYPE', value: archetype });
+    if (mode) traits.push({ label: 'MODE', value: mode });
+    if (vibe.length) traits.push({ label: 'VIBE', value: vibe.slice(0, 3).join(', ') });
+    if (interests.length) traits.push({ label: 'INTERESTS', value: interests.slice(0, 4).join(', ') });
+    if (igPostingCadence) traits.push({ label: 'CADENCE', value: igPostingCadence });
+    if (city) traits.push({ label: 'BASED IN', value: city });
+    return traits;
+  })();
 
   $: {
     const h = new Date().getHours();
@@ -2042,21 +2063,70 @@
   <!-- Bento grid -->
   <div class="os-bento">
 
-    <!-- ── Brands in Ecosystem ── -->
-    <section class="os-card os-card--brands">
+    <!-- ── Personality & Social ── -->
+    <section class="os-card os-card--personality">
       <div class="os-card-head">
-        <span class="os-card-label">BRANDS IN ECOSYSTEM</span>
-        <span class="os-card-count">{ecoBrands.length}</span>
+        <span class="os-card-label">YOUR IDENTITY</span>
       </div>
-      <div class="os-brand-grid">
-        {#each ecoBrands as brand}
-          <div class="os-brand-row">
-            <div class="os-brand-dot" style="background:{brand.logo_color}"></div>
-            <span class="os-brand-name">{brand.name}</span>
-            <span class="os-brand-cat">{brand.category}</span>
+      {#if heroOneLiner}
+        <p class="os-identity-liner">{heroOneLiner}</p>
+      {/if}
+      <div class="os-trait-list">
+        {#each personalityTraits as trait}
+          <div class="os-trait">
+            <span class="os-trait-label">{trait.label}</span>
+            <span class="os-trait-value">{trait.value}</span>
           </div>
         {/each}
       </div>
+      {#if igUsername}
+        <div class="os-social-bar">
+          <div class="os-social-stat">
+            <span class="os-social-num">{igFollowers.toLocaleString('en-IN')}</span>
+            <span class="os-social-lbl">Followers</span>
+          </div>
+          <div class="os-social-stat">
+            <span class="os-social-num">{igMediaCount}</span>
+            <span class="os-social-lbl">Posts</span>
+          </div>
+          <div class="os-social-stat">
+            <span class="os-social-num">{igEngagement}%</span>
+            <span class="os-social-lbl">Engagement</span>
+          </div>
+        </div>
+      {/if}
+    </section>
+
+    <!-- ── Brands in Ecosystem (from DB) ── -->
+    <section class="os-card os-card--brands">
+      <div class="os-card-head">
+        <span class="os-card-label">BRANDS IN ECOSYSTEM</span>
+        {#if ecoBrands.length > 0}<span class="os-card-count">{ecoBrands.length}</span>{/if}
+      </div>
+      {#if ecoBrandsLoading}
+        <div class="os-card-empty">Loading brands...</div>
+      {:else if ecoBrands.length === 0}
+        <div class="os-card-empty">No brands onboarded yet</div>
+      {:else}
+        <div class="os-brand-grid">
+          {#each ecoBrands as brand}
+            <div class="os-brand-row">
+              {#if brand.picture}
+                <img src={brand.picture} alt="" class="os-brand-pic" />
+              {:else}
+                <div class="os-brand-pic os-brand-pic--init">{brand.name.charAt(0)}</div>
+              {/if}
+              <div class="os-brand-info">
+                <span class="os-brand-name">{brand.name}</span>
+                {#if brand.category}<span class="os-brand-cat">{brand.category}</span>{/if}
+              </div>
+              {#if brand.followers > 0}
+                <span class="os-brand-followers">{brand.followers >= 1000 ? (brand.followers / 1000).toFixed(1) + 'K' : brand.followers}</span>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
     </section>
 
     <!-- ── Brand Requests ── -->
@@ -2140,7 +2210,7 @@
         <span class="os-card-label">WATCH TONIGHT</span>
       </div>
       <div class="os-watch-scroll">
-        {#each displayMovies.slice(0, 6) as movie}
+        {#each displayMovies as movie}
           <a href={movie.ctaUrl} target="_blank" rel="noopener" class="os-watch-item">
             <img src={movie.image} alt={movie.title} class="os-watch-poster" loading="lazy" />
             <div class="os-watch-info">
@@ -2158,7 +2228,7 @@
         <span class="os-card-label">READ NEXT</span>
       </div>
       <div class="os-book-list">
-        {#each displayBooks.slice(0, 5) as book}
+        {#each displayBooks as book}
           <a href={book.ctaUrl} target="_blank" rel="noopener" class="os-book-row">
             <img src={book.image} alt={book.title} class="os-book-cover" loading="lazy" />
             <div class="os-book-info">
@@ -2189,22 +2259,8 @@
       </section>
     {/if}
 
-    <!-- ── Tagline / One-liner ── -->
-    {#if heroOneLiner}
-      <section class="os-card os-card--tagline">
-        <p class="os-tagline-text">{heroOneLiner}</p>
-        {#if heroArchetype}
-          <span class="os-tagline-archetype">{heroArchetype}</span>
-        {/if}
-      </section>
-    {/if}
-
-  </div>
-
-  <!-- Chat sidebar -->
-  <div class="os-chat-toggle">
-    <!-- old feed content purge marker -->
-    <aside class="home-chat-col" aria-label="Ask your system">
+        <!-- ── Chat ── -->
+    <section class="os-card os-card--chat">
       <div bind:this={homeChatScrollEl} class="home-chat-scroll">
         <div class="home-chat-meta">
           <div class="home-chat-mode" role="tablist" aria-label="Composer mode">
@@ -2289,7 +2345,8 @@
           </button>
         </div>
       </div>
-    </aside>
+    </section>
+
   </div>
 </div>
 
@@ -2455,13 +2512,14 @@
   }
 
   /* ── Card sizes ── */
+  .os-card--personality { grid-column: span 1; grid-row: span 2; }
   .os-card--brands { grid-column: span 1; grid-row: span 2; }
   .os-card--requests { grid-column: span 1; grid-row: span 2; }
-  .os-card--metrics { grid-column: span 2; grid-row: span 1; }
+  .os-card--metrics { grid-column: span 1; grid-row: span 1; }
   .os-card--watch { grid-column: span 2; grid-row: span 1; }
   .os-card--books { grid-column: span 1; grid-row: span 1; }
   .os-card--activity { grid-column: span 1; grid-row: span 1; }
-  .os-card--tagline { grid-column: span 2; grid-row: span 1; justify-content: center; align-items: center; }
+  .os-card--chat { grid-column: span 2; grid-row: span 2; }
 
   /* ── Brands ecosystem ── */
   .os-brand-grid {
@@ -2475,11 +2533,59 @@
     transition: background 0.15s ease;
   }
   .os-brand-row:hover { background: rgba(255,255,255,0.03); }
-  .os-brand-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .os-brand-name { font-size: 12px; font-weight: 600; color: #EDEDEF; flex: 1; }
+  .os-brand-pic {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    object-fit: cover; border: 1px solid rgba(255,255,255,0.04);
+  }
+  .os-brand-pic--init {
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(232,131,58,0.12); color: #E8833A;
+    font-size: 12px; font-weight: 700;
+  }
+  .os-brand-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .os-brand-name { font-size: 12px; font-weight: 600; color: #EDEDEF; }
   .os-brand-cat {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 9px; color: #3A3A40; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .os-brand-followers {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; color: #4A4A50; flex-shrink: 0;
+  }
+
+  /* ── Personality & Social ── */
+  .os-identity-liner {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 15px; font-style: italic; font-weight: 400;
+    color: #8A8A90; line-height: 1.5; margin: 0 0 14px;
+  }
+  .os-trait-list { display: flex; flex-direction: column; gap: 6px; }
+  .os-trait {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+  }
+  .os-trait-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; font-weight: 600; color: #3A3A40;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    width: 72px; flex-shrink: 0;
+  }
+  .os-trait-value {
+    font-size: 12px; color: #EDEDEF; font-weight: 500;
+  }
+  .os-social-bar {
+    display: flex; gap: 16px; margin-top: auto;
+    padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.03);
+  }
+  .os-social-stat { display: flex; flex-direction: column; gap: 1px; }
+  .os-social-num {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 18px; font-weight: 700; color: #EDEDEF;
+  }
+  .os-social-lbl {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; text-transform: uppercase; letter-spacing: 0.06em;
   }
 
   /* ── Brand requests ── */
@@ -2654,8 +2760,10 @@
     letter-spacing: 0.1em; margin-top: 8px; display: inline-block;
   }
 
-  /* ── Chat toggle wrapper ── */
-  .os-chat-toggle { display: none; }
+  /* ── Chat card ── */
+  .os-card--chat { padding: 0; overflow: hidden; }
+  .os-card--chat .home-chat-scroll { flex: 1; }
+  .os-card--chat .home-composer { border-top: 1px solid rgba(255,255,255,0.04); }
 
   /* ── Mobile responsive ── */
   @media (max-width: 1024px) {
@@ -2667,11 +2775,12 @@
     .os-earn-hero { border-left: none; padding-left: 0; text-align: left; }
     .os-earn-sub-row { justify-content: flex-start; }
     .os-bento { grid-template-columns: repeat(2, 1fr); }
+    .os-card--personality { grid-column: span 1; grid-row: span 1; }
     .os-card--brands { grid-column: span 1; grid-row: span 1; }
-    .os-card--requests { grid-column: span 1; grid-row: span 1; }
+    .os-card--requests { grid-column: span 2; grid-row: span 1; }
     .os-card--metrics { grid-column: span 2; }
     .os-card--watch { grid-column: span 2; }
-    .os-card--tagline { grid-column: span 2; }
+    .os-card--chat { grid-column: span 2; grid-row: span 1; min-height: 300px; }
   }
 
   @media (max-width: 640px) {
@@ -2686,13 +2795,14 @@
       grid-template-columns: 1fr;
       grid-auto-rows: auto;
     }
+    .os-card--personality,
     .os-card--brands,
     .os-card--requests,
     .os-card--metrics,
     .os-card--watch,
     .os-card--books,
     .os-card--activity,
-    .os-card--tagline { grid-column: span 1; grid-row: span 1; }
+    .os-card--chat { grid-column: span 1; grid-row: span 1; min-height: 280px; }
     .os-metrics-grid { gap: 16px; }
     .os-metric-ring { width: 48px; height: 48px; }
   }
