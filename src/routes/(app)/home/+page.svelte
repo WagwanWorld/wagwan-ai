@@ -1713,7 +1713,16 @@
   $: heroOneLiner = personaSnapshot?.payload?.one_liner
     || personaIntelligence?.payload?.snapshot?.one_line_state
     || inferenceCompact?.predictive_one_liner
-    || '';
+    || (() => {
+      // Fallback tagline from available signals
+      const ig = $profile.instagramIdentity;
+      const interests = $profile.interests ?? [];
+      if (ig?.bio?.trim()) return ig.bio.trim();
+      if (ig?.username && interests.length >= 2) return `@${ig.username} · ${interests.slice(0, 3).join(', ')}`;
+      if (ig?.username) return `@${ig.username}`;
+      if (interests.length >= 2) return interests.slice(0, 3).join(' · ');
+      return 'Your creator dashboard';
+    })();
   $: heroArchetype = personaSnapshot?.payload?.archetype || '';
   $: heroMode = personaSnapshot?.payload?.current_mode
     || personaIntelligence?.payload?.snapshot?.mode
@@ -1734,6 +1743,58 @@
   let recBooks: RecItem[] = [];
   let recMusic: RecItem[] = [];
   let recRestaurants: RecItem[] = [];
+
+  // ── Seed data: movies/shows + books (always available) ──
+  const seedMovies: RecItem[] = [
+    { image: 'https://image.tmdb.org/t/p/w300/pB8BM7pdSp6B6Ih7QI4S2t0POoT.jpg', title: 'The Social Network', subtitle: 'Aaron Sorkin\'s razor-sharp origin story of Facebook.', tag: 'Drama', matchReason: 'Builder energy', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/movie/the-social-network' },
+    { image: 'https://image.tmdb.org/t/p/w300/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg', title: 'Parasite', subtitle: 'Bong Joon-ho\'s masterclass in class tension.', tag: 'Thriller', matchReason: 'Visual storytelling', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/movie/parasite' },
+    { image: 'https://image.tmdb.org/t/p/w300/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg', title: 'The Bear', subtitle: 'Chaos, craft, and obsession in a Chicago kitchen.', tag: 'Series', matchReason: 'Creative intensity', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/tv-show/the-bear' },
+    { image: 'https://image.tmdb.org/t/p/w300/4HodYYKEIsGOdinkGi2Ucz6X9i0.jpg', title: 'Succession', subtitle: 'Power, family, and the art of self-destruction.', tag: 'Series', matchReason: 'Business drama', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/tv-show/succession' },
+    { image: 'https://image.tmdb.org/t/p/w300/d5NXSklXo0qyIYkgV94XAgMIckC.jpg', title: 'Dune: Part Two', subtitle: 'Villeneuve\'s epic sci-fi continuation.', tag: 'Sci-fi', matchReason: 'Visual ambition', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/movie/dune-part-two' },
+    { image: 'https://image.tmdb.org/t/p/w300/9cqNcoGLjRIhyA4kNEWABOlMRlJ.jpg', title: 'Past Lives', subtitle: 'A quiet film about the lives we don\'t lead.', tag: 'Drama', matchReason: 'Emotional depth', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/movie/past-lives' },
+    { image: 'https://image.tmdb.org/t/p/w300/k6EOrckWFuz7I4z4wiRwz8zsj4H.jpg', title: 'Fleabag', subtitle: 'Phoebe Waller-Bridge breaks every fourth wall.', tag: 'Series', matchReason: 'Raw authenticity', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/tv-show/fleabag' },
+    { image: 'https://image.tmdb.org/t/p/w300/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg', title: 'Interstellar', subtitle: 'Nolan explores love across spacetime.', tag: 'Sci-fi', matchReason: 'Grand ambition', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/movie/interstellar' },
+    { image: 'https://image.tmdb.org/t/p/w300/7WsyChQLEftFiDhRkZEGwQ0kYkS.jpg', title: 'Severance', subtitle: 'What if you could split your work and life selves?', tag: 'Series', matchReason: 'Identity questions', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/tv-show/severance' },
+    { image: 'https://image.tmdb.org/t/p/w300/8b8R8l88Qje9dn9OE8PY05Nez7S.jpg', title: 'Everything Everywhere All at Once', subtitle: 'Multiverse chaos meets immigrant family love.', tag: 'Sci-fi', matchReason: 'Creative maximalism', ctaLabel: 'Watch', ctaUrl: 'https://www.justwatch.com/in/movie/everything-everywhere-all-at-once' },
+  ];
+
+  const seedBooks: RecItem[] = [
+    { image: 'https://covers.openlibrary.org/b/isbn/9780062316110-M.jpg', title: 'Shoe Dog', subtitle: 'Phil Knight\'s memoir on building Nike from nothing.', tag: 'Memoir', matchReason: 'Founder energy', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/27220736-shoe-dog' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780307352156-M.jpg', title: 'Sapiens', subtitle: 'Yuval Noah Harari rewrites human history.', tag: 'Non-fiction', matchReason: 'Big-picture thinking', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/23692271-sapiens' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780141988511-M.jpg', title: 'Atomic Habits', subtitle: 'James Clear on the compound effect of tiny changes.', tag: 'Self-help', matchReason: 'Systems over goals', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/40121378-atomic-habits' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780062457714-M.jpg', title: 'The Subtle Art of Not Giving a F*ck', subtitle: 'Mark Manson on choosing what to care about.', tag: 'Self-help', matchReason: 'Prioritization', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/28257707' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780374533557-M.jpg', title: 'Thinking, Fast and Slow', subtitle: 'Daniel Kahneman on how we actually decide.', tag: 'Psychology', matchReason: 'Decision-making', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/11468377' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780593135204-M.jpg', title: 'Project Hail Mary', subtitle: 'Andy Weir\'s sci-fi survival with an alien friend.', tag: 'Sci-fi', matchReason: 'Problem-solving joy', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/54493401' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780399590528-M.jpg', title: 'Educated', subtitle: 'Tara Westover\'s escape from survivalist childhood.', tag: 'Memoir', matchReason: 'Self-reinvention', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/35133922' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780525559474-M.jpg', title: 'The Midnight Library', subtitle: 'Matt Haig explores every life you could have lived.', tag: 'Fiction', matchReason: 'Alternate paths', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/52578297' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780143127741-M.jpg', title: 'The Hard Thing About Hard Things', subtitle: 'Ben Horowitz on the unglamorous side of building.', tag: 'Business', matchReason: 'Real talk on startups', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/18176747' },
+    { image: 'https://covers.openlibrary.org/b/isbn/9780670024964-M.jpg', title: 'Quiet', subtitle: 'Susan Cain makes the case for introverts.', tag: 'Psychology', matchReason: 'Self-understanding', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/8520610' },
+  ];
+
+  // Merge seed data with API results (API overrides if available)
+  $: displayMovies = recMovies.length >= 4 ? recMovies : seedMovies;
+  $: displayBooks = recBooks.length >= 4 ? recBooks : seedBooks;
+
+  // ── Brands in ecosystem ──
+  type EcoBrand = { name: string; category: string; logo_color: string };
+  let ecoBrands: EcoBrand[] = [
+    { name: 'Razorpay', category: 'Fintech', logo_color: '#2B84EA' },
+    { name: 'Zerodha', category: 'Fintech', logo_color: '#387ED1' },
+    { name: 'CRED', category: 'Fintech', logo_color: '#1A1A2E' },
+    { name: 'Meesho', category: 'E-commerce', logo_color: '#E91E63' },
+    { name: 'PhonePe', category: 'Payments', logo_color: '#5F259F' },
+    { name: 'Swiggy', category: 'Food', logo_color: '#FC8019' },
+    { name: 'Zomato', category: 'Food', logo_color: '#E23744' },
+    { name: 'Freshworks', category: 'SaaS', logo_color: '#26BF65' },
+    { name: 'Postman', category: 'DevTools', logo_color: '#FF6C37' },
+    { name: 'Chargebee', category: 'SaaS', logo_color: '#FF6C37' },
+    { name: 'Boat', category: 'Consumer', logo_color: '#E63B2E' },
+    { name: 'Sugar Cosmetics', category: 'Beauty', logo_color: '#C71585' },
+    { name: 'Mamaearth', category: 'Wellness', logo_color: '#4CAF50' },
+    { name: 'Lenskart', category: 'Retail', logo_color: '#1E88E5' },
+    { name: 'Urban Company', category: 'Services', logo_color: '#1A1A2E' },
+    { name: 'Cult.fit', category: 'Fitness', logo_color: '#FF5722' },
+  ];
 
   $: {
     const h = new Date().getHours();
@@ -2049,6 +2110,26 @@
             </section>
           {/if}
 
+          <!-- Brands in Ecosystem -->
+          <section class="dash-section">
+            <h2 class="dash-section-title">
+              <Briefcase size={16} weight="bold" />
+              Brands in ecosystem
+              <span class="dash-count">{ecoBrands.length}</span>
+            </h2>
+            <div class="dash-eco-brands">
+              {#each ecoBrands as brand}
+                <div class="dash-eco-chip">
+                  <div class="dash-eco-dot" style="background: {brand.logo_color}"></div>
+                  <div class="dash-eco-info">
+                    <span class="dash-eco-name">{brand.name}</span>
+                    <span class="dash-eco-cat">{brand.category}</span>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </section>
+
           <!-- Recent Transactions -->
           {#if dashWallet?.transactions?.length}
             <section class="dash-section">
@@ -2115,12 +2196,12 @@
           {/if}
 
           <!-- ── Rich Recommendations ── -->
-          {#if recMovies.length}
+          {#if displayMovies.length}
             <RecommendationStrip
               title="Watch Tonight"
               emoji="🎬"
               variant="tall"
-              items={recMovies}
+              items={displayMovies}
             />
           {/if}
 
@@ -2133,12 +2214,12 @@
             />
           {/if}
 
-          {#if recBooks.length}
+          {#if displayBooks.length}
             <RecommendationStrip
               title="Read Next"
               emoji="📚"
               variant="tall"
-              items={recBooks}
+              items={displayBooks}
             />
           {/if}
 
@@ -2634,6 +2715,72 @@
 
   .dash-tx-amount--pending {
     color: var(--g-metric-cadence, #D9C26E);
+  }
+
+  /* Ecosystem brands */
+  .dash-eco-brands {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .dash-eco-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--glass-light, rgba(255,255,255,0.02));
+    border: 1px solid var(--border-subtle, rgba(255,255,255,0.04));
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+
+  .dash-eco-chip:hover {
+    border-color: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.035);
+  }
+
+  .dash-eco-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dash-eco-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .dash-eco-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #EDEDEF);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dash-eco-cat {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted, #4A4A50);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  @media (min-width: 768px) {
+    .dash-eco-brands {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 520px) {
+    .dash-eco-brands {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* Divider */
