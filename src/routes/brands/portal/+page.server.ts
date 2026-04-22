@@ -10,7 +10,8 @@ export const load: PageServerLoad = async ({ cookies }) => {
   const igUserId = verifyBrandSessionCookieValue(raw);
   const isValid = !!igUserId && igUserId !== '__legacy__';
 
-  let brandProfile = null;
+  let brandProfile: Record<string, unknown> | null = null;
+
   if (isValid && igUserId && igUserId !== '__legacy__') {
     try {
       const supabaseUrl = env.SUPABASE_URL;

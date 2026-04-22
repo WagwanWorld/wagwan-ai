@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wagwan — Brand Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #08080f;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.018) 1px, transparent 0);
+    background-size: 32px 32px;
+  }
+
+  /* ── Ambient background wash ── */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .ambient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.4;
+    animation: drift 20s ease-in-out infinite;
+  }
+  .ambient-orb--1 { width: 500px; height: 500px; background: rgba(255,60,60,0.06); top: -10%; left: -5%; animation-delay: 0s; }
+  .ambient-orb--2 { width: 400px; height: 400px; background: rgba(77,124,255,0.05); top: 30%; right: -8%; animation-delay: -7s; }
+  .ambient-orb--3 { width: 350px; height: 350px; background: rgba(255,184,77,0.04); bottom: -5%; left: 30%; animation-delay: -14s; }
+
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    33% { transform: translate(15px, -20px); }
+    66% { transform: translate(-10px, 15px); }
+  }
+
+  /* ── Dashboard container — fullscreen ── */
+  .dashboard {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    padding: 28px 32px 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ff4d4d, #ff8844);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    box-shadow: 0 4px 20px rgba(255,77,77,0.15);
+  }
+  .brand-info h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: rgba(255,255,255,0.95);
+  }
+  .brand-info span {
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    font-weight: 400;
+  }
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    padding: 8px 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(8px);
+  }
+  .btn:hover {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.85);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .btn--primary {
+    background: rgba(255,77,77,0.1);
+    border-color: rgba(255,77,77,0.15);
+    color: #ff8a8a;
+  }
+  .btn--primary:hover {
+    background: rgba(255,77,77,0.18);
+    box-shadow: 0 0 30px rgba(255,77,77,0.08);
+  }
+  .mode-toggle {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.35);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+  }
+  .mode-toggle:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.06); }
+
+  /* ── Bento Grid ── */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px;
+  }
+
+  /* ── Glass Card ── */
+  .card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    padding: 22px;
+    border: 1px solid rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: inherit;
+    z-index: -1;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.08);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .card-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(50px);
+    pointer-events: none;
+    opacity: 0.6;
+    transition: opacity 0.5s;
+  }
+  .card:hover .card-orb { opacity: 0.9; }
+
+  .card-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .card-number {
+    font-size: 40px;
+    font-weight: 300;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    position: relative;
+  }
+  .card-detail {
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    margin-top: 6px;
+    position: relative;
+  }
+  .card-body-text {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.6);
+    position: relative;
+  }
+  .card-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.3s;
+  }
+  .card:hover .card-footer { color: rgba(255,255,255,0.4); }
+
+  /* ── Stat Cards ── */
+  .card--stat { grid-column: span 3; min-height: 140px; background: rgba(255,255,255,0.015); }
+
+  /* ── Wide Cards ── */
+  .card--wide { grid-column: span 6; min-height: 200px; }
+  .card--full { grid-column: span 12; min-height: 120px; }
+
+  /* ── Card color themes ── */
+  .card--red { background: linear-gradient(160deg, rgba(255,60,60,0.04), rgba(255,60,60,0.01)); }
+  .card--red .card-number { color: rgba(255,130,130,0.9); }
+
+  .card--green { background: linear-gradient(160deg, rgba(52,211,153,0.04), rgba(52,211,153,0.01)); }
+  .card--green .card-number { color: rgba(110,231,183,0.9); }
+
+  .card--indigo { background: linear-gradient(160deg, rgba(99,102,241,0.04), rgba(99,102,241,0.01)); }
+  .card--indigo .card-number { color: rgba(165,180,252,0.9); }
+
+  .card--amber { background: linear-gradient(160deg, rgba(251,191,36,0.04), rgba(251,191,36,0.01)); }
+  .card--amber .card-number { color: rgba(252,211,77,0.9); }
+
+  .card--rose { background: linear-gradient(160deg, rgba(244,63,94,0.03), transparent); }
+  .card--blue { background: linear-gradient(160deg, rgba(59,130,246,0.03), transparent); }
+  .card--teal { background: linear-gradient(160deg, rgba(20,184,166,0.03), transparent); }
+  .card--purple { background: linear-gradient(160deg, rgba(168,85,247,0.03), transparent); }
+  .card--emerald { background: linear-gradient(160deg, rgba(16,185,129,0.03), transparent); }
+  .card--gold { background: linear-gradient(160deg, rgba(245,158,11,0.03), transparent); }
+
+  /* ── Tags ── */
+  .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 14px; position: relative; }
+  .tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 4px 11px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.4);
+    border: 1px solid rgba(255,255,255,0.03);
+    transition: all 0.3s;
+  }
+  .card:hover .tag { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.55); }
+
+  /* ── Heatmap mini ── */
+  .heatmap-row {
+    display: flex;
+    gap: 3px;
+    margin-top: 14px;
+    position: relative;
+  }
+  .heat-cell {
+    flex: 1;
+    aspect-ratio: 1.4;
+    border-radius: 4px;
+    background: rgba(244,63,94,0.06);
+    transition: all 0.3s;
+  }
+  .heat-cell--1 { background: rgba(244,63,94,0.12); }
+  .heat-cell--2 { background: rgba(244,63,94,0.22); }
+  .heat-cell--3 { background: rgba(244,63,94,0.38); }
+  .card:hover .heat-cell--3 { background: rgba(244,63,94,0.5); box-shadow: 0 0 12px rgba(244,63,94,0.2); }
+
+  /* ── Creator chips (horizontal scroll) ── */
+  .creators-scroll {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    position: relative;
+    scrollbar-width: none;
+  }
+  .creators-scroll::-webkit-scrollbar { display: none; }
+  .creator-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px 8px 8px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 14px;
+    flex-shrink: 0;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .creator-chip:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.08);
+    transform: translateY(-1px);
+  }
+  .creator-avatar {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+  }
+  .creator-name { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.7); }
+  .creator-meta { font-size: 10px; color: rgba(255,255,255,0.25); }
+
+  /* ── Idea rows ── */
+  .idea-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    position: relative;
+  }
+  .idea-row:last-child { border-bottom: none; }
+  .idea-badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(168,85,247,0.1);
+    color: rgba(192,132,252,0.8);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .idea-text { font-size: 13px; color: rgba(255,255,255,0.6); }
+
+  /* ── Quick stat inside cards ── */
+  .inline-stats {
+    display: flex;
+    gap: 20px;
+    margin-top: 14px;
+    position: relative;
+  }
+  .inline-stat-val {
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .inline-stat-label {
+    font-size: 9px;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 3px;
+  }
+
+  /* ── Section divider ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.15);
+    grid-column: span 12;
+    padding: 20px 0 4px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .bento { grid-template-columns: repeat(4, 1fr); }
+    .card--stat { grid-column: span 2; }
+    .card--wide { grid-column: span 4; }
+    .card--full { grid-column: span 4; }
+    .dashboard { padding: 20px 16px 60px; }
+  }
+  @media (max-width: 600px) {
+    .bento { grid-template-columns: repeat(2, 1fr); }
+    .card--stat { grid-column: span 1; }
+    .card--wide { grid-column: span 2; }
+    .card--full { grid-column: span 2; }
+    .topbar { flex-direction: column; gap: 16px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Ambient background -->
+<div class="ambient">
+  <div class="ambient-orb ambient-orb--1"></div>
+  <div class="ambient-orb ambient-orb--2"></div>
+  <div class="ambient-orb ambient-orb--3"></div>
+</div>
+
+<div class="dashboard">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="avatar">W</div>
+      <div class="brand-info">
+        <h1>Wagwan</h1>
+        <span>@wagwan.world &middot; 924 followers</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn--primary">Run Analysis</button>
+      <button class="btn">Create Post</button>
+      <button class="btn">Schedule</button>
+      <div class="mode-toggle">&#9789;</div>
+    </div>
+  </div>
+
+  <!-- Bento grid -->
+  <div class="bento">
+    <!-- Row 1: Stats -->
+    <div class="card card--stat card--red">
+      <div class="card-orb" style="width:80px;height:80px;background:rgba(255,60,60,0.1);top:-25px;right:-25px;"></div>
+      <div class="card-label">Followers</div>
+      <div class="card-number">924</div>
+      <div class="card-detail">+0.3% this week</div>
+    </div>
+    <div class="card card--stat card--green">
+      <div class="card-orb" style="width:70px;height:70px;background:rgba(52,211,153,0.1);bottom:-20px;right:-20px;"></div>
+      <div class="card-label">Engagement</div>
+      <div class="card-number">4.19<span style="font-size:18px;color:rgba(255,255,255,0.3);">%</span></div>
+      <div class="card-detail">Above average</div>
+    </div>
+    <div class="card card--stat card--indigo">
+      <div class="card-orb" style="width:65px;height:65px;background:rgba(99,102,241,0.12);top:-15px;left:-15px;"></div>
+      <div class="card-label">Reach (7d)</div>
+      <div class="card-number">39</div>
+      <div class="card-detail">+5.0% from prior</div>
+    </div>
+    <div class="card card--stat card--amber">
+      <div class="card-orb" style="width:70px;height:70px;background:rgba(251,191,36,0.1);bottom:-20px;left:-15px;"></div>
+      <div class="card-label">Posts</div>
+      <div class="card-number">334</div>
+      <div class="card-detail">0.7 / week</div>
+    </div>
+
+    <!-- Row 2: Strategy + Brief -->
+    <div class="section-label">Intelligence</div>
+
+    <div class="card card--wide card--red">
+      <div class="card-orb" style="width:140px;height:140px;background:rgba(255,60,60,0.06);bottom:-50px;right:-40px;"></div>
+      <div class="card-label">Brand Direction</div>
+      <div class="card-body-text">Position as Bangalore's culture-tech bridge — connecting underground music, sports, and community scenes with B2B event infrastructure. Own the intersection of culture and technology.</div>
+      <div class="tags">
+        <span class="tag">urban tech culture</span>
+        <span class="tag">community building</span>
+        <span class="tag">B2B events</span>
+        <span class="tag">underground scenes</span>
+      </div>
+      <div class="card-footer">Expand full strategy &rarr;</div>
+    </div>
+
+    <div class="card card--wide card--blue">
+      <div class="card-orb" style="width:120px;height:120px;background:rgba(59,130,246,0.06);top:-35px;right:-30px;"></div>
+      <div class="card-label">Weekly Brief</div>
+      <div class="card-body-text">Reel reach is trending upward — your video content is being pushed to new audiences. Consider increasing posting frequency from 0.7 to 2-3x per week to capitalise on algorithm momentum.</div>
+      <div class="card-footer">Read full brief &rarr;</div>
+    </div>
+
+    <!-- Row 3: Heatmap + Audience -->
+    <div class="card card--wide card--rose">
+      <div class="card-orb" style="width:100px;height:100px;background:rgba(244,63,94,0.06);top:-30px;left:-20px;"></div>
+      <div class="card-label">Best Posting Times</div>
+      <div class="inline-stats">
+        <div><div class="inline-stat-val" style="color:rgba(251,113,133,0.8);">Tue 12p</div><div class="inline-stat-label">Peak slot</div></div>
+        <div><div class="inline-stat-val" style="color:rgba(251,113,133,0.8);">Wed</div><div class="inline-stat-label">Best day</div></div>
+        <div><div class="inline-stat-val" style="color:rgba(251,113,133,0.8);">1p</div><div class="inline-stat-label">Best hour</div></div>
+      </div>
+      <div class="heatmap-row">
+        <div class="heat-cell"></div><div class="heat-cell heat-cell--1"></div><div class="heat-cell heat-cell--2"></div><div class="heat-cell heat-cell--1"></div>
+        <div class="heat-cell"></div><div class="heat-cell"></div><div class="heat-cell heat-cell--1"></div><div class="heat-cell heat-cell--3"></div>
+        <div class="heat-cell heat-cell--1"></div><div class="heat-cell heat-cell--2"></div><div class="heat-cell"></div><div class="heat-cell"></div>
+        <div class="heat-cell heat-cell--1"></div><div class="heat-cell heat-cell--3"></div><div class="heat-cell"></div><div class="heat-cell heat-cell--1"></div>
+      </div>
+      <div class="card-footer">Expand heatmap &rarr;</div>
+    </div>
+
+    <div class="card card--wide card--teal">
+      <div class="card-orb" style="width:110px;height:110px;background:rgba(20,184,166,0.06);bottom:-35px;left:-25px;"></div>
+      <div class="card-label">Audience DNA</div>
+      <div class="card-body-text">18-34 males in Bangalore — tech professionals and creatives drawn to underground culture, live events, and community-driven experiences.</div>
+      <div class="inline-stats">
+        <div><div class="inline-stat-val" style="color:rgba(45,212,191,0.8);">72%</div><div class="inline-stat-label">Male</div></div>
+        <div><div class="inline-stat-val" style="color:rgba(45,212,191,0.8);">18-34</div><div class="inline-stat-label">Primary age</div></div>
+        <div><div class="inline-stat-val" style="color:rgba(45,212,191,0.8);">BLR</div><div class="inline-stat-label">Top city</div></div>
+      </div>
+      <div class="card-footer">Full demographics &rarr;</div>
+    </div>
+
+    <!-- Row 4: Ideas + Creators -->
+    <div class="section-label">Opportunities</div>
+
+    <div class="card card--wide card--purple">
+      <div class="card-orb" style="width:100px;height:100px;background:rgba(168,85,247,0.06);top:-30px;right:-25px;"></div>
+      <div class="card-label">Content Ideas</div>
+      <div style="margin-top:4px;position:relative;">
+        <div class="idea-row">
+          <span class="idea-badge">REEL</span>
+          <span class="idea-text">Behind the scenes at your next community event</span>
+        </div>
+        <div class="idea-row">
+          <span class="idea-badge">CAROUSEL</span>
+          <span class="idea-text">5 underground spots in Bangalore creators need to know</span>
+        </div>
+        <div class="idea-row">
+          <span class="idea-badge">IMAGE</span>
+          <span class="idea-text">Community spotlight — feature a creator each week</span>
+        </div>
+      </div>
+      <div class="card-footer">See all 5 ideas &rarr;</div>
+    </div>
+
+    <div class="card card--wide card--emerald">
+      <div class="card-orb" style="width:90px;height:90px;background:rgba(16,185,129,0.06);bottom:-25px;right:-20px;"></div>
+      <div class="card-label">Creator Matches</div>
+      <div class="creators-scroll">
+        <div class="creator-chip">
+          <div class="creator-avatar" style="background:linear-gradient(135deg,#6ee7b7,#059669);border-radius:10px;"></div>
+          <div><div class="creator-name">Madhvik N.</div><div class="creator-meta">Score 85 &middot; New York</div></div>
+        </div>
+        <div class="creator-chip">
+          <div class="creator-avatar" style="background:linear-gradient(135deg,#c084fc,#7c3aed);border-radius:10px;"></div>
+          <div><div class="creator-name">Priya K.</div><div class="creator-meta">Score 72 &middot; Mumbai</div></div>
+        </div>
+        <div class="creator-chip">
+          <div class="creator-avatar" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:10px;"></div>
+          <div><div class="creator-name">Arjun M.</div><div class="creator-meta">Score 68 &middot; Bangalore</div></div>
+        </div>
+        <div class="creator-chip">
+          <div class="creator-avatar" style="background:linear-gradient(135deg,#fb7185,#e11d48);border-radius:10px;"></div>
+          <div><div class="creator-name">Maya I.</div><div class="creator-meta">Score 64 &middot; Delhi</div></div>
+        </div>
+      </div>
+      <div class="card-footer">Browse all matches &rarr;</div>
+    </div>
+
+    <!-- Row 5: Competitors -->
+    <div class="card card--full card--gold">
+      <div class="card-orb" style="width:120px;height:120px;background:rgba(245,158,11,0.05);top:-40px;right:-30px;"></div>
+      <div class="card-label">Competitor Watch</div>
+      <div style="display:flex;align-items:center;gap:16px;position:relative;margin-top:4px;">
+        <span style="font-size:13px;color:rgba(255,255,255,0.35);">Track up to 5 competitor accounts</span>
+        <button class="btn" style="padding:6px 14px;font-size:11px;">+ Add handle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

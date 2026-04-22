@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/publish-scheduled",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/brand-intelligence",
+      "schedule": "0 6 * * 1"
     }
   ]
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
+  import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import BrandIntakeCard from '$lib/components/brands/BrandIntakeCard.svelte';
   import GuidedQuestions from '$lib/components/brands/GuidedQuestions.svelte';
@@ -17,10 +18,18 @@
   import LaunchModal from '$lib/components/brands/LaunchModal.svelte';
   import ContentStudio from '$lib/components/brands/ContentStudio.svelte';
   import BrandProfile from '$lib/components/brands/BrandProfile.svelte';
+  import BrandStrategist from '$lib/components/brands/BrandStrategist.svelte';
 
   export let data: { brandSessionValid: boolean; brandProfile: Record<string, unknown> | null };
 
+  // Read tab from URL param (set by editorial shell nav)
+  $: urlTab = $page.url.searchParams.get('tab') as 'content' | 'creators' | 'profile' | null;
   let portalTab: 'content' | 'creators' | 'profile' = data.brandProfile ? 'content' : 'creators';
+
+  // URL tab param handled by reactive block above
+  $: if (urlTab && ['content', 'creators', 'profile'].includes(urlTab)) {
+    portalTab = urlTab;
+  }
 
   // ── Step machine ──
   type Step = 'intake' | 'questions' | 'thinking' | 'confirm' | 'results';
@@ -697,29 +706,26 @@
 </script>
 
 <div class="brand-studio">
-  <!-- Tab toggle: Content Studio vs Find Creators -->
-  {#if data.brandProfile}
-    <div class="portal-tabs">
-      <button
-        class="portal-tab"
-        class:active={portalTab === 'content'}
-        on:click={() => portalTab = 'content'}
-      >Content Studio</button>
-      <button
-        class="portal-tab"
-        class:active={portalTab === 'creators'}
-        on:click={() => portalTab = 'creators'}
-      >Find Creators</button>
-      <button
-        class="portal-tab"
-        class:active={portalTab === 'profile'}
-        on:click={() => portalTab = 'profile'}
-      >Profile & Insights</button>
-    </div>
-  {/if}
+  <!-- Tabs handled by masthead layout switcher -->
 
   {#if portalTab === 'content' && data.brandProfile}
     <div class="portal-content-studio">
+      <!-- Brand Strategist Dashboard -->
+      <BrandStrategist brandProfile={{
+        ig_user_id: String(data.brandProfile.ig_user_id || ''),
+        ig_username: String(data.brandProfile.ig_username || ''),
+        ig_name: String(data.brandProfile.ig_name || ''),
+        ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
+        ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
+      }} />
+
+      <!-- Divider before Content Studio -->
+      <div class="studio-divider" id="create-publish-section">
+        <span class="divider-rule"></span>
+        <span class="divider-label">Create & Publish</span>
+        <span class="divider-rule"></span>
+      </div>
+
       <ContentStudio brandProfile={{
         ig_user_id: String(data.brandProfile.ig_user_id || ''),
         ig_username: String(data.brandProfile.ig_username || ''),
@@ -730,6 +736,10 @@
     </div>
   {:else if portalTab === 'profile' && data.brandProfile}
     <div class="portal-content-studio">
+      <!-- Section header -->
+      <div class="section-intro">
+        <h2 class="section-headline">{data.brandProfile.ig_name || 'Your Brand'}</h2>
+      </div>
       <BrandProfile />
     </div>
   {:else if showManualSearch}
@@ -1123,24 +1133,14 @@
 </div>
 
 <style>
-  /* === Brand color system === */
+  /* === Glass brand studio === */
   .brand-studio {
-    --accent-primary: #FF4D4D;
-    --accent-secondary: #4D7CFF;
-    --accent-tertiary: #FFB84D;
-    --bg-primary: oklch(8% 0.008 260);
-    --bg-secondary: oklch(10% 0.009 255);
-    --bg-elevated: oklch(13% 0.010 258);
-    --text-primary: #e8ecf3;
-    --text-secondary: #9aa3b2;
-    --text-muted: #6d7684;
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --border-strong: rgba(255, 255, 255, 0.14);
-    --glass-light: rgba(255, 255, 255, 0.055);
-    --glass-medium: rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 56px);
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0 24px 4rem;
+    background: transparent;
   }
 
   .agent-full {
@@ -1683,24 +1683,51 @@
   }
   .confirm-back:hover { color: var(--text-secondary); }
 
-  /* ── Portal tabs ── */
-  .portal-tabs {
-    display: flex; gap: 4px; margin-bottom: 24px;
-    background: var(--panel-surface); border-radius: 12px; padding: 4px;
-  }
-  .portal-tab {
-    flex: 1; padding: 10px 16px; border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 600; font-family: inherit;
-    background: transparent; color: var(--text-muted); cursor: pointer;
-    transition: all 0.2s;
-  }
-  .portal-tab.active {
-    background: var(--glass-medium); color: var(--text-primary);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
+  /* ── Content studio / profile wrapper ── */
   .portal-content-studio {
-    max-width: 48rem;
+    max-width: 56rem;
     margin: 0 auto;
-    padding: 0 16px 80px;
+    padding: 0 0 80px;
+  }
+
+
+  /* ── Studio divider ── */
+  .studio-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 64px 0 40px;
+  }
+  .divider-rule {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+  .divider-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--g-text-ghost, rgba(255,255,255,0.1));
+    white-space: nowrap;
+  }
+
+  /* ── Section intro (for profile tab) ── */
+  .section-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 40px;
+  }
+  .section-headline {
+    font-family: var(--g-font, 'Inter', sans-serif);
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--g-text, rgba(255,255,255,0.92));
+    margin: 0;
   }
 </style>

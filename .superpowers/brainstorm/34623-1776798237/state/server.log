@@ -1,0 +1,11 @@
+{"type":"server-started","port":55113,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:55113","screen_dir":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content","state_dir":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/state"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/dashboard-direction.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-layout.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-v2.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-mobile.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-v3.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-v4.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-v5.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-v6.html"}
+{"type":"screen-added","file":"/Users/madhviknemani/wagwan-ai/.superpowers/brainstorm/34623-1776798237/content/brand-dashboard-v7.html"}
+{"type":"server-stopped","reason":"idle timeout"}

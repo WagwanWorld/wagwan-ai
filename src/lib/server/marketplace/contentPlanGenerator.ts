@@ -106,11 +106,14 @@ RULES FOR CAPTIONS:
 - Minimal emojis (0-2 max). No emoji spam.
 - End with a subtle CTA or question if it fits naturally. Skip it if it doesn't.
 
+IMPORTANT — TODAY'S DATE AND TIME IS: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} IST.
+All scheduled times MUST be in the FUTURE — at least 2 hours from now. Never schedule in the past.
+
 TASK: For each creative, provide:
 1. A short, punchy caption (1-2 lines)
 2. 5-7 hashtags WITHOUT the # symbol (e.g. "wagwan" not "#wagwan")
-3. Best date/time to post
-4. Brief reasoning
+3. Best date/time to post (MUST be in the future, starting from today or tomorrow)
+4. Brief reasoning for the chosen time
 
 JSON array only:
 [
@@ -118,13 +121,13 @@ JSON array only:
     "creativeIndex": 0,
     "caption": "...",
     "hashtags": ["wagwan", "community", "bangalore"],
-    "scheduledAt": "2026-04-18T19:30:00+05:30",
+    "scheduledAt": "YYYY-MM-DDTHH:mm:ss+05:30",
     "mediaType": "IMAGE",
     "reasoning": "..."
   }
 ]
 
-Use IST timezone. Start from tomorrow. Only output JSON.`,
+Use IST timezone (+05:30). Schedule across the coming days — space posts out, don't bunch them. Only output JSON.`,
   });
 
   const response = await anthropic.messages.create({
@@ -146,13 +149,28 @@ Use IST timezone. Start from tomorrow. Only output JSON.`,
     reasoning: string;
   }>;
 
-  return items.map(item => ({
-    gcsUrl: creatives[item.creativeIndex]?.url || '',
-    mediaType: (item.mediaType || creatives[item.creativeIndex]?.mediaType || 'IMAGE') as ContentPlanItem['mediaType'],
-    caption: item.caption,
-    // Strip any # prefix the AI might still include
-    hashtags: item.hashtags.map(h => h.replace(/^#+/, '')),
-    scheduledAt: item.scheduledAt,
-    reasoning: item.reasoning,
-  }));
+  const now = Date.now();
+  const twoHoursMs = 2 * 60 * 60 * 1000;
+
+  return items.map((item, idx) => {
+    let scheduledAt = item.scheduledAt;
+
+    // Safety: if the scheduled time is in the past, bump to future
+    const scheduled = new Date(scheduledAt).getTime();
+    if (isNaN(scheduled) || scheduled < now + twoHoursMs) {
+      // Schedule for tomorrow at a reasonable hour, spaced by index
+      const tomorrow = new Date(now + 24 * 60 * 60 * 1000);
+      tomorrow.setHours(10 + idx * 3, 0, 0, 0); // 10am, 1pm, 4pm, 7pm...
+      scheduledAt = tomorrow.toISOString();
+    }
+
+    return {
+      gcsUrl: creatives[item.creativeIndex]?.url || '',
+      mediaType: (item.mediaType || creatives[item.creativeIndex]?.mediaType || 'IMAGE') as ContentPlanItem['mediaType'],
+      caption: item.caption,
+      hashtags: item.hashtags.map(h => h.replace(/^#+/, '')),
+      scheduledAt,
+      reasoning: item.reasoning,
+    };
+  });
 }

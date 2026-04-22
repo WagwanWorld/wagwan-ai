@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wagwan — Brand Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #09090f;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ═══ ATMOSPHERE ═══ */
+  .atm-grid {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.012) 1px, transparent 0);
+    background-size: 40px 40px;
+  }
+  .atm-orbs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .ao { position: absolute; border-radius: 50%; will-change: transform; }
+  .ao1 { width: 800px; height: 800px; background: radial-gradient(circle, rgba(255,45,45,0.05), transparent 60%); top: -25%; left: -15%; animation: d1 40s linear infinite; filter: blur(120px); }
+  .ao2 { width: 600px; height: 600px; background: radial-gradient(circle, rgba(40,80,255,0.04), transparent 60%); top: 15%; right: -20%; animation: d2 45s linear infinite; filter: blur(110px); }
+  .ao3 { width: 550px; height: 550px; background: radial-gradient(circle, rgba(255,150,20,0.035), transparent 60%); bottom: -20%; left: 15%; animation: d3 38s linear infinite; filter: blur(100px); }
+  @keyframes d1 { 0% { transform: translate(0,0); } 25% { transform: translate(50px,-40px); } 50% { transform: translate(-30px,60px); } 75% { transform: translate(40px,20px); } 100% { transform: translate(0,0); } }
+  @keyframes d2 { 0% { transform: translate(0,0); } 25% { transform: translate(-40px,30px); } 50% { transform: translate(35px,-45px); } 75% { transform: translate(-20px,-25px); } 100% { transform: translate(0,0); } }
+  @keyframes d3 { 0% { transform: translate(0,0); } 33% { transform: translate(30px,-40px); } 66% { transform: translate(-25px,35px); } 100% { transform: translate(0,0); } }
+
+  .page { position: relative; z-index: 1; max-width: 1360px; margin: 0 auto; padding: 32px 36px 100px; }
+
+  /* ═══ PROFILE ═══ */
+  .prof {
+    display: flex; align-items: center; gap: 28px;
+    padding: 32px 36px; margin-bottom: 24px;
+    border-radius: 28px;
+    /* 3D glass: top highlight + darker bottom + inner shadow */
+    background: linear-gradient(175deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.012) 100%);
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow:
+      0 1px 0 0 rgba(255,255,255,0.04) inset,
+      0 -1px 0 0 rgba(0,0,0,0.2) inset,
+      0 8px 32px rgba(0,0,0,0.2),
+      0 1px 3px rgba(0,0,0,0.15);
+    backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+    position: relative; overflow: hidden;
+    opacity: 0; animation: enter 0.9s cubic-bezier(0.22,1,0.36,1) 0.1s forwards;
+  }
+  .prof::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(140deg, rgba(255,55,55,0.02), rgba(255,130,65,0.012), transparent 55%);
+  }
+  /* Top edge highlight for 3D */
+  .prof::after {
+    content: ''; position: absolute; top: 0; left: 20px; right: 20px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  }
+  .prof-glow {
+    position: absolute; width: 260px; height: 260px; border-radius: 50%;
+    background: rgba(255,70,70,0.04); filter: blur(100px);
+    top: -80px; right: -60px;
+    animation: glow 7s ease-in-out infinite;
+  }
+  @keyframes glow { 0%,100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.08); } }
+
+  .prof-av {
+    width: 68px; height: 68px; border-radius: 18px;
+    background: linear-gradient(140deg, #ff4040, #ff7e3a);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 24px; flex-shrink: 0;
+    box-shadow: 0 6px 28px rgba(255,70,70,0.12), 0 1px 2px rgba(0,0,0,0.2);
+    position: relative;
+  }
+  .prof-av::after {
+    content: ''; position: absolute; inset: -4px; border-radius: 21px;
+    border: 1px solid rgba(255,70,70,0.08);
+    animation: ring 4s ease-in-out infinite;
+  }
+  @keyframes ring { 0%,100% { opacity: 0.15; } 50% { opacity: 0.35; } }
+  .prof-body { flex: 1; position: relative; }
+  .prof-name { font-size: 26px; font-weight: 600; letter-spacing: -0.025em; color: rgba(255,255,255,0.92); }
+  .prof-meta { font-size: 12px; color: rgba(255,255,255,0.22); margin-top: 3px; }
+  .prof-bio { font-size: 13px; color: rgba(255,255,255,0.3); margin-top: 10px; line-height: 1.55; max-width: 480px; }
+  .prof-btns { display: flex; gap: 7px; margin-top: 18px; }
+  .prof-stats { display: flex; gap: 32px; position: relative; }
+  .pst { text-align: center; }
+  .pst-v { font-size: 26px; font-weight: 300; letter-spacing: -0.04em; color: rgba(255,255,255,0.82); }
+  .pst-l { font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.13em; color: rgba(255,255,255,0.16); margin-top: 3px; }
+
+  /* Buttons */
+  .b {
+    padding: 8px 18px; border-radius: 11px;
+    border: 1px solid rgba(255,255,255,0.05);
+    background: linear-gradient(175deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    color: rgba(255,255,255,0.38);
+    font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 1px 0 rgba(255,255,255,0.02) inset;
+    transition: color 0.6s, background 0.6s, border-color 0.6s, box-shadow 0.6s;
+  }
+  .b:hover { background: linear-gradient(175deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025)); color: rgba(255,255,255,0.72); border-color: rgba(255,255,255,0.08); }
+  .b--p { background: linear-gradient(175deg, rgba(255,65,65,0.1), rgba(255,65,65,0.04)); border-color: rgba(255,65,65,0.1); color: rgba(255,140,140,0.85); }
+  .b--p:hover { background: linear-gradient(175deg, rgba(255,65,65,0.14), rgba(255,65,65,0.06)); box-shadow: 0 2px 20px rgba(255,65,65,0.06); }
+
+  /* ═══ POSTS STRIP ═══ */
+  .strip {
+    display: flex; gap: 10px; overflow-x: auto; padding: 0 0 22px;
+    margin-bottom: 22px; scrollbar-width: none;
+    opacity: 0; animation: enter 0.8s cubic-bezier(0.22,1,0.36,1) 0.2s forwards;
+  }
+  .strip::-webkit-scrollbar { display: none; }
+  .th {
+    width: 108px; height: 108px; border-radius: 16px;
+    overflow: hidden; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.04);
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 1px 0 rgba(255,255,255,0.02) inset;
+    transition: border-color 0.7s, box-shadow 0.7s;
+  }
+  .th:hover { border-color: rgba(255,255,255,0.08); box-shadow: 0 12px 36px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.03) inset; }
+  .th img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s cubic-bezier(0.22,1,0.36,1); }
+  .th:hover img { transform: scale(1.06); }
+  .th-ov {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 45%);
+    display: flex; align-items: flex-end; padding: 9px;
+    opacity: 0; transition: opacity 0.5s;
+  }
+  .th:hover .th-ov { opacity: 1; }
+  .th-s { font-size: 10px; color: rgba(255,255,255,0.8); font-weight: 500; }
+
+  /* ═══ BENTO GRID ═══ */
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 11px; }
+
+  /* ═══ CARD — 3D glass ═══ */
+  .c {
+    position: relative; overflow: hidden;
+    border-radius: 22px; padding: 22px 24px;
+    /* 3D: top-light gradient + border + layered shadows */
+    background: linear-gradient(175deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.008) 100%);
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow:
+      0 1px 0 0 rgba(255,255,255,0.03) inset,    /* top inner highlight */
+      0 -1px 0 0 rgba(0,0,0,0.15) inset,          /* bottom inner shadow */
+      0 4px 16px rgba(0,0,0,0.12),                 /* close shadow */
+      0 12px 40px rgba(0,0,0,0.08);                /* far shadow */
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    display: flex; flex-direction: column; cursor: pointer;
+    transition: border-color 0.7s cubic-bezier(0.22,1,0.36,1),
+                box-shadow 0.7s cubic-bezier(0.22,1,0.36,1);
+    opacity: 0; animation: enter 0.7s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  /* Top edge highlight — the 3D "catch" */
+  .c::before {
+    content: ''; position: absolute; top: 0; left: 16px; right: 16px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    pointer-events: none;
+  }
+  /* Inner light on hover */
+  .c::after {
+    content: ''; position: absolute; inset: 0; border-radius: 22px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.015), transparent 45%);
+    opacity: 0; transition: opacity 0.7s; pointer-events: none;
+  }
+  .c:hover {
+    border-color: rgba(255,255,255,0.065);
+    box-shadow:
+      0 1px 0 0 rgba(255,255,255,0.04) inset,
+      0 -1px 0 0 rgba(0,0,0,0.12) inset,
+      0 6px 20px rgba(0,0,0,0.15),
+      0 20px 50px rgba(0,0,0,0.12);
+  }
+  .c:hover::after { opacity: 1; }
+  .c:hover .cg { opacity: 0.65; }
+
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .c:nth-child(1) { animation-delay: 0.22s; }
+  .c:nth-child(2) { animation-delay: 0.27s; }
+  .c:nth-child(3) { animation-delay: 0.32s; }
+  .c:nth-child(4) { animation-delay: 0.37s; }
+  .c:nth-child(n+5) { animation-delay: 0.42s; }
+  .c:nth-child(n+7) { animation-delay: 0.48s; }
+  .c:nth-child(n+9) { animation-delay: 0.54s; }
+
+  .cg { position: absolute; border-radius: 50%; filter: blur(55px); pointer-events: none; opacity: 0.3; transition: opacity 0.8s cubic-bezier(0.22,1,0.36,1); }
+
+  .cl { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.13em; color: rgba(255,255,255,0.2); margin-bottom: 14px; position: relative; z-index: 1; }
+  .cn { font-size: 44px; font-weight: 300; letter-spacing: -0.05em; line-height: 1; position: relative; z-index: 1; transition: letter-spacing 0.8s cubic-bezier(0.22,1,0.36,1); }
+  .c:hover .cn { letter-spacing: -0.03em; }
+  .cd { font-size: 11px; color: rgba(255,255,255,0.16); margin-top: 7px; position: relative; z-index: 1; }
+  .ct2 { font-size: 14px; font-weight: 400; line-height: 1.7; color: rgba(255,255,255,0.42); position: relative; z-index: 1; }
+  .cf { margin-top: auto; padding-top: 16px; font-size: 11px; color: rgba(255,255,255,0.1); position: relative; z-index: 1; transition: color 0.6s, letter-spacing 0.6s; }
+  .c:hover .cf { color: rgba(255,255,255,0.28); letter-spacing: 0.04em; }
+
+  .s3 { grid-column: span 3; min-height: 148px; }
+  .s4 { grid-column: span 4; min-height: 168px; }
+  .s6 { grid-column: span 6; min-height: 210px; }
+  .s8 { grid-column: span 8; }
+  .s12 { grid-column: span 12; }
+
+  /* Color layers — additive on top of the base 3D glass */
+  .p-r { background: linear-gradient(175deg, rgba(255,50,50,0.035), rgba(255,255,255,0.008)); }
+  .p-r .cn { color: rgba(255,125,125,0.85); }
+  .p-g { background: linear-gradient(175deg, rgba(52,211,153,0.03), rgba(255,255,255,0.008)); }
+  .p-g .cn { color: rgba(110,231,183,0.85); }
+  .p-i { background: linear-gradient(175deg, rgba(99,102,241,0.03), rgba(255,255,255,0.008)); }
+  .p-i .cn { color: rgba(165,180,252,0.85); }
+  .p-a { background: linear-gradient(175deg, rgba(251,191,36,0.03), rgba(255,255,255,0.008)); }
+  .p-a .cn { color: rgba(252,210,77,0.85); }
+  .p-ro { background: linear-gradient(175deg, rgba(244,63,94,0.02), rgba(255,255,255,0.008)); }
+  .p-b { background: linear-gradient(175deg, rgba(59,130,246,0.02), rgba(255,255,255,0.008)); }
+  .p-t { background: linear-gradient(175deg, rgba(20,184,166,0.02), rgba(255,255,255,0.008)); }
+  .p-pu { background: linear-gradient(175deg, rgba(168,85,247,0.02), rgba(255,255,255,0.008)); }
+  .p-e { background: linear-gradient(175deg, rgba(16,185,129,0.02), rgba(255,255,255,0.008)); }
+  .p-go { background: linear-gradient(175deg, rgba(245,158,11,0.02), rgba(255,255,255,0.008)); }
+
+  /* Micro components */
+  .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 16px; position: relative; z-index: 1; }
+  .tg { font-size: 10px; font-weight: 500; padding: 4px 12px; border-radius: 9px; background: rgba(255,255,255,0.025); color: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.02); transition: color 0.5s, background 0.5s; }
+  .c:hover .tg { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45); }
+
+  .ist { display: flex; gap: 22px; margin-top: 16px; position: relative; z-index: 1; }
+  .isv { font-size: 22px; font-weight: 300; letter-spacing: -0.04em; line-height: 1; }
+  .isl { font-size: 9px; color: rgba(255,255,255,0.12); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 4px; }
+
+  .hr { display: flex; gap: 3px; margin-top: 16px; position: relative; z-index: 1; }
+  .hc2 { flex: 1; aspect-ratio: 1.4; border-radius: 4px; background: rgba(244,63,94,0.04); transition: background 0.6s; }
+  .hc2-1 { background: rgba(244,63,94,0.09); }
+  .hc2-2 { background: rgba(244,63,94,0.18); }
+  .hc2-3 { background: rgba(244,63,94,0.32); }
+  .c:hover .hc2-3 { background: rgba(244,63,94,0.45); }
+
+  .ir2 { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.015); position: relative; z-index: 1; }
+  .ir2:last-child { border-bottom: none; }
+  .ib2 { font-size: 9px; font-weight: 600; padding: 3px 9px; border-radius: 7px; background: rgba(168,85,247,0.06); color: rgba(192,132,252,0.6); flex-shrink: 0; }
+  .it2 { font-size: 13px; color: rgba(255,255,255,0.4); }
+
+  .crs2 { display: flex; gap: 8px; overflow-x: auto; margin-top: 16px; position: relative; z-index: 1; scrollbar-width: none; }
+  .crs2::-webkit-scrollbar { display: none; }
+  .cc2 {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px 8px 8px;
+    background: linear-gradient(175deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.03);
+    border-radius: 14px; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.015) inset;
+    transition: background 0.6s, border-color 0.6s, box-shadow 0.6s;
+  }
+  .cc2:hover { background: linear-gradient(175deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)); border-color: rgba(255,255,255,0.05); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+  .cc2-a { width: 30px; height: 30px; border-radius: 9px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  .cc2-n { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.55); }
+  .cc2-m { font-size: 10px; color: rgba(255,255,255,0.16); }
+
+  .sec2 { grid-column: span 12; padding: 28px 0 8px; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(255,255,255,0.07); opacity: 0; animation: enter 0.6s cubic-bezier(0.22,1,0.36,1) 0.4s forwards; }
+
+  @media (max-width: 900px) {
+    .prof { flex-direction: column; align-items: flex-start; gap: 18px; padding: 24px; }
+    .prof-stats { margin-top: 14px; }
+    .grid { grid-template-columns: repeat(4, 1fr); }
+    .s3 { grid-column: span 2; } .s4 { grid-column: span 2; }
+    .s6 { grid-column: span 4; } .s8 { grid-column: span 4; }
+    .s12 { grid-column: span 4; } .sec2 { grid-column: span 4; }
+    .page { padding: 22px 18px 70px; }
+    .th { width: 88px; height: 88px; border-radius: 14px; }
+  }
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .s3,.s4 { grid-column: span 1; } .s6,.s8,.s12 { grid-column: span 2; }
+    .sec2 { grid-column: span 2; }
+    .prof-name { font-size: 21px; }
+    .prof-av { width: 52px; height: 52px; font-size: 18px; border-radius: 14px; }
+    .pst-v { font-size: 21px; } .cn { font-size: 34px; }
+    .th { width: 76px; height: 76px; border-radius: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="atm-grid"></div>
+<div class="atm-orbs"><div class="ao ao1"></div><div class="ao ao2"></div><div class="ao ao3"></div></div>
+
+<div class="page">
+  <div class="prof">
+    <div class="prof-glow"></div>
+    <div class="prof-av">W</div>
+    <div class="prof-body">
+      <div class="prof-name">Wagwan</div>
+      <div class="prof-meta">@wagwan.world &middot; Creator &middot; Bangalore, India</div>
+      <div class="prof-bio">Building B2B event infrastructure deeply embedded in Bangalore's underground music, sports, and community scenes.</div>
+      <div class="prof-btns"><button class="b b--p">Run Analysis</button><button class="b">Create Post</button><button class="b">Schedule</button></div>
+    </div>
+    <div class="prof-stats">
+      <div class="pst"><div class="pst-v">924</div><div class="pst-l">Followers</div></div>
+      <div class="pst"><div class="pst-v">334</div><div class="pst-l">Posts</div></div>
+      <div class="pst"><div class="pst-v">4.2%</div><div class="pst-l">Eng. Rate</div></div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <div class="th"><img src="https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 45</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 32</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 67</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 28</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 51</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 39</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 44</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 56</span></div></div>
+    <div class="th"><img src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=220&h=220&fit=crop" alt=""/><div class="th-ov"><span class="th-s">&#9829; 33</span></div></div>
+  </div>
+
+  <div class="grid">
+    <div class="c s3 p-r"><div class="cg" style="width:85px;height:85px;background:rgba(255,50,50,0.06);top:-28px;right:-28px;"></div><div class="cl">Reach (7d)</div><div class="cn" style="color:rgba(255,125,125,0.85);">39</div><div class="cd">+5.0% from prior</div></div>
+    <div class="c s3 p-g"><div class="cg" style="width:70px;height:70px;background:rgba(52,211,153,0.06);bottom:-20px;right:-20px;"></div><div class="cl">Avg. Saves</div><div class="cn" style="color:rgba(110,231,183,0.85);">12</div><div class="cd">Per post</div></div>
+    <div class="c s3 p-i"><div class="cg" style="width:65px;height:65px;background:rgba(99,102,241,0.06);top:-14px;left:-14px;"></div><div class="cl">Shares</div><div class="cn" style="color:rgba(165,180,252,0.85);">3</div><div class="cd">Per post avg</div></div>
+    <div class="c s3 p-a"><div class="cg" style="width:70px;height:70px;background:rgba(251,191,36,0.06);bottom:-20px;left:-14px;"></div><div class="cl">Posts/Week</div><div class="cn" style="color:rgba(252,210,77,0.85);">0.7</div><div class="cd">Increase recommended</div></div>
+
+    <div class="sec2">Intelligence</div>
+
+    <div class="c s8 p-r"><div class="cg" style="width:170px;height:170px;background:rgba(255,50,50,0.035);bottom:-55px;right:-45px;"></div><div class="cl">Brand Direction</div><div class="ct2">Position as Bangalore's culture-tech bridge — connecting underground music, sports, and community scenes with B2B event infrastructure. Own the intersection where authentic culture meets digital scale.</div><div class="tags"><span class="tg">urban tech culture</span><span class="tg">community building</span><span class="tg">B2B events</span><span class="tg">underground scenes</span></div><div class="cf">Expand full strategy &rarr;</div></div>
+    <div class="c s4 p-ro"><div class="cg" style="width:85px;height:85px;background:rgba(244,63,94,0.035);top:-28px;left:-18px;"></div><div class="cl">Best Times</div><div class="ist"><div><div class="isv" style="color:rgba(251,113,133,0.78);">Tue</div><div class="isl">Best day</div></div><div><div class="isv" style="color:rgba(251,113,133,0.78);">12p</div><div class="isl">Peak hour</div></div></div><div class="hr"><div class="hc2"></div><div class="hc2 hc2-1"></div><div class="hc2 hc2-3"></div><div class="hc2 hc2-1"></div><div class="hc2"></div><div class="hc2 hc2-2"></div><div class="hc2"></div><div class="hc2 hc2-1"></div><div class="hc2 hc2-1"></div><div class="hc2 hc2-3"></div><div class="hc2"></div><div class="hc2"></div></div><div class="cf">Full heatmap &rarr;</div></div>
+
+    <div class="c s6 p-b"><div class="cg" style="width:115px;height:115px;background:rgba(59,130,246,0.03);top:-38px;right:-28px;"></div><div class="cl">Weekly Brief</div><div class="ct2">Reel reach trending upward — video content getting pushed to new audiences. Increase posting frequency from 0.7 to 2-3x per week. Your engagement rate is strong — the algorithm favours you.</div><div class="cf">Read full brief &rarr;</div></div>
+    <div class="c s6 p-t"><div class="cg" style="width:105px;height:105px;background:rgba(20,184,166,0.03);bottom:-32px;left:-22px;"></div><div class="cl">Audience DNA</div><div class="ct2">18-34 males in Bangalore — tech professionals and creatives drawn to underground culture, live events, and community experiences.</div><div class="ist"><div><div class="isv" style="color:rgba(45,212,191,0.78);">72%</div><div class="isl">Male</div></div><div><div class="isv" style="color:rgba(45,212,191,0.78);">18-34</div><div class="isl">Primary</div></div><div><div class="isv" style="color:rgba(45,212,191,0.78);">BLR</div><div class="isl">Top city</div></div></div><div class="cf">Full demographics &rarr;</div></div>
+
+    <div class="sec2">Opportunities</div>
+
+    <div class="c s6 p-pu"><div class="cg" style="width:95px;height:95px;background:rgba(168,85,247,0.03);top:-28px;right:-22px;"></div><div class="cl">Content Ideas</div><div style="margin-top:4px;position:relative;z-index:1;"><div class="ir2"><span class="ib2">REEL</span><span class="it2">Behind the scenes at your next community event</span></div><div class="ir2"><span class="ib2">CAROUSEL</span><span class="it2">5 underground spots in Bangalore creators need to know</span></div><div class="ir2"><span class="ib2">IMAGE</span><span class="it2">Community spotlight — feature a creator each week</span></div></div><div class="cf">See all 5 ideas &rarr;</div></div>
+    <div class="c s6 p-e"><div class="cg" style="width:85px;height:85px;background:rgba(16,185,129,0.03);bottom:-24px;right:-20px;"></div><div class="cl">Creator Matches</div><div class="crs2"><div class="cc2"><div class="cc2-a" style="background:linear-gradient(135deg,#6ee7b7,#059669);"></div><div><div class="cc2-n">Madhvik N.</div><div class="cc2-m">85 &middot; New York</div></div></div><div class="cc2"><div class="cc2-a" style="background:linear-gradient(135deg,#c084fc,#7c3aed);"></div><div><div class="cc2-n">Priya K.</div><div class="cc2-m">72 &middot; Mumbai</div></div></div><div class="cc2"><div class="cc2-a" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);"></div><div><div class="cc2-n">Arjun M.</div><div class="cc2-m">68 &middot; BLR</div></div></div><div class="cc2"><div class="cc2-a" style="background:linear-gradient(135deg,#fb7185,#e11d48);"></div><div><div class="cc2-n">Maya I.</div><div class="cc2-m">64 &middot; Delhi</div></div></div></div><div class="cf">Browse all matches &rarr;</div></div>
+
+    <div class="c s12 p-go"><div class="cg" style="width:125px;height:125px;background:rgba(245,158,11,0.025);top:-42px;right:-32px;"></div><div class="cl">Competitor Watch</div><div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1;margin-top:6px;"><span style="font-size:13px;color:rgba(255,255,255,0.22);">Track up to 5 competitor accounts</span><button class="b" style="padding:6px 14px;font-size:11px;">+ Add handle</button></div></div>
+  </div>
+</div>
+
+</body>
+</html>

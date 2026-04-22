@@ -22,7 +22,11 @@ export const GET: RequestHandler = async () => {
     const ig = profileData.instagramIdentity as Record<string, unknown> | undefined;
     const snapshot = graph.identitySnapshot as any;
     const strength = computeGraphStrength(graph, profileData);
-    const tags = flattenIdentityGraph(graph).slice(0, 5);
+    const tags = flattenIdentityGraph(graph).slice(0, 8);
+
+    const personality = ig?.personality as { expressive: number; humor: number; introspective: number } | undefined;
+    const visual = ig?.visual as Record<string, unknown> | undefined;
+    const engagement = ig?.engagement as Record<string, unknown> | undefined;
 
     return {
       googleSub: row.google_sub as string,
@@ -34,7 +38,29 @@ export const GET: RequestHandler = async () => {
       vibeTags: snapshot?.payload?.vibe?.slice(0, 3) || [],
       contentTags: tags,
       strength: strength.score,
+      strengthLabel: strength.label,
       initial: ((row.name as string) || '?').charAt(0).toUpperCase(),
+
+      // Identity signals
+      aesthetic: (graph.aesthetic as string) || (ig?.aesthetic as string) || '',
+      lifestyle: (graph.lifestyle as string) || (ig?.lifestyle as string) || '',
+      brandVibes: ((graph.brandVibes || ig?.brandVibes || []) as string[]).slice(0, 5),
+      interests: ((graph.interests || ig?.interests || []) as string[]).slice(0, 8),
+      activities: ((graph.activities || []) as string[]).slice(0, 5),
+      contentCategories: ((graph.contentCategories || []) as string[]).slice(0, 5),
+
+      // Instagram profile
+      profilePicture: (ig?.profilePicture as string) || '',
+      bio: ((ig?.rawSummary as string) || '').slice(0, 200),
+      mediaCount: (ig?.mediaCount as number) || 0,
+      engagementTier: (engagement?.engagementTier as string) || '',
+      captionIntent: (ig?.captionIntent as string) || '',
+      creatorTier: (ig?.igCreatorTier as string) || '',
+      personality: personality || null,
+
+      // Visual
+      colorPalette: ((visual?.colorPalette || []) as string[]).slice(0, 4),
+      aestheticTone: ((visual?.aesthetic as any)?.tone as string) || '',
     };
   }).filter(c => c.name);
 

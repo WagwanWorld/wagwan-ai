@@ -5,6 +5,8 @@
   import Sparkle from 'phosphor-svelte/lib/Sparkle';
   import CalendarCheck from 'phosphor-svelte/lib/CalendarCheck';
   import Rocket from 'phosphor-svelte/lib/Rocket';
+  import PencilSimple from 'phosphor-svelte/lib/PencilSimple';
+  import Trash from 'phosphor-svelte/lib/Trash';
 
   export let brandProfile: {
     ig_user_id: string; ig_username: string; ig_name: string;
@@ -22,6 +24,57 @@
   let genError = '';
   let scheduleMsg = '';
   let publishedPosts: Array<Record<string, unknown>> = [];
+  let editingPostId: string | null = null;
+  let editCaption = '';
+  let editTime = '';
+  let saving = false;
+
+  function startEdit(post: Record<string, unknown>) {
+    editingPostId = String(post.id);
+    editCaption = String(post.caption || '');
+    const dt = post.scheduled_at ? new Date(String(post.scheduled_at)) : new Date();
+    editTime = dt.toISOString().slice(0, 16);
+  }
+
+  function cancelEdit() {
+    editingPostId = null;
+    editCaption = '';
+    editTime = '';
+  }
+
+  async function saveEdit() {
+    if (!editingPostId) return;
+    saving = true;
+    try {
+      const res = await fetch('/api/brand/scheduled-posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: editingPostId,
+          caption: editCaption,
+          scheduledAt: new Date(editTime).toISOString(),
+        }),
+      });
+      if (res.ok) {
+        cancelEdit();
+        await loadPublished();
+        scheduleMsg = 'Post updated.';
+      }
+    } catch {} finally {
+      saving = false;
+    }
+  }
+
+  async function deletePost(postId: string) {
+    try {
+      await fetch('/api/brand/scheduled-posts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId }),
+      });
+      await loadPublished();
+    } catch {}
+  }
 
   async function generatePlan() {
     if (!uploads.length) return;
@@ -164,36 +217,76 @@
     <div class="studio-section-label">Scheduled & published</div>
     <div class="published-list">
       {#each publishedPosts as p}
-        <div class="published-card">
+        <div class="published-card" class:editing={editingPostId === String(p.id)}>
           <div class="published-thumb">
             {#if String(p.media_type) === 'IMAGE' || String(p.media_type) === 'CAROUSEL'}
               <img src={String(p.gcs_url)} alt="" />
             {:else}
               <div class="published-video-badge">{p.media_type}</div>
             {/if}
+            <span class="pub-type-badge">{p.media_type}</span>
           </div>
-          <div class="published-info">
-            <p class="published-caption">{String(p.caption || '').slice(0, 80)}{String(p.caption || '').length > 80 ? '...' : ''}</p>
-            <div class="published-meta">
-              <span class="published-status" class:published={p.status === 'published'} class:failed={p.status === 'failed'} class:scheduled={p.status === 'scheduled'}>
-                {p.status}
-              </span>
-              {#if p.scheduled_at}
-                <span class="published-time">{new Date(String(p.scheduled_at)).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+
+          {#if editingPostId === String(p.id)}
+            <!-- Edit mode -->
+            <div class="published-info edit-mode">
+              <label class="edit-label">
+                <span class="edit-label-text">Caption</span>
+                <textarea class="edit-textarea" bind:value={editCaption} rows="4"></textarea>
+              </label>
+              <label class="edit-label">
+                <span class="edit-label-text">Scheduled time</span>
+                <input class="edit-input" type="datetime-local" bind:value={editTime} />
+              </label>
+              <div class="edit-actions">
+                <button class="edit-save" on:click={saveEdit} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save changes'}
+                </button>
+                <button class="edit-cancel" on:click={cancelEdit}>Cancel</button>
+              </div>
+            </div>
+          {:else}
+            <!-- View mode -->
+            <div class="published-info">
+              <p class="published-caption">{String(p.caption || 'No caption')}</p>
+              {#if p.hashtags && Array.isArray(p.hashtags) && p.hashtags.length}
+                <div class="pub-hashtags">
+                  {#each p.hashtags as tag}
+                    <span class="pub-tag">#{tag}</span>
+                  {/each}
+                </div>
+              {/if}
+              <div class="published-meta">
+                <span class="published-status" class:published={p.status === 'published'} class:failed={p.status === 'failed'} class:scheduled={p.status === 'scheduled'}>
+                  {p.status}
+                </span>
+                {#if p.scheduled_at}
+                  <span class="published-time">{new Date(String(p.scheduled_at)).toLocaleString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                {/if}
+              </div>
+              {#if p.ai_reasoning}
+                <p class="pub-reasoning">{p.ai_reasoning}</p>
               {/if}
             </div>
-          </div>
-          <div class="published-actions">
-            {#if p.status === 'scheduled'}
-              <button class="publish-now-btn" on:click={() => publishNow(String(p.id))} disabled={publishing}>
-                <Rocket size={14} weight="bold" />
-                {publishing ? '...' : 'Publish now'}
-              </button>
-            {/if}
-            {#if p.ig_permalink}
-              <a href={String(p.ig_permalink)} target="_blank" rel="noopener" class="view-ig-link">View</a>
-            {/if}
-          </div>
+            <div class="published-actions">
+              {#if p.status === 'scheduled' || p.status === 'draft'}
+                <button class="pub-edit-btn" on:click={() => startEdit(p)} title="Edit">
+                  <PencilSimple size={14} />
+                  Edit
+                </button>
+                <button class="publish-now-btn" on:click={() => publishNow(String(p.id))} disabled={publishing}>
+                  <Rocket size={14} weight="bold" />
+                  {publishing ? '...' : 'Publish'}
+                </button>
+                <button class="pub-delete-btn" on:click={() => deletePost(String(p.id))} title="Delete">
+                  <Trash size={14} />
+                </button>
+              {/if}
+              {#if p.ig_permalink}
+                <a href={String(p.ig_permalink)} target="_blank" rel="noopener" class="view-ig-link">View on IG</a>
+              {/if}
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
@@ -204,75 +297,161 @@
   .studio { display: flex; flex-direction: column; gap: 20px; }
   .studio-account {
     display: flex; align-items: center; gap: 12px;
-    padding: 16px; background: var(--panel-surface); border: 1px solid var(--panel-border);
-    border-radius: 14px;
+    padding: 16px;
+    background: var(--g-flat-bg, linear-gradient(175deg, rgba(255,255,255,0.025), rgba(255,255,255,0.006)));
+    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-radius: 16px;
+    box-shadow: var(--g-flat-shadow, 0 2px 8px rgba(0,0,0,0.08));
   }
-  .studio-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-  .studio-username { font-size: 15px; font-weight: 700; color: var(--text-primary); display: block; }
-  .studio-followers { font-size: 12px; color: var(--text-muted); }
+  .studio-avatar { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; }
+  .studio-username { font-size: 14px; font-weight: 600; color: var(--g-text, #EDEDEF); display: block; }
+  .studio-followers { font-size: 12px; color: var(--g-text-3, #4A4A50); }
   .studio-section-label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--text-muted); margin-top: 8px;
+    font-size: var(--g-label-size, 11px); font-weight: var(--g-label-weight, 500);
+    text-transform: uppercase; letter-spacing: var(--g-label-spacing, 0.08em);
+    color: var(--g-text-3, #4A4A50); margin-top: 8px;
   }
   .studio-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; padding: 14px; border: none; border-radius: 12px;
-    font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
-    transition: all 0.2s;
+    width: 100%; padding: 14px; border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-radius: 14px;
+    font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: all var(--g-dur-fast, 0.4s) var(--g-ease);
+    background: var(--g-flat-bg);
+    color: var(--g-text-2, #8A8A90);
   }
   .studio-btn:disabled { opacity: 0.5; cursor: default; }
   .studio-btn--primary {
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
-    color: white;
+    background: var(--g-accent-soft, rgba(232,70,74,0.08));
+    border-color: var(--g-accent, #E8464A);
+    color: var(--g-accent, #E8464A);
   }
-  .studio-btn--primary:hover:not(:disabled) { box-shadow: 0 0 24px rgba(255, 77, 77, 0.2); }
-  .studio-btn--approve { background: var(--accent-secondary); color: white; }
+  .studio-btn--primary:hover:not(:disabled) { background: rgba(232,70,74,0.14); box-shadow: 0 0 24px var(--g-accent-glow, rgba(232,70,74,0.12)); }
+  .studio-btn--approve {
+    background: rgba(127,200,169,0.08);
+    border-color: var(--g-metric-engagement, #7FC8A9);
+    color: var(--g-metric-engagement, #7FC8A9);
+  }
+  .studio-btn--approve:hover:not(:disabled) { background: rgba(127,200,169,0.14); }
   .studio-actions { display: flex; gap: 10px; }
-  .studio-error { font-size: 13px; color: var(--accent-primary); margin: 0; }
-  .studio-success { font-size: 13px; color: #4ade80; margin: 0; font-weight: 600; }
+  .studio-error { font-size: 13px; color: var(--g-accent, #E8464A); margin: 0; }
+  .studio-success { font-size: 13px; color: var(--g-metric-engagement, #7FC8A9); margin: 0; font-weight: 600; }
 
   /* Published list */
   .published-list { display: flex; flex-direction: column; gap: 10px; }
   .published-card {
     display: flex; align-items: center; gap: 12px;
-    padding: 12px; background: var(--panel-surface);
-    border: 1px solid var(--panel-border); border-radius: 12px;
+    padding: 14px;
+    background: var(--g-flat-bg, linear-gradient(175deg, rgba(255,255,255,0.025), rgba(255,255,255,0.006)));
+    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-radius: 16px;
+    box-shadow: var(--g-flat-shadow, 0 2px 8px rgba(0,0,0,0.08));
+    transition: border-color var(--g-dur, 0.7s) var(--g-ease);
   }
+  .published-card:hover { border-color: var(--g-border-strong, rgba(255,255,255,0.12)); }
   .published-thumb {
-    width: 56px; height: 56px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+    width: 56px; height: 56px; border-radius: 10px; overflow: hidden; flex-shrink: 0;
+    position: relative;
   }
   .published-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .published-video-badge {
     width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-    background: var(--glass-medium); font-size: 10px; font-weight: 700; color: var(--text-muted);
+    background: var(--g-surface, #17171A); font-size: 10px; font-weight: 700; color: var(--g-text-3, #4A4A50);
   }
-  .published-info { flex: 1; min-width: 0; }
+  .published-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
   .published-caption {
-    font-size: 13px; color: var(--text-primary); margin: 0 0 4px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 13px; color: var(--g-text, #EDEDEF); margin: 0;
+    line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+  }
+  .pub-hashtags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pub-tag { font-size: 11px; color: var(--g-metric-shares, #7BA7D9); font-weight: 600; }
+  .pub-reasoning { font-size: 11px; color: var(--g-text-3, #4A4A50); margin: 0; font-style: italic; line-height: 1.4; }
+  .pub-type-badge {
+    position: absolute; bottom: 4px; left: 4px;
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 4px;
   }
   .published-meta { display: flex; align-items: center; gap: 8px; }
   .published-status {
     font-size: 10px; font-weight: 700; text-transform: uppercase;
     padding: 2px 8px; border-radius: 6px;
-    background: var(--glass-medium); color: var(--text-muted);
+    background: var(--g-surface, #17171A); color: var(--g-text-3, #4A4A50);
   }
-  .published-status.published { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
-  .published-status.failed { background: rgba(251, 113, 133, 0.15); color: #fb7185; }
-  .published-status.scheduled { background: rgba(255, 184, 77, 0.15); color: #FFB84D; }
-  .published-time { font-size: 11px; color: var(--text-muted); }
-  .published-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .published-status.published { background: rgba(127,200,169,0.12); color: var(--g-metric-engagement, #7FC8A9); }
+  .published-status.failed { background: rgba(232,70,74,0.12); color: var(--g-accent, #E8464A); }
+  .published-status.scheduled { background: rgba(232,131,58,0.12); color: var(--g-metric-reach, #E8833A); }
+  .published-time { font-size: 11px; color: var(--g-text-3, #4A4A50); font-family: var(--g-font-mono); }
+  .published-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+  .pub-edit-btn {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border: 1px solid var(--g-border, rgba(255,255,255,0.06)); border-radius: 10px;
+    background: transparent; color: var(--g-text-2, #8A8A90);
+    font-size: 12px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: all var(--g-dur-fast, 0.4s) var(--g-ease);
+  }
+  .pub-edit-btn:hover { border-color: var(--g-border-strong); color: var(--g-text); }
+  .pub-delete-btn {
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px; border: 1px solid var(--g-border, rgba(255,255,255,0.06)); border-radius: 10px;
+    background: transparent; color: var(--g-text-3, #4A4A50);
+    cursor: pointer; transition: all var(--g-dur-fast, 0.4s) var(--g-ease);
+  }
+  .pub-delete-btn:hover { border-color: var(--g-accent); color: var(--g-accent); }
   .publish-now-btn {
     display: flex; align-items: center; gap: 4px;
-    padding: 6px 12px; border-radius: 8px; border: none;
-    background: var(--accent-primary); color: white;
+    padding: 6px 14px; border-radius: 10px;
+    border: 1px solid var(--g-accent, #E8464A);
+    background: var(--g-accent-soft, rgba(232,70,74,0.08));
+    color: var(--g-accent, #E8464A);
     font-size: 12px; font-weight: 600; font-family: inherit;
-    cursor: pointer; transition: opacity 0.15s;
+    cursor: pointer; transition: all var(--g-dur-fast, 0.4s) var(--g-ease);
   }
+  .publish-now-btn:hover { background: rgba(232,70,74,0.14); }
   .publish-now-btn:disabled { opacity: 0.5; }
   .view-ig-link {
-    font-size: 11px; color: var(--accent-secondary);
+    font-size: 11px; color: var(--g-metric-shares, #7BA7D9);
     text-decoration: none; text-align: center;
   }
   .view-ig-link:hover { text-decoration: underline; }
+
+  /* Edit mode */
+  .published-card.editing { border-color: var(--g-metric-shares, #7BA7D9); }
+  .edit-mode { gap: 12px; }
+  .edit-label { display: flex; flex-direction: column; gap: 4px; }
+  .edit-label-text {
+    font-size: var(--g-label-size, 11px); font-weight: var(--g-label-weight, 500);
+    text-transform: uppercase; letter-spacing: var(--g-label-spacing, 0.08em);
+    color: var(--g-text-3, #4A4A50);
+  }
+  .edit-textarea {
+    width: 100%; box-sizing: border-box; font-size: 13px; font-family: inherit;
+    background: var(--g-surface, #17171A); border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-radius: 10px; padding: 10px; color: var(--g-text, #EDEDEF); resize: vertical;
+    line-height: 1.5;
+  }
+  .edit-textarea:focus { border-color: var(--g-metric-shares, #7BA7D9); outline: none; }
+  .edit-input {
+    font-size: 13px; font-family: inherit;
+    background: var(--g-surface, #17171A); border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-radius: 10px; padding: 8px 10px; color: var(--g-text, #EDEDEF);
+  }
+  .edit-input:focus { border-color: var(--g-metric-shares, #7BA7D9); outline: none; }
+  .edit-actions { display: flex; gap: 8px; }
+  .edit-save {
+    padding: 8px 16px; border-radius: 10px;
+    border: 1px solid var(--g-accent, #E8464A);
+    background: var(--g-accent-soft, rgba(232,70,74,0.08));
+    color: var(--g-accent, #E8464A);
+    font-size: 12px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: all var(--g-dur-fast) var(--g-ease);
+  }
+  .edit-save:hover { background: rgba(232,70,74,0.14); }
+  .edit-save:disabled { opacity: 0.5; }
+  .edit-cancel {
+    padding: 8px 16px; border: 1px solid var(--g-border, rgba(255,255,255,0.06)); border-radius: 10px;
+    background: transparent; color: var(--g-text-2, #8A8A90);
+    font-size: 12px; font-weight: 500; font-family: inherit;
+    cursor: pointer; transition: all var(--g-dur-fast) var(--g-ease);
+  }
+  .edit-cancel:hover { border-color: var(--g-border-strong); color: var(--g-text); }
 </style>

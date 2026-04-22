@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wagwan — Mobile Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #08080f;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.018) 1px, transparent 0);
+    background-size: 32px 32px;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .ambient {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .ambient-orb {
+    position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.35;
+    animation: drift 22s ease-in-out infinite;
+  }
+  .a1 { width: 300px; height: 300px; background: rgba(255,60,60,0.07); top: -5%; left: -10%; }
+  .a2 { width: 250px; height: 250px; background: rgba(77,124,255,0.05); top: 40%; right: -15%; animation-delay: -8s; }
+  .a3 { width: 200px; height: 200px; background: rgba(255,184,77,0.04); bottom: 5%; left: 20%; animation-delay: -15s; }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    33% { transform: translate(10px, -12px); }
+    66% { transform: translate(-8px, 10px); }
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    min-height: 844px;
+    background: #08080f;
+    border-radius: 44px;
+    border: 3px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0);
+    background-size: 28px 28px;
+  }
+  .phone-inner {
+    padding: 56px 16px 32px;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  /* Notch */
+  .notch {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 28px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 10;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #ff4d4d, #ff8844);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    box-shadow: 0 4px 16px rgba(255,77,77,0.12);
+  }
+  .brand-name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-handle { font-size: 11px; color: rgba(255,255,255,0.25); }
+  .topbar-actions { display: flex; gap: 6px; }
+  .btn-sm {
+    padding: 7px 13px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.5);
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+  }
+  .btn-sm--primary {
+    background: rgba(255,77,77,0.1);
+    border-color: rgba(255,77,77,0.15);
+    color: #ff8a8a;
+  }
+
+  /* ── Bento Grid — 2 columns for mobile ── */
+  .bento {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* ── Card ── */
+  .card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .card:active {
+    transform: scale(0.97);
+    border-color: rgba(255,255,255,0.08);
+  }
+  .card-orb {
+    position: absolute; border-radius: 50%; filter: blur(40px); pointer-events: none; opacity: 0.5;
+  }
+  .card-label {
+    font-size: 9px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.12em; color: rgba(255,255,255,0.28);
+    margin-bottom: 8px; position: relative;
+  }
+  .card-number {
+    font-size: 32px; font-weight: 300; letter-spacing: -0.04em;
+    line-height: 1; position: relative;
+  }
+  .card-detail {
+    font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 4px; position: relative;
+  }
+  .card-text {
+    font-size: 12px; font-weight: 400; line-height: 1.6;
+    color: rgba(255,255,255,0.55); position: relative;
+  }
+  .card-footer {
+    margin-top: auto; padding-top: 10px;
+    font-size: 10px; color: rgba(255,255,255,0.18); position: relative;
+  }
+
+  /* ── Span variants ── */
+  .span-1 { grid-column: span 1; }
+  .span-2 { grid-column: span 2; }
+
+  /* ── Colors ── */
+  .c-red { background: linear-gradient(155deg, rgba(255,60,60,0.05), rgba(255,60,60,0.01)); }
+  .c-red .card-number { color: rgba(255,130,130,0.85); }
+  .c-green { background: linear-gradient(155deg, rgba(52,211,153,0.05), rgba(52,211,153,0.01)); }
+  .c-green .card-number { color: rgba(110,231,183,0.85); }
+  .c-indigo { background: linear-gradient(155deg, rgba(99,102,241,0.05), rgba(99,102,241,0.01)); }
+  .c-indigo .card-number { color: rgba(165,180,252,0.85); }
+  .c-amber { background: linear-gradient(155deg, rgba(251,191,36,0.05), rgba(251,191,36,0.01)); }
+  .c-amber .card-number { color: rgba(252,211,77,0.85); }
+  .c-rose { background: linear-gradient(155deg, rgba(244,63,94,0.04), transparent); }
+  .c-blue { background: linear-gradient(155deg, rgba(59,130,246,0.04), transparent); }
+  .c-teal { background: linear-gradient(155deg, rgba(20,184,166,0.04), transparent); }
+  .c-purple { background: linear-gradient(155deg, rgba(168,85,247,0.04), transparent); }
+  .c-emerald { background: linear-gradient(155deg, rgba(16,185,129,0.04), transparent); }
+
+  /* ── Tags ── */
+  .tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; position: relative; }
+  .tag {
+    font-size: 9px; font-weight: 500; padding: 3px 9px; border-radius: 7px;
+    background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+
+  /* ── Mini heatmap ── */
+  .heat-row {
+    display: flex; gap: 2px; margin-top: 10px; position: relative;
+  }
+  .hc {
+    flex: 1; aspect-ratio: 1.3; border-radius: 3px;
+    background: rgba(244,63,94,0.06);
+  }
+  .hc-1 { background: rgba(244,63,94,0.14); }
+  .hc-2 { background: rgba(244,63,94,0.25); }
+  .hc-3 { background: rgba(244,63,94,0.42); }
+
+  /* ── Stats inline ── */
+  .stats-row {
+    display: flex; gap: 14px; margin-top: 10px; position: relative;
+  }
+  .s-val {
+    font-size: 18px; font-weight: 300; letter-spacing: -0.03em; line-height: 1;
+  }
+  .s-lbl {
+    font-size: 8px; color: rgba(255,255,255,0.18); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-top: 2px;
+  }
+
+  /* ── Creator chips ── */
+  .creators {
+    display: flex; gap: 6px; overflow-x: auto; margin-top: 10px;
+    position: relative; scrollbar-width: none; padding-bottom: 2px;
+  }
+  .creators::-webkit-scrollbar { display: none; }
+  .cc {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px 6px 6px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 12px; flex-shrink: 0;
+  }
+  .cc-av {
+    width: 26px; height: 26px; border-radius: 8px;
+  }
+  .cc-name { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.65); }
+  .cc-meta { font-size: 9px; color: rgba(255,255,255,0.22); }
+
+  /* ── Idea rows ── */
+  .ir {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.025);
+    position: relative;
+  }
+  .ir:last-child { border-bottom: none; }
+  .ir-badge {
+    font-size: 8px; font-weight: 600; padding: 2px 7px; border-radius: 5px;
+    background: rgba(168,85,247,0.1); color: rgba(192,132,252,0.75);
+    letter-spacing: 0.04em; flex-shrink: 0;
+  }
+  .ir-text { font-size: 11px; color: rgba(255,255,255,0.5); }
+
+  /* ── Section divider ── */
+  .section {
+    grid-column: span 2;
+    padding: 14px 0 2px;
+    font-size: 10px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.15em; color: rgba(255,255,255,0.12);
+  }
+
+  /* Annotation */
+  .note {
+    text-align: center; margin-top: 32px;
+    font-size: 12px; color: rgba(255,255,255,0.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient">
+  <div class="ambient-orb a1"></div>
+  <div class="ambient-orb a2"></div>
+  <div class="ambient-orb a3"></div>
+</div>
+
+<div style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+
+<!-- Phone mockup -->
+<div class="phone">
+  <div class="notch"></div>
+  <div class="phone-inner">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="avatar">W</div>
+        <div>
+          <div class="brand-name">Wagwan</div>
+          <div class="brand-handle">@wagwan.world</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-sm btn-sm--primary">Analyse</button>
+      </div>
+    </div>
+
+    <!-- Bento -->
+    <div class="bento">
+      <!-- Stats: 2x2 -->
+      <div class="card span-1 c-red" style="min-height:100px;">
+        <div class="card-orb" style="width:50px;height:50px;background:rgba(255,60,60,0.1);top:-15px;right:-15px;"></div>
+        <div class="card-label">Followers</div>
+        <div class="card-number">924</div>
+        <div class="card-detail">+0.3%</div>
+      </div>
+      <div class="card span-1 c-green" style="min-height:100px;">
+        <div class="card-orb" style="width:45px;height:45px;background:rgba(52,211,153,0.1);bottom:-12px;right:-12px;"></div>
+        <div class="card-label">Engagement</div>
+        <div class="card-number">4.2<span style="font-size:14px;color:rgba(255,255,255,0.25);">%</span></div>
+        <div class="card-detail">Above avg</div>
+      </div>
+      <div class="card span-1 c-indigo" style="min-height:100px;">
+        <div class="card-orb" style="width:45px;height:45px;background:rgba(99,102,241,0.1);top:-10px;left:-10px;"></div>
+        <div class="card-label">Reach (7d)</div>
+        <div class="card-number">39</div>
+        <div class="card-detail">+5.0%</div>
+      </div>
+      <div class="card span-1 c-amber" style="min-height:100px;">
+        <div class="card-orb" style="width:45px;height:45px;background:rgba(251,191,36,0.1);bottom:-12px;left:-10px;"></div>
+        <div class="card-label">Posts</div>
+        <div class="card-number">334</div>
+        <div class="card-detail">0.7/wk</div>
+      </div>
+
+      <!-- Strategy — full width -->
+      <div class="section">Intelligence</div>
+
+      <div class="card span-2 c-red" style="min-height:130px;">
+        <div class="card-orb" style="width:90px;height:90px;background:rgba(255,60,60,0.05);bottom:-30px;right:-25px;"></div>
+        <div class="card-label">Brand Direction</div>
+        <div class="card-text">Position as Bangalore's culture-tech bridge connecting underground scenes with digital infrastructure.</div>
+        <div class="tags">
+          <span class="tag">urban tech</span>
+          <span class="tag">culture</span>
+          <span class="tag">community</span>
+        </div>
+        <div class="card-footer">Expand &rarr;</div>
+      </div>
+
+      <!-- Brief -->
+      <div class="card span-2 c-blue" style="min-height:110px;">
+        <div class="card-orb" style="width:80px;height:80px;background:rgba(59,130,246,0.05);top:-25px;right:-20px;"></div>
+        <div class="card-label">Weekly Brief</div>
+        <div class="card-text">Reel reach trending up. Increase posting to 2-3x/week to ride the momentum.</div>
+        <div class="card-footer">Read more &rarr;</div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="card span-1 c-rose" style="min-height:120px;">
+        <div class="card-label">Best Times</div>
+        <div style="position:relative;">
+          <div class="s-val" style="color:rgba(251,113,133,0.8);font-size:16px;">Tue 12p</div>
+          <div class="s-lbl">Peak slot</div>
+        </div>
+        <div class="heat-row">
+          <div class="hc"></div><div class="hc hc-1"></div><div class="hc hc-3"></div><div class="hc hc-1"></div>
+          <div class="hc"></div><div class="hc hc-2"></div><div class="hc"></div><div class="hc hc-1"></div>
+        </div>
+      </div>
+
+      <!-- Audience -->
+      <div class="card span-1 c-teal" style="min-height:120px;">
+        <div class="card-orb" style="width:60px;height:60px;background:rgba(20,184,166,0.06);bottom:-20px;left:-15px;"></div>
+        <div class="card-label">Audience</div>
+        <div class="stats-row">
+          <div><div class="s-val" style="color:rgba(45,212,191,0.8);">72%</div><div class="s-lbl">Male</div></div>
+          <div><div class="s-val" style="color:rgba(45,212,191,0.8);">18-34</div><div class="s-lbl">Age</div></div>
+        </div>
+        <div class="card-footer">Details &rarr;</div>
+      </div>
+
+      <!-- Opportunities -->
+      <div class="section">Opportunities</div>
+
+      <!-- Content Ideas -->
+      <div class="card span-2 c-purple">
+        <div class="card-orb" style="width:70px;height:70px;background:rgba(168,85,247,0.05);top:-20px;right:-15px;"></div>
+        <div class="card-label">Content Ideas</div>
+        <div style="position:relative;">
+          <div class="ir">
+            <span class="ir-badge">REEL</span>
+            <span class="ir-text">Behind the scenes at your event</span>
+          </div>
+          <div class="ir">
+            <span class="ir-badge">CAROUSEL</span>
+            <span class="ir-text">5 underground Bangalore spots</span>
+          </div>
+          <div class="ir">
+            <span class="ir-badge">IMAGE</span>
+            <span class="ir-text">Weekly community spotlight</span>
+          </div>
+        </div>
+        <div class="card-footer">All ideas &rarr;</div>
+      </div>
+
+      <!-- Creators — horizontal scroll -->
+      <div class="card span-2 c-emerald">
+        <div class="card-orb" style="width:60px;height:60px;background:rgba(16,185,129,0.05);bottom:-18px;right:-12px;"></div>
+        <div class="card-label">Creator Matches</div>
+        <div class="creators">
+          <div class="cc">
+            <div class="cc-av" style="background:linear-gradient(135deg,#6ee7b7,#059669);"></div>
+            <div><div class="cc-name">Madhvik N.</div><div class="cc-meta">85 &middot; NYC</div></div>
+          </div>
+          <div class="cc">
+            <div class="cc-av" style="background:linear-gradient(135deg,#c084fc,#7c3aed);"></div>
+            <div><div class="cc-name">Priya K.</div><div class="cc-meta">72 &middot; MUM</div></div>
+          </div>
+          <div class="cc">
+            <div class="cc-av" style="background:linear-gradient(135deg,#fbbf24,#f59e0b);"></div>
+            <div><div class="cc-name">Arjun M.</div><div class="cc-meta">68 &middot; BLR</div></div>
+          </div>
+        </div>
+        <div class="card-footer">All matches &rarr;</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="note">Mobile layout — 2-column bento grid, tap to expand cards, horizontal scroll for creators</p>
+
+</div>
+</body>
+</html>

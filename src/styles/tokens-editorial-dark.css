@@ -1,0 +1,31 @@
+/* ═══════════════════════════════════════════════════════
+   EDITORIAL TOKENS — Dark mode
+   Applied when .editorial-shell[data-editorial-theme="dark"]
+   ═══════════════════════════════════════════════════════ */
+
+.editorial-shell[data-editorial-theme="dark"] {
+  /* ── Surfaces — deep warm blacks ── */
+  --ed-bg:          oklch(10% 0.008 260);
+  --ed-bg-deep:     oklch(8% 0.006 258);
+  --ed-bg-elevated: oklch(14% 0.010 262);
+
+  /* ── Ink — light on dark ── */
+  --ed-ink:         oklch(92% 0.006 240);
+  --ed-ink-2:       oklch(72% 0.008 245);
+  --ed-ink-3:       oklch(55% 0.006 248);
+  --ed-ink-ghost:   oklch(38% 0.005 250);
+
+  /* ── Rules — light dividers ── */
+  --ed-rule:        rgba(255, 255, 255, 0.10);
+  --ed-rule-heavy:  rgba(255, 255, 255, 0.22);
+  --ed-rule-light:  rgba(255, 255, 255, 0.05);
+
+  /* ── Accent — same red, adjusted for dark ── */
+  --ed-accent:      #FF5C4D;
+  --ed-accent-soft: rgba(255, 92, 77, 0.12);
+  --ed-accent-mid:  rgba(255, 92, 77, 0.25);
+
+  /* ── Background override ── */
+  background: var(--ed-bg);
+  color: var(--ed-ink);
+}

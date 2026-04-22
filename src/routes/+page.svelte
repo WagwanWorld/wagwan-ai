@@ -9,33 +9,16 @@
   } from '$lib/auth/sessionGate';
   import { primaryAccountKeyFromOAuthState } from '$lib/auth/accountKey';
   import type { InstagramIdentity } from '$lib/server/instagram';
-  import type { GoogleIdentity } from '$lib/utils';
-  import MagnetStraight from 'phosphor-svelte/lib/MagnetStraight';
-  import Lightning from 'phosphor-svelte/lib/Lightning';
-  import ChartLineUp from 'phosphor-svelte/lib/ChartLineUp';
-  import Check from 'phosphor-svelte/lib/Check';
   import InstagramLogo from 'phosphor-svelte/lib/InstagramLogo';
-  import TrendUp from 'phosphor-svelte/lib/TrendUp';
-  import Users from 'phosphor-svelte/lib/Users';
-  import CurrencyInr from 'phosphor-svelte/lib/CurrencyInr';
 
   let visible = false;
-  let g1: HTMLDivElement, g2: HTMLDivElement, g3: HTMLDivElement;
-  let raf: number;
   let shouldShowLanding = false;
   let canvas: HTMLCanvasElement;
   let particleRaf: number;
-  let cardsVisible = false;
-  let creatorsVisible = false;
-  let cardsEl: HTMLDivElement;
-  let creatorsEl: HTMLDivElement;
+  let g1: HTMLDivElement, g2: HTMLDivElement;
+  let gradRaf: number;
 
-  // ── Auth state ──
-  let authStarted = false;
-  let googleConnected = false;
-  let googleConnecting = false;
-  let googleIdentity: GoogleIdentity | null = null;
-  let googleTokens: { accessToken: string; refreshToken: string } | null = null;
+  // ── Auth state (Instagram only) ──
   let igConnected = false;
   let igConnecting = false;
   let igIdentity: InstagramIdentity | null = null;
@@ -43,18 +26,18 @@
   let authError = '';
   let finishing = false;
 
-  $: displayName = googleIdentity?.name?.split(' ')[0] || igIdentity?.displayName?.split(' ')[0] || '';
-  $: displayPicture = googleIdentity?.picture || igIdentity?.profilePicture || '';
-
-  // ── Mock data ──
-  const mockCreators = [
-    { name: 'Priya S.', handle: '@priya.vibes', followers: '8.2K', earned: '₹24,500', tags: ['Food', 'Travel'], color: '#FF6B6B' },
-    { name: 'Arjun M.', handle: '@arjunmakes', followers: '3.1K', earned: '₹11,200', tags: ['Tech', 'Lifestyle'], color: '#4D7CFF' },
-    { name: 'Sneha R.', handle: '@sneha.daily', followers: '12.4K', earned: '₹38,700', tags: ['Fashion', 'Beauty'], color: '#FFB84D' },
-    { name: 'Karthik V.', handle: '@karthik.eats', followers: '5.7K', earned: '₹18,300', tags: ['Food', 'Nightlife'], color: '#FF4D4D' },
-    { name: 'Ananya D.', handle: '@ananya.fit', followers: '9.8K', earned: '₹31,000', tags: ['Fitness', 'Wellness'], color: '#34D399' },
-    { name: 'Rohan K.', handle: '@rohan.lens', followers: '2.3K', earned: '₹8,600', tags: ['Photography', 'Travel'], color: '#A78BFA' },
+  // ── Live activity feed ──
+  const feedMessages = [
+    { text: 'Arjun in Mumbai just got matched with', brand: 'Razorpay' },
+    { text: 'Priya earned', brand: '₹8,200 this week' },
+    { text: 'Sneha in Bangalore matched with', brand: 'CRED' },
+    { text: 'Maya completed her', brand: '12th brand deal' },
+    { text: 'Karthik just got paid', brand: '₹18,300' },
+    { text: 'Rohan in Delhi matched with', brand: 'Zerodha' },
   ];
+  let feedIndex = 0;
+  let feedVisible = true;
+  let feedInterval: ReturnType<typeof setInterval>;
 
   function readCookie(name: string): string | undefined {
     return document.cookie.split('; ').find(c => c.startsWith(`${name}=`))?.split('=').slice(1).join('=');
@@ -68,14 +51,7 @@
     window.history.replaceState({}, '', u.toString());
   }
 
-  function startGoogle() {
-    authStarted = true;
-    googleConnecting = true;
-    window.location.href = '/auth/google?from=landing';
-  }
-
   function startInstagram() {
-    authStarted = true;
     igConnecting = true;
     window.location.href = '/auth/instagram?from=landing';
   }
@@ -85,8 +61,8 @@
     authError = '';
 
     const accountSub = primaryAccountKeyFromOAuthState({
-      googleConnected,
-      googleIdentity,
+      googleConnected: false,
+      googleIdentity: null,
       igConnected,
       igIdentity,
     });
@@ -96,10 +72,10 @@
       return;
     }
 
-    const name = googleIdentity?.name || igIdentity?.displayName || '';
+    const name = igIdentity?.displayName || '';
     const city = igIdentity?.city || '';
-    const interests = igIdentity?.interests?.length ? igIdentity.interests
-      : googleIdentity?.lifestyleSignals?.length ? googleIdentity.lifestyleSignals
+    const interests = igIdentity?.interests?.length
+      ? igIdentity.interests
       : ['Music', 'Food', 'Fitness', 'Nightlife'];
 
     const fullProfile = {
@@ -117,10 +93,10 @@
       appleMusicIdentity: null,
       youtubeConnected: false,
       youtubeIdentity: null,
-      googleConnected,
-      googleIdentity,
-      googleAccessToken: googleTokens?.accessToken ?? '',
-      googleRefreshToken: googleTokens?.refreshToken ?? '',
+      googleConnected: false,
+      googleIdentity: null,
+      googleAccessToken: '',
+      googleRefreshToken: '',
       linkedinConnected: false,
       linkedinIdentity: null,
       savedItems: [] as import('$lib/stores/profile').SavedItem[],
@@ -133,8 +109,6 @@
     profile.set(fullProfile);
 
     const tokens: Record<string, string> = {};
-    if (googleTokens?.accessToken) tokens.googleAccessToken = googleTokens.accessToken;
-    if (googleTokens?.refreshToken) tokens.googleRefreshToken = googleTokens.refreshToken;
     if (igToken) tokens.instagramToken = igToken;
 
     fetch('/api/profile/save', {
@@ -157,23 +131,18 @@
     function tick(ts: number) {
       const t = ts * 0.001;
       if (g1) {
-        const x = Math.sin(t * 0.15) * 28 + Math.sin(t * 0.32) * 14;
-        const y = Math.cos(t * 0.12) * 24 + Math.cos(t * 0.24) * 10;
+        const x = Math.sin(t * 0.08) * 12;
+        const y = Math.cos(t * 0.06) * 10;
         g1.style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`;
       }
       if (g2) {
-        const x = Math.sin(t * 0.24 + 1.3) * 34 + Math.cos(t * 0.41) * 16;
-        const y = Math.cos(t * 0.18 + 0.8) * 28 + Math.sin(t * 0.29) * 12;
+        const x = Math.sin(t * 0.1 + 1.5) * 14;
+        const y = Math.cos(t * 0.07 + 0.8) * 12;
         g2.style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`;
       }
-      if (g3) {
-        const x = Math.sin(t * 0.08 + 0.5) * 18 + Math.cos(t * 0.12) * 10;
-        const y = Math.cos(t * 0.065 + 1.2) * 20 + Math.sin(t * 0.11) * 8;
-        g3.style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`;
-      }
-      raf = requestAnimationFrame(tick);
+      gradRaf = requestAnimationFrame(tick);
     }
-    raf = requestAnimationFrame(tick);
+    gradRaf = requestAnimationFrame(tick);
   }
 
   // ── Floating particles ──
@@ -196,14 +165,14 @@
     window.addEventListener('resize', resize);
 
     const particles: Particle[] = [];
-    for (let i = 0; i < 45; i++) {
+    for (let i = 0; i < 25; i++) {
       particles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: -(Math.random() * 0.4 + 0.1),
-        r: Math.random() * 1.5 + 0.5,
-        a: Math.random() * 0.25 + 0.08,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: -(Math.random() * 0.2 + 0.05),
+        r: Math.random() * 1.2 + 0.3,
+        a: Math.random() * 0.12 + 0.03,
       });
     }
 
@@ -225,24 +194,8 @@
     draw();
   }
 
-  // ── Scroll-triggered reveals ──
-  function observeElements() {
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            if (entry.target === cardsEl) cardsVisible = true;
-            if (entry.target === creatorsEl) creatorsVisible = true;
-          }
-        }
-      },
-      { threshold: 0.1 },
-    );
-    if (cardsEl) obs.observe(cardsEl);
-    if (creatorsEl) obs.observe(creatorsEl);
-  }
-
   onMount(() => {
+    // Check existing session
     try {
       const raw = localStorage.getItem('wagwan_profile_v2');
       const parsed = raw ? JSON.parse(raw) : null;
@@ -265,23 +218,9 @@
 
     shouldShowLanding = true;
 
-    // Handle Google callback
-    const params = new URL(window.location.href).searchParams;
-    if (params.get('google_connected') === '1') {
-      authStarted = true;
-      const idRaw = readCookie('google_identity');
-      const tokRaw = readCookie('google_tokens');
-      if (idRaw) { try { googleIdentity = JSON.parse(decodeURIComponent(idRaw)); } catch {} clearCookie('google_identity'); }
-      if (tokRaw) { try { googleTokens = JSON.parse(decodeURIComponent(tokRaw)); } catch {} clearCookie('google_tokens'); }
-      googleConnected = true;
-      googleConnecting = false;
-      try { localStorage.setItem('onboarding_google', JSON.stringify({ identity: googleIdentity, tokens: googleTokens })); } catch {}
-      cleanParam('google_connected');
-    }
-
     // Handle Instagram callback
+    const params = new URL(window.location.href).searchParams;
     if (params.get('ig_connected') === '1') {
-      authStarted = true;
       const redemptionToken = (params.get('ig_rt') || '').trim() || readCookie('ig_redemption');
       clearCookie('ig_redemption');
       cleanParam('ig_connected');
@@ -300,646 +239,462 @@
                 localStorage.setItem('onboarding_ig', JSON.stringify(igIdentity));
                 localStorage.setItem('onboarding_ig_token', igToken);
               } catch {}
+              // Auto-proceed to dashboard
+              await finishSetup();
             } else {
               authError = 'Could not load Instagram profile — try again.';
+              igConnected = false;
             }
           })
-          .catch(() => { authError = 'Instagram connection failed.'; });
+          .catch(() => {
+            authError = 'Instagram connection failed.';
+            igConnected = false;
+          });
       } else {
-        authError = 'Instagram could not finish. Try Connect again.';
+        authError = 'Instagram could not finish. Try again.';
       }
     }
 
     // Restore saved auth state
     try {
-      const savedGoogle = localStorage.getItem('onboarding_google');
-      if (savedGoogle) {
-        const parsed = JSON.parse(savedGoogle);
-        googleIdentity = parsed.identity;
-        googleTokens = parsed.tokens;
-        googleConnected = true;
-        authStarted = true;
-      }
       const savedIg = localStorage.getItem('onboarding_ig');
       if (savedIg) {
         igIdentity = JSON.parse(savedIg);
         igConnected = true;
-        authStarted = true;
       }
       const savedIgToken = localStorage.getItem('onboarding_ig_token');
       if (savedIgToken) igToken = savedIgToken;
     } catch {}
 
+    // Live feed rotation
+    feedInterval = setInterval(() => {
+      feedVisible = false;
+      setTimeout(() => {
+        feedIndex = (feedIndex + 1) % feedMessages.length;
+        feedVisible = true;
+      }, 400);
+    }, 3500);
+
     setTimeout(() => {
       visible = true;
       startGradient();
       startParticles();
-      observeElements();
     }, 60);
   });
 
   onDestroy(() => {
-    if (raf) cancelAnimationFrame(raf);
+    if (gradRaf) cancelAnimationFrame(gradRaf);
     if (particleRaf) cancelAnimationFrame(particleRaf);
+    if (feedInterval) clearInterval(feedInterval);
   });
 </script>
 
 {#if shouldShowLanding}
 <div class="landing-root" data-app-chrome="dark">
-  <!-- Mesh gradient background -->
+  <!-- Mesh gradient — restrained -->
   <div class="landing-grad" class:ready={visible}>
-    <div class="landing-g landing-g--a mesh-animate" bind:this={g1}></div>
-    <div class="landing-g landing-g--b mesh-animate" bind:this={g2}></div>
-    <div class="landing-g landing-g--c mesh-animate" bind:this={g3}></div>
+    <div class="landing-g landing-g--warm" bind:this={g1}></div>
+    <div class="landing-g landing-g--cool" bind:this={g2}></div>
   </div>
 
-  <!-- Hero background — dark cinematic visual -->
-  <div class="hero-bg" class:ready={visible}>
-    <div class="hero-bg-grain"></div>
-    <div class="hero-bg-glow hero-bg-glow--a"></div>
-    <div class="hero-bg-glow hero-bg-glow--b"></div>
-    <div class="hero-bg-glow hero-bg-glow--c"></div>
-    <div class="hero-bg-lines">
-      <div class="hero-line"></div>
-      <div class="hero-line"></div>
-      <div class="hero-line"></div>
-      <div class="hero-line"></div>
-      <div class="hero-line"></div>
-    </div>
-  </div>
+  <!-- Film grain -->
+  <div class="grain" class:ready={visible}></div>
 
-  <!-- Floating particles -->
+  <!-- Particles -->
   <canvas class="landing-particles" bind:this={canvas}></canvas>
 
   <div class="landing-content" class:ready={visible}>
-    {#if !authStarted}
-      <nav class="landing-nav">
-        <img src="/logo-white.svg" alt="WagwanAI" class="landing-logo-img" />
-      </nav>
+    <!-- Nav -->
+    <nav class="hero-nav">
+      <img src="/logo-white.svg" alt="WagwanAI" class="hero-logo" />
+      <span class="nav-pill">For creators</span>
+    </nav>
 
-      <div class="landing-hero">
-        <h1 class="landing-h1">
-          <span class="shimmer-text">Post. Get paid.</span><br>
-          <span class="shimmer-text shimmer-text--delay">Your AI handles the&nbsp;rest.</span>
-        </h1>
-        <p class="landing-sub">
-          Wagwan matches you with brands, auto-posts your content, and handles analytics. You just keep being you.
-        </p>
+    <!-- Center — headline + CTA -->
+    <div class="hero-center">
+      <h1 class="hero-h1">
+        Get matched with brands.<br>
+        <span class="gradient-phrase">Get paid weekly.</span><br>
+        Skip the&nbsp;DMs.
+      </h1>
 
-        <!-- Stats bar -->
-        <div class="stats-bar">
-          <div class="stats-item">
-            <Users size={16} weight="bold" />
-            <span><strong>2,400+</strong> creators</span>
-          </div>
-          <div class="stats-divider"></div>
-          <div class="stats-item">
-            <CurrencyInr size={16} weight="bold" />
-            <span><strong>₹14L+</strong> paid out</span>
-          </div>
-          <div class="stats-divider"></div>
-          <div class="stats-item">
-            <TrendUp size={16} weight="bold" />
-            <span><strong>180+</strong> brands</span>
-          </div>
-        </div>
+      <p class="hero-sub">
+        Wagwan finds brands whose audiences match yours, drafts the content,
+        and handles payouts. You approve everything before it goes live.
+      </p>
 
-        <div class="landing-auth-buttons">
-          <button class="landing-auth-btn glow-breathe" on:click={startGoogle}>
-            <img src="/icons/google.svg" alt="" class="auth-icon" />
-            Continue with Google
-          </button>
-          <button class="landing-auth-btn glow-breathe glow-breathe--delay" on:click={startInstagram}>
-            <img src="/icons/instagram.svg" alt="" class="auth-icon" />
-            Continue with Instagram
-          </button>
-        </div>
-        <p class="landing-trust" class:ready={visible}>Join micro-creators already earning</p>
+      {#if igConnecting}
+        <button class="ig-btn ig-btn--loading" disabled>
+          <span class="ig-spinner"></span>
+          Connecting...
+        </button>
+      {:else if authError}
+        <button class="ig-btn" on:click={startInstagram}>
+          <InstagramLogo size={20} weight="bold" />
+          Try again with Instagram
+        </button>
+        <p class="auth-error">{authError}</p>
+      {:else}
+        <button class="ig-btn" on:click={startInstagram}>
+          <InstagramLogo size={20} weight="bold" />
+          Continue with Instagram
+        </button>
+      {/if}
+
+      <p class="trust-line">
+        We see your public profile and insights. Never your DMs or password.
+      </p>
+
+      <!-- Live activity ticker -->
+      <div class="feed-ticker" class:feed-show={feedVisible}>
+        <div class="feed-dot"></div>
+        <span>{feedMessages[feedIndex].text} <strong>{feedMessages[feedIndex].brand}</strong></span>
+      </div>
+    </div>
+
+    <!-- Bottom bar — stats + how it works -->
+    <div class="hero-bottom">
+      <div class="stats-row">
+        <span class="stat"><strong>2,400+</strong> creators</span>
+        <span class="stat-sep">/</span>
+        <span class="stat"><strong>₹14L+</strong> paid out</span>
+        <span class="stat-sep">/</span>
+        <span class="stat"><strong>180+</strong> brands</span>
       </div>
 
-      <div class="landing-section-label">How it works</div>
-
-      <div class="landing-cards" bind:this={cardsEl} class:cards-visible={cardsVisible}>
-        <div class="landing-card">
-          <div class="landing-card-icon"><MagnetStraight size={28} weight="duotone" /></div>
-          <h3 class="landing-card-title">Auto-matched</h3>
-          <p class="landing-card-desc">Brands find you based on your vibe, not your follower count.</p>
-        </div>
-        <div class="landing-card">
-          <div class="landing-card-icon"><Lightning size={28} weight="duotone" /></div>
-          <h3 class="landing-card-title">Auto-posted</h3>
-          <p class="landing-card-desc">Content suggestions ready to go. Approve and it's live.</p>
-        </div>
-        <div class="landing-card">
-          <div class="landing-card-icon"><ChartLineUp size={28} weight="duotone" /></div>
-          <h3 class="landing-card-title">Auto-reported</h3>
-          <p class="landing-card-desc">Analytics packaged and sent to brands. You don't touch a thing.</p>
-        </div>
-      </div>
-
-      <!-- Creator showcase -->
-      <div class="landing-section-label">Creators earning right now</div>
-
-      <div class="creators-grid" bind:this={creatorsEl} class:creators-visible={creatorsVisible}>
-        {#each mockCreators as creator, i}
-          <div class="creator-card" style="--delay: {i * 0.1}s">
-            <div class="creator-avatar" style="background: {creator.color}">
-              {creator.name.charAt(0)}
-            </div>
-            <div class="creator-info">
-              <span class="creator-name">{creator.name}</span>
-              <span class="creator-handle">{creator.handle}</span>
-            </div>
-            <div class="creator-meta">
-              <div class="creator-stat">
-                <InstagramLogo size={13} />
-                <span>{creator.followers}</span>
-              </div>
-              <div class="creator-earned">{creator.earned} earned</div>
-            </div>
-            <div class="creator-tags">
-              {#each creator.tags as tag}
-                <span class="creator-tag">{tag}</span>
-              {/each}
-            </div>
+      <div class="how-row">
+        <div class="how-item">
+          <span class="how-num">01</span>
+          <div>
+            <div class="how-title">Brands find you</div>
+            <div class="how-desc">Based on your vibe, not your follower count.</div>
           </div>
-        {/each}
-      </div>
-
-      <div class="landing-footer">
-        <p>Built for everyday creators in India</p>
-      </div>
-
-    {:else}
-      <!-- Auth card state -->
-      <div class="auth-card-wrapper">
-        <div class="auth-card">
-          {#if displayPicture}
-            <img src={displayPicture} alt="" class="auth-avatar" />
-          {/if}
-          {#if displayName}
-            <p class="auth-name">{displayName}</p>
-          {/if}
-
-          <div class="auth-card-buttons">
-            <button
-              class="landing-auth-btn"
-              class:connected={googleConnected}
-              disabled={googleConnected || googleConnecting}
-              on:click={startGoogle}
-            >
-              {#if googleConnected}
-                <Check size={18} weight="bold" /> Google connected
-              {:else if googleConnecting}
-                Connecting...
-              {:else}
-                <img src="/icons/google.svg" alt="" class="auth-icon" /> Continue with Google
-              {/if}
-            </button>
-
-            <button
-              class="landing-auth-btn"
-              class:connected={igConnected}
-              disabled={igConnected || igConnecting}
-              on:click={startInstagram}
-            >
-              {#if igConnected}
-                <Check size={18} weight="bold" /> Instagram connected
-              {:else if igConnecting}
-                Connecting...
-              {:else}
-                <img src="/icons/instagram.svg" alt="" class="auth-icon" /> Continue with Instagram
-              {/if}
-            </button>
+        </div>
+        <div class="how-sep"></div>
+        <div class="how-item">
+          <span class="how-num">02</span>
+          <div>
+            <div class="how-title">Content drafted for you</div>
+            <div class="how-desc">You approve before posting. Always.</div>
           </div>
-
-          {#if authError}
-            <p class="auth-error">{authError}</p>
-          {/if}
-
-          {#if googleConnected && igConnected}
-            <button class="landing-cta" on:click={finishSetup} disabled={finishing}>
-              {#if finishing}Saving...{:else}Start earning{/if}
-            </button>
-          {:else if googleConnected || igConnected}
-            <p class="auth-hint">Connect both for the best brand matches — or <button class="auth-skip-link" on:click={finishSetup}>skip for now</button></p>
-          {/if}
+        </div>
+        <div class="how-sep"></div>
+        <div class="how-item">
+          <span class="how-num">03</span>
+          <div>
+            <div class="how-title">We handle the receipts</div>
+            <div class="how-desc">Analytics sent to brands. You don't touch a thing.</div>
+          </div>
         </div>
       </div>
-    {/if}
+    </div>
   </div>
 </div>
 {:else}
-<div style="flex:1; display:flex; align-items:center; justify-content:center;">
-  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF4D4D,#FFB84D);display:flex;align-items:center;justify-content:center;font-size:22px;" class="pulse-glow">✦</div>
+<div class="loading-shell">
+  <div class="loading-mark">✦</div>
 </div>
 {/if}
 
 <style>
+  /* ══════════════════════════════════════════════════════════
+     ROOT
+     ══════════════════════════════════════════════════════════ */
   .landing-root {
     position: fixed; inset: 0;
-    background: var(--bg-primary);
-    overflow-y: auto;
-    scrollbar-width: none;
-    font-family: var(--font-sans);
+    background: #0F0F11;
+    overflow: hidden;
+    font-family: 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    color: #EDEDEF;
   }
 
-  /* ── Mesh gradient ── */
+  /* ── Mesh gradient — very restrained ── */
   .landing-grad {
     position: fixed; inset: 0;
-    opacity: 0;
-    transition: opacity 1.5s ease;
-    pointer-events: none;
-    z-index: 0;
+    opacity: 0; transition: opacity 2s ease;
+    pointer-events: none; z-index: 0;
   }
   .landing-grad.ready { opacity: 1; }
   .landing-g {
-    position: absolute; border-radius: 50%; will-change: transform; transform: translate(-50%, -50%);
+    position: absolute; border-radius: 50%;
+    will-change: transform; transform: translate(-50%, -50%);
   }
-  .landing-g--a {
-    width: 120vw; height: 120vw; left: 25%; top: 15%;
-    background: radial-gradient(ellipse at center, oklch(60% 0.28 25 / 0.22) 0%, transparent 60%);
-    filter: blur(80px);
+  .landing-g--warm {
+    width: 110vw; height: 110vw; left: 20%; top: 10%;
+    background: radial-gradient(ellipse at center, oklch(50% 0.20 25 / 0.10) 0%, transparent 55%);
+    filter: blur(120px);
   }
-  .landing-g--b {
-    width: 90vw; height: 90vw; left: 65%; top: 60%;
-    background: radial-gradient(ellipse at center, oklch(55% 0.24 260 / 0.20) 0%, transparent 60%);
-    filter: blur(70px);
-  }
-  .landing-g--c {
-    width: 140vw; height: 140vw; left: 45%; top: 40%;
-    background: radial-gradient(ellipse at center, oklch(72% 0.22 80 / 0.16) 0%, transparent 65%);
-    filter: blur(90px);
+  .landing-g--cool {
+    width: 90vw; height: 90vw; left: 70%; top: 60%;
+    background: radial-gradient(ellipse at center, oklch(45% 0.18 260 / 0.07) 0%, transparent 55%);
+    filter: blur(120px);
   }
 
-  /* ── Hero background — dark cinematic ── */
-  .hero-bg {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
+  /* ── Film grain ── */
+  .grain {
+    position: fixed; inset: 0; z-index: 1;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 1.5s ease 0.3s;
-    overflow: hidden;
-  }
-  .hero-bg.ready { opacity: 1; }
-
-  /* Film grain texture */
-  .hero-bg-grain {
-    position: absolute; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    opacity: 0.5;
+    opacity: 0; transition: opacity 2s ease;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
     mix-blend-mode: overlay;
   }
+  .grain.ready { opacity: 0.5; }
 
-  /* Colored glow orbs (on top of mesh gradient for extra richness) */
-  .hero-bg-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(100px);
-    animation: glow-drift 8s ease-in-out infinite alternate;
-  }
-  .hero-bg-glow--a {
-    width: 50vw; height: 50vw;
-    top: -10%; left: -10%;
-    background: rgba(255, 77, 77, 0.15);
-    animation-duration: 10s;
-  }
-  .hero-bg-glow--b {
-    width: 40vw; height: 40vw;
-    bottom: -5%; right: -5%;
-    background: rgba(77, 124, 255, 0.12);
-    animation-duration: 12s;
-    animation-delay: 2s;
-  }
-  .hero-bg-glow--c {
-    width: 35vw; height: 35vw;
-    top: 40%; left: 50%;
-    background: rgba(255, 184, 77, 0.08);
-    animation-duration: 14s;
-    animation-delay: 4s;
-  }
-
-  @keyframes glow-drift {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(30px, -20px) scale(1.1); }
-  }
-
-  /* Subtle grid lines for depth */
-  .hero-bg-lines {
-    position: absolute; inset: 0;
-    display: flex;
-    justify-content: space-evenly;
-    opacity: 0.04;
-  }
-  .hero-line {
-    width: 1px;
-    height: 100%;
-    background: linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.5) 30%, rgba(255, 255, 255, 0.5) 70%, transparent 100%);
-  }
-
-  /* ── Floating particles ── */
+  /* ── Particles ── */
   .landing-particles {
     position: fixed; inset: 0;
-    pointer-events: none;
-    z-index: 2;
-    opacity: 0.5;
+    pointer-events: none; z-index: 2;
+    opacity: 0.35;
   }
 
-  /* ── Content ── */
+  /* ══════════════════════════════════════════════════════════
+     CONTENT LAYOUT — full viewport, flex column
+     ══════════════════════════════════════════════════════════ */
   .landing-content {
-    position: relative;
-    z-index: 3;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: env(safe-area-inset-top, 0px) 28px env(safe-area-inset-bottom, 28px);
-    opacity: 0;
-    transform: translateY(16px);
-    transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+    position: relative; z-index: 3;
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    padding: 0 clamp(24px, 6vw, 80px);
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.8s ease 0.15s, transform 0.8s ease 0.15s;
   }
   .landing-content.ready { opacity: 1; transform: translateY(0); }
 
   /* ── Nav ── */
-  .landing-nav {
-    padding: max(20px, env(safe-area-inset-top, 20px)) 0 0;
-    flex-shrink: 0; width: 100%;
+  .hero-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: max(24px, env(safe-area-inset-top, 24px)) 0 0;
+    flex-shrink: 0;
   }
-  .landing-logo-img { height: 20px; width: auto; opacity: 0.8; }
+  .hero-logo { height: 16px; opacity: 0.5; }
+  .nav-pill {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.1em; color: #3A3A40;
+    padding: 5px 12px;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 100px;
+  }
 
-  /* ── Hero ── */
-  .landing-hero {
-    min-height: 74dvh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+  /* ── Center block ── */
+  .hero-center {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
     text-align: center;
-    padding: 48px 0 32px;
-    max-width: 680px;
+    max-width: 620px;
+    margin: 0 auto;
+    padding-bottom: 24px;
   }
 
-  .landing-h1 {
-    font-family: var(--font-sans);
-    font-size: clamp(38px, 11vw, 64px);
-    font-weight: 800;
-    line-height: 1.06;
-    letter-spacing: -0.035em;
-    color: var(--text-primary);
+  /* ── Headline ── */
+  .hero-h1 {
+    font-family: 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-size: clamp(32px, 5.5vw, 52px);
+    font-weight: 750;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: #EDEDEF;
     margin: 0 0 24px;
   }
 
-  /* Shimmer text */
-  .shimmer-text {
-    display: inline-block;
-    background: linear-gradient(90deg, var(--text-primary) 0%, var(--text-primary) 40%, #FF4D4D 50%, #FFB84D 55%, var(--text-primary) 60%, var(--text-primary) 100%);
-    background-size: 200% 100%;
+  .gradient-phrase {
+    background: linear-gradient(135deg, #E87FA8 0%, #E8833A 55%, #D9C26E 100%);
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: shimmer 3s ease-in-out infinite;
-  }
-  .shimmer-text--delay { animation-delay: 0.4s; }
-
-  @keyframes shimmer {
-    0% { background-position: 100% 0; }
-    100% { background-position: -100% 0; }
   }
 
-  .landing-sub {
-    font-size: 17px;
-    color: var(--text-secondary);
-    line-height: 1.7;
-    max-width: min(28rem, 100%);
-    margin: 0 0 28px;
+  /* ── Subhead ── */
+  .hero-sub {
+    font-size: clamp(14px, 1.8vw, 16px);
+    line-height: 1.65;
+    color: #6A6A72;
+    max-width: 420px;
+    margin: 0 0 36px;
+    font-weight: 400;
   }
 
-  /* ── Stats bar ── */
-  .stats-bar {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 24px;
-    background: var(--glass-medium);
-    border: 1px solid var(--border-subtle);
-    border-radius: 100px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-tall-card);
-  }
-  .stats-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-  .stats-item strong {
-    color: var(--text-primary);
-    font-weight: 800;
-  }
-  .stats-divider {
-    width: 1px;
-    height: 16px;
-    background: var(--border-subtle);
-  }
-
-  /* ── Auth buttons ── */
-  .landing-auth-buttons {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 28px;
-  }
-
-  .landing-auth-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 28px;
-    border-radius: 14px;
-    background: var(--glass-strong, var(--glass-medium));
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    font-size: 15px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    box-shadow: var(--shadow-tall-card);
-  }
-  .landing-auth-btn:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: var(--shadow-card-hover);
-    border-color: rgba(255, 77, 77, 0.25);
-  }
-  .landing-auth-btn:active { transform: scale(0.98); }
-  .landing-auth-btn.connected {
-    border-color: rgba(74, 222, 128, 0.4);
-    color: #4ade80; cursor: default;
-  }
-  .landing-auth-btn:disabled { opacity: 0.6; cursor: default; }
-  .landing-auth-btn:disabled:hover { transform: none; box-shadow: var(--shadow-tall-card); }
-
-  .glow-breathe { animation: breathe 2.8s ease-in-out infinite; }
-  .glow-breathe--delay { animation-delay: 1.4s; }
-
-  @keyframes breathe {
-    0%, 100% { box-shadow: var(--shadow-tall-card); }
-    50% { box-shadow: 0 4px 28px rgba(255, 77, 77, 0.18), 0 0 0 1px rgba(255, 77, 77, 0.08); }
-  }
-
-  .auth-icon { width: 20px; height: 20px; }
-
-  .landing-trust {
-    font-size: 13px; color: var(--text-muted); margin: 0;
-    opacity: 0; transition: opacity 1s ease 1.2s;
-  }
-  .landing-trust.ready { opacity: 1; }
-
-  /* ── CTA ── */
-  .landing-cta {
-    width: fit-content; padding: 16px 48px; border-radius: 100px;
-    background: linear-gradient(135deg, #FF4D4D, #FFB84D);
-    border: none; color: white; font-size: 16px; font-weight: 700;
+  /* ══════════════════════════════════════════════════════════
+     INSTAGRAM BUTTON
+     ══════════════════════════════════════════════════════════ */
+  .ig-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; max-width: 340px;
+    height: 52px; padding: 0 32px;
+    border: none; border-radius: 13px;
+    background: linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 80%, #515BD4 100%);
+    color: #fff; font-size: 15px; font-weight: 600;
     font-family: inherit; cursor: pointer;
-    box-shadow: 0 4px 24px rgba(255, 77, 77, 0.3);
-    transition: transform 0.2s, box-shadow 0.2s;
-    margin-top: 20px;
+    box-shadow: 0 4px 32px rgba(221, 42, 123, 0.20);
+    transition: transform 0.25s ease, box-shadow 0.4s ease;
+    position: relative; overflow: hidden;
   }
-  .landing-cta:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 32px rgba(255, 77, 77, 0.4); }
-  .landing-cta:active { transform: scale(0.97); }
-  .landing-cta:disabled { opacity: 0.7; cursor: default; }
-
-  /* ── Section label ── */
-  .landing-section-label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.08em; color: var(--text-muted);
-    margin-bottom: 20px; width: 100%; max-width: 54rem;
+  .ig-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+    opacity: 0; transition: opacity 0.3s ease;
   }
-
-  /* ── Value prop cards ── */
-  .landing-cards {
-    display: grid; grid-template-columns: 1fr; gap: 16px;
-    width: 100%; max-width: 54rem; margin-bottom: 48px;
+  .ig-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 40px rgba(221, 42, 123, 0.28), 0 0 60px rgba(221, 42, 123, 0.08);
   }
-  .landing-card {
-    background: var(--glass-strong, var(--glass-medium));
-    border: 1px solid var(--border-subtle);
-    border-radius: 18px; padding: 28px 24px;
-    box-shadow: var(--shadow-tall-card);
-    opacity: 0; transform: translateY(32px);
-    transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.2s ease;
+  .ig-btn:hover::before { opacity: 1; }
+  .ig-btn:active { transform: scale(0.985); }
+
+  .ig-btn--loading {
+    opacity: 0.7; cursor: default;
   }
-  .landing-card:hover { box-shadow: var(--shadow-card-hover); }
-  .cards-visible .landing-card { opacity: 1; transform: translateY(0); }
-  .cards-visible .landing-card:nth-child(1) { transition-delay: 0s; }
-  .cards-visible .landing-card:nth-child(2) { transition-delay: 0.15s; }
-  .cards-visible .landing-card:nth-child(3) { transition-delay: 0.3s; }
+  .ig-btn--loading:hover { transform: none; box-shadow: 0 4px 32px rgba(221, 42, 123, 0.20); }
+  .ig-btn--loading:hover::before { opacity: 0; }
 
-  .landing-card-icon { color: var(--accent-primary); margin-bottom: 12px; }
-  .landing-card-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
-  .landing-card-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin: 0; }
+  .ig-spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Creator showcase ── */
-  .creators-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-    width: 100%;
-    max-width: 54rem;
-    margin-bottom: 48px;
+  /* ── Auth error ── */
+  .auth-error {
+    font-size: 12px; color: #fb7185;
+    margin: 12px 0 0; text-align: center;
   }
 
-  .creator-card {
-    background: var(--glass-strong, var(--glass-medium));
-    border: 1px solid var(--border-subtle);
-    border-radius: 16px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    box-shadow: var(--shadow-tall-card);
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.5s ease var(--delay), transform 0.5s ease var(--delay), box-shadow 0.2s ease;
+  /* ── Trust line ── */
+  .trust-line {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 11px; color: #3A3A40;
+    margin: 16px 0 0; letter-spacing: 0.01em;
+    font-weight: 400;
   }
-  .creator-card:hover { box-shadow: var(--shadow-card-hover); }
-  .creators-visible .creator-card { opacity: 1; transform: translateY(0); }
 
-  .creator-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 16px; font-weight: 800;
+  /* ── Live activity ticker ── */
+  .feed-ticker {
+    display: flex; align-items: center; gap: 8px;
+    margin: 24px 0 0;
+    font-size: 12px; color: #4A4A50;
+    opacity: 0; transform: translateY(4px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .feed-ticker.feed-show { opacity: 1; transform: translateY(0); }
+  .feed-ticker strong { color: #8A8A90; font-weight: 600; }
+  .feed-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #4ade80; flex-shrink: 0;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.35);
+    animation: pulse-dot 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BOTTOM BAR
+     ══════════════════════════════════════════════════════════ */
+  .hero-bottom {
     flex-shrink: 0;
-  }
-  .creator-info { display: flex; flex-direction: column; gap: 1px; }
-  .creator-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-  .creator-handle { font-size: 12px; color: var(--text-muted); }
-  .creator-meta { display: flex; align-items: center; gap: 12px; }
-  .creator-stat {
-    display: flex; align-items: center; gap: 4px;
-    font-size: 12px; color: var(--text-secondary);
-  }
-  .creator-earned {
-    font-size: 13px; font-weight: 700; color: #4ade80;
-  }
-  .creator-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-  .creator-tag {
-    font-size: 11px; font-weight: 600;
-    padding: 3px 10px; border-radius: 100px;
-    background: var(--accent-soft); color: var(--accent-primary);
+    padding: 0 0 max(28px, env(safe-area-inset-bottom, 28px));
+    display: flex; flex-direction: column; gap: 20px;
+    border-top: 1px solid rgba(255,255,255,0.03);
+    padding-top: 20px;
   }
 
-  /* ── Footer ── */
-  .landing-footer {
-    padding: 32px 0 max(48px, env(safe-area-inset-bottom, 48px));
-    text-align: center;
+  /* Stats */
+  .stats-row {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; color: #3A3A40;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
   }
-  .landing-footer p { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .stat strong { color: #5A5A62; font-weight: 600; }
+  .stat-sep { color: #2A2A30; font-weight: 300; }
 
-  /* ── Auth card ── */
-  .auth-card-wrapper {
-    min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 48px 0;
+  /* How it works — row */
+  .how-row {
+    display: flex; align-items: flex-start; gap: 0;
   }
-  .auth-card {
-    background: var(--glass-strong, var(--glass-medium));
-    border: 1px solid var(--border-subtle);
-    border-radius: 24px; padding: 48px 40px;
-    display: flex; flex-direction: column; align-items: center; gap: 16px;
-    max-width: 400px; width: 100%;
-    box-shadow: var(--shadow-tall-card);
-    animation: card-rise 0.5s ease forwards;
+  .how-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    flex: 1;
+    padding: 0 20px;
   }
-  @keyframes card-rise {
-    from { opacity: 0; transform: translateY(24px) scale(0.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+  .how-item:first-child { padding-left: 0; }
+  .how-item:last-child { padding-right: 0; }
+  .how-sep {
+    width: 1px; height: 36px;
+    background: rgba(255,255,255,0.04);
+    flex-shrink: 0; margin-top: 2px;
   }
-  .auth-avatar {
-    width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
-    border: 2px solid var(--border-subtle);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  .how-num {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    color: #2A2A30; flex-shrink: 0;
+    margin-top: 2px;
   }
-  .auth-name { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0; }
-  .auth-card-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px; }
-  .auth-card-buttons .landing-auth-btn { width: 100%; justify-content: center; animation: none; }
-  .auth-error { font-size: 13px; color: #fb7185; margin: 0; text-align: center; }
-  .auth-hint { font-size: 13px; color: var(--text-muted); margin: 0; text-align: center; }
-  .auth-skip-link {
-    background: none; border: none; color: var(--accent-primary);
-    font-size: 13px; font-family: inherit; cursor: pointer;
-    text-decoration: underline; padding: 0;
+  .how-title {
+    font-size: 13px; font-weight: 600; color: #8A8A90;
+    margin-bottom: 3px;
   }
-
-  /* ── Responsive ── */
-  @media (max-width: 520px) {
-    .landing-auth-buttons { flex-direction: column; width: 100%; }
-    .landing-auth-btn { justify-content: center; }
-    .auth-card { padding: 36px 24px; margin: 0 16px; }
-    .stats-bar { gap: 10px; padding: 10px 16px; }
-    .stats-item { font-size: 12px; }
-    .creators-grid { grid-template-columns: 1fr; }
+  .how-desc {
+    font-size: 11px; color: #4A4A50; line-height: 1.5;
+    font-weight: 400;
   }
 
-  @media (min-width: 768px) {
-    .landing-cards { grid-template-columns: repeat(3, 1fr); }
-    .creators-grid { grid-template-columns: repeat(3, 1fr); }
+  /* ── Loading shell ── */
+  .loading-shell {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #0F0F11;
+  }
+  .loading-mark {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, #E87FA8, #E8833A);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #fff;
+    animation: mark-pulse 2s ease-in-out infinite;
+  }
+  @keyframes mark-pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     MOBILE
+     ══════════════════════════════════════════════════════════ */
+  @media (max-width: 640px) {
+    .landing-content { padding: 0 24px; }
+
+    .hero-nav { padding: max(16px, env(safe-area-inset-top, 16px)) 0 0; }
+    .nav-pill { font-size: 9px; padding: 4px 10px; }
+
+    .hero-h1 { font-size: 32px; margin-bottom: 18px; }
+    .hero-sub { font-size: 14px; margin-bottom: 28px; max-width: 320px; }
+
+    .ig-btn {
+      max-width: 100%; height: 56px;
+      border-radius: 14px; font-size: 15px;
+    }
+
+    .trust-line { font-size: 10px; }
+    .feed-ticker { font-size: 11px; margin-top: 20px; }
+
+    .hero-bottom { gap: 16px; padding-top: 16px; }
+    .stats-row { font-size: 10px; gap: 8px; flex-wrap: wrap; }
+
+    /* Stack how-it-works vertically on mobile */
+    .how-row {
+      flex-direction: column; gap: 14px;
+    }
+    .how-sep { display: none; }
+    .how-item { padding: 0; }
+  }
+
+  /* ── Very small screens ── */
+  @media (max-width: 380px) {
+    .hero-h1 { font-size: 28px; }
+    .hero-sub { font-size: 13px; }
   }
 </style>

@@ -1,0 +1,173 @@
+/* ═══════════════════════════════════════════════════════
+   EDITORIAL TOKENS — Magazine / Highsnobiety aesthetic
+   Applied to .editorial-shell only (brands portal)
+   ═══════════════════════════════════════════════════════ */
+
+.editorial-shell {
+  /* ── Surface palette — warm newsprint ── */
+  --ed-bg:          oklch(97% 0.008 75);
+  --ed-bg-deep:     oklch(94% 0.010 72);
+  --ed-bg-elevated: oklch(99% 0.004 80);
+  --ed-ink:         oklch(14% 0.008 260);
+  --ed-ink-2:       oklch(35% 0.010 250);
+  --ed-ink-3:       oklch(55% 0.008 245);
+  --ed-ink-ghost:   oklch(72% 0.006 240);
+
+  /* ── Borders — hairline rules ── */
+  --ed-rule:        rgba(20, 24, 32, 0.12);
+  --ed-rule-heavy:  rgba(20, 24, 32, 0.28);
+  --ed-rule-light:  rgba(20, 24, 32, 0.06);
+
+  /* ── Accent — pulled from brand theme, fallback to red ── */
+  --ed-accent:      var(--accent-primary, #E63B2E);
+  --ed-accent-soft: color-mix(in srgb, var(--ed-accent) 10%, transparent);
+  --ed-accent-mid:  color-mix(in srgb, var(--ed-accent) 25%, transparent);
+
+  /* ── Typography — editorial scale ── */
+  --ed-font-display: 'Bodoni Moda', 'PP Mori', Georgia, 'Times New Roman', serif;
+  --ed-font-body:    'PP Mori', 'Geist Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ed-font-mono:    'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
+
+  /* Display sizes — poster-like for stats & headlines */
+  --ed-display-xl:   clamp(3.5rem, 8vw, 7rem);
+  --ed-display-lg:   clamp(2.75rem, 6vw, 4.5rem);
+  --ed-display-md:   clamp(2rem, 4.5vw, 3rem);
+  --ed-display-sm:   clamp(1.5rem, 3vw, 2rem);
+
+  /* Body sizes */
+  --ed-text-lg:      1.125rem;
+  --ed-text-base:    0.9375rem;
+  --ed-text-sm:      0.8125rem;
+  --ed-text-xs:      0.6875rem;
+  --ed-text-xxs:     0.5625rem;
+
+  /* ── Spacing — editorial rhythm ── */
+  --ed-gutter:       clamp(16px, 3vw, 32px);
+  --ed-gutter-wide:  clamp(24px, 5vw, 64px);
+  --ed-section-gap:  clamp(48px, 8vh, 96px);
+
+  /* ── Misc ── */
+  --ed-radius:       0;  /* editorial = sharp corners */
+  --ed-radius-sm:    2px;
+  --ed-ease:         cubic-bezier(0.32, 0.72, 0, 1);
+  --ed-ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ed-dur:          250ms;
+  --ed-dur-slow:     600ms;
+
+  /* base setup */
+  background: var(--ed-bg);
+  color: var(--ed-ink);
+  font-family: var(--ed-font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* layout — full viewport, scroll inside main */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ── Utility classes ── */
+.ed-serif {
+  font-family: var(--ed-font-display);
+  font-weight: 400;
+  font-style: normal;
+}
+
+.ed-serif-italic {
+  font-family: var(--ed-font-display);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.ed-mono {
+  font-family: var(--ed-font-mono);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.ed-caps {
+  font-family: var(--ed-font-body);
+  font-size: var(--ed-text-xxs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ed-kicker {
+  font-family: var(--ed-font-body);
+  font-size: var(--ed-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ed-accent);
+}
+
+/* ── Hairline rules ── */
+.ed-rule-top    { border-top: 1px solid var(--ed-rule); }
+.ed-rule-bottom { border-bottom: 1px solid var(--ed-rule); }
+.ed-rule-heavy  { border-top: 2px solid var(--ed-ink); }
+
+/* ── Drop cap ── */
+.ed-drop-cap::first-letter {
+  font-family: var(--ed-font-display);
+  font-size: 3.5em;
+  float: left;
+  line-height: 0.8;
+  margin-right: 0.08em;
+  margin-top: 0.05em;
+  color: var(--ed-ink);
+  font-weight: 400;
+}
+
+/* ── Oversized number — poster treatment for stats ── */
+.ed-stat-number {
+  font-family: var(--ed-font-display);
+  font-size: var(--ed-display-xl);
+  font-weight: 400;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  color: var(--ed-ink);
+}
+
+.ed-stat-label {
+  font-family: var(--ed-font-body);
+  font-size: var(--ed-text-xxs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ed-ink-3);
+}
+
+/* ── Pull quote ── */
+.ed-pull-quote {
+  font-family: var(--ed-font-display);
+  font-style: italic;
+  font-size: var(--ed-display-sm);
+  line-height: 1.25;
+  color: var(--ed-ink);
+  border-left: 2px solid var(--ed-accent);
+  padding-left: var(--ed-gutter);
+  margin: var(--ed-gutter-wide) 0;
+}
+
+/* ── Caption — italic serif under images ── */
+.ed-caption {
+  font-family: var(--ed-font-display);
+  font-style: italic;
+  font-size: var(--ed-text-sm);
+  color: var(--ed-ink-3);
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+/* ── Running head / folio ── */
+.ed-running-head {
+  font-family: var(--ed-font-body);
+  font-size: var(--ed-text-xxs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ed-ink-ghost);
+}

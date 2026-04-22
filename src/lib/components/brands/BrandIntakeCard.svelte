@@ -148,11 +148,13 @@
   .intake-card {
     position: relative;
     width: 100%;
-    max-width: 440px;
+    max-width: 480px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 24px;
     padding: 28px 24px;
+    overflow: hidden;
     border-radius: 1.25rem;
     border: 1px solid var(--border-subtle);
     background: var(--glass-light);
@@ -215,6 +217,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-width: 0;
   }
 
   .field label {
@@ -283,6 +286,7 @@
     border-radius: 0;
     padding-left: 2px;
     box-shadow: none !important;
+    min-width: 0;
   }
 
   /* ── Examples ── */

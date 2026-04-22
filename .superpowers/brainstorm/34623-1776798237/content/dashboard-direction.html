@@ -1,0 +1,111 @@
+<h2>Dashboard Aesthetic Direction</h2>
+<p class="subtitle">Moving from editorial/magazine to a modern brand dashboard. Which vibe feels right for Wagwan?</p>
+
+<div class="cards">
+  <!-- Option A: Glass + Dark -->
+  <div class="card" data-choice="glass-dark" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #0a0a1a, #1a1a3e); padding: 24px; min-height: 260px; position: relative; overflow: hidden;">
+      <!-- Glass panel mockup -->
+      <div style="position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); filter: blur(60px);"></div>
+      <div style="position: absolute; bottom: -30px; left: -30px; width: 160px; height: 160px; border-radius: 50%; background: rgba(236, 72, 153, 0.12); filter: blur(50px);"></div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+        <div style="background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px;">
+          <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.4); margin-bottom: 6px;">Followers</div>
+          <div style="font-size: 22px; font-weight: 600; color: #fff;">924</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px;">
+          <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.4); margin-bottom: 6px;">Eng. Rate</div>
+          <div style="font-size: 22px; font-weight: 600; color: #6ee7b7;">4.19%</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px;">
+          <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.4); margin-bottom: 6px;">Reach</div>
+          <div style="font-size: 22px; font-weight: 600; color: #fff;">39</div>
+        </div>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.04); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.35); margin-bottom: 8px;">Brand Direction</div>
+        <div style="font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.5;">Position as Bangalore's culture-tech bridge...</div>
+        <div style="display: flex; gap: 6px; margin-top: 10px;">
+          <span style="font-size: 10px; padding: 3px 10px; border-radius: 20px; background: rgba(99,102,241,0.2); color: #a5b4fc;">urban tech</span>
+          <span style="font-size: 10px; padding: 3px 10px; border-radius: 20px; background: rgba(236,72,153,0.15); color: #f9a8d4;">culture</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Glass + Dark</h3>
+      <p>Deep dark background, frosted glass panels, subtle ambient gradients. Premium feel like Linear/Raycast. Sections are glass cards with blur. Expand to reveal detail.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Light + Bento -->
+  <div class="card" data-choice="light-bento" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #f8f7f4; padding: 24px; min-height: 260px;">
+      <div style="display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: auto auto; gap: 10px;">
+        <div style="background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 16px; grid-row: span 2;">
+          <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 8px;">Brand Direction</div>
+          <div style="font-size: 14px; color: #1a1a1a; font-weight: 500; line-height: 1.5;">Position as Bangalore's culture-tech bridge connecting underground scenes with digital infrastructure.</div>
+          <div style="display: flex; gap: 6px; margin-top: 12px;">
+            <span style="font-size: 10px; padding: 3px 10px; border-radius: 8px; background: #f0f0f0; color: #555;">urban tech</span>
+            <span style="font-size: 10px; padding: 3px 10px; border-radius: 8px; background: #f0f0f0; color: #555;">culture</span>
+          </div>
+        </div>
+        <div style="background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 14px;">
+          <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 6px;">Followers</div>
+          <div style="font-size: 24px; font-weight: 700; color: #1a1a1a;">924</div>
+        </div>
+        <div style="background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 14px;">
+          <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #999; margin-bottom: 6px;">Eng. Rate</div>
+          <div style="font-size: 24px; font-weight: 700; color: #16a34a;">4.19%</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Light + Bento Grid</h3>
+      <p>Clean white background, Apple-style bento grid with varying card sizes. Rounded corners, subtle shadows. Warm and approachable. Click cards to expand.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Hybrid Glass -->
+  <div class="card" data-choice="hybrid-glass" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(180deg, #111118, #1c1c2e); padding: 24px; min-height: 260px; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: 20%; left: 50%; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(255,77,77,0.08), transparent 70%); transform: translate(-50%, -50%);"></div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; padding: 16px; grid-column: span 2;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #ff4d4d, #ff8c4d);"></div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #fff;">Wagwan</div>
+              <div style="font-size: 11px; color: rgba(255,255,255,0.4);">@wagwan.world</div>
+            </div>
+            <div style="margin-left: auto; display: flex; gap: 16px;">
+              <div style="text-align: center;"><div style="font-size: 18px; font-weight: 600; color: #fff;">924</div><div style="font-size: 8px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em;">followers</div></div>
+              <div style="text-align: center;"><div style="font-size: 18px; font-weight: 600; color: #6ee7b7;">4.2%</div><div style="font-size: 8px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em;">eng rate</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 12px; cursor: pointer; transition: all 0.2s;" onmouseenter="this.style.background='rgba(255,255,255,0.06)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.background='rgba(255,255,255,0.03)';this.style.transform='translateY(0)'">
+          <div style="font-size: 9px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em;">Strategy</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Click to expand</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 12px; cursor: pointer;">
+          <div style="font-size: 9px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em;">Audience</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Click to expand</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 12px; cursor: pointer;">
+          <div style="font-size: 9px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.08em;">Content</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px;">Click to expand</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Hybrid — Dark Glass + Bento</h3>
+      <p>Dark base with the Wagwan red/gold ambient glow. Glass bento grid — compact cards that expand on click with spring animations. Profile as hero header. Horizontal scroll for creators. Most unique feel.</p>
+    </div>
+  </div>
+</div>
