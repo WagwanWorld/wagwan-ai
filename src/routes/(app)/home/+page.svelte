@@ -1992,321 +1992,218 @@
   />
 {/if}
 
-<div class="home-page-root" data-home-surface="dark">
-  <PersonaBg photoUrl={photoUrl} dark />
+<div class="os-root" data-home-surface="dark">
+  <!-- ════════════════════════════════════════════════════════════
+       BENTO GRID — Personal OS Dashboard
+       ════════════════════════════════════════════════════════════ -->
 
-  <div class="home-split">
-    <!-- ── Left: Identity feed ── -->
-    <div class="home-identity-col">
-      <div class="home-identity-scroll">
-        <HeroIdentity
-          displayName={$profile.name?.trim() || firstName}
-          photoUrl={photoUrl}
-          avatarInitial={avatarInitial}
-          oneLiner={heroOneLiner}
-          archetype={heroArchetype}
-          mode={heroMode}
-          vibeTags={heroVibeTags}
-          contradiction={heroContradiction}
-          greeting={morningGreeting}
-          city={city}
-          loading={personaLoading && !hasHomeHeaderContent}
-          regenerating={personaRegenerating}
-          on:share={() => (showShareModal = true)}
-          on:refresh={regeneratePersona}
-        />
-
-        <div class="home-feed-pad">
-          <!-- ════════════════════════════════════════════
-               CREATOR DASHBOARD — earnings, requests, portfolio
-               ════════════════════════════════════════════ -->
-
-          <!-- Earnings summary -->
-          <section class="dash-section">
-            <div class="dash-earnings">
-              <div class="dash-earn-card">
-                <div class="dash-earn-label">Total earned</div>
-                <div class="dash-earn-value">{formatInr(totalEarned)}</div>
-              </div>
-              <div class="dash-earn-card">
-                <div class="dash-earn-label">Pending</div>
-                <div class="dash-earn-value dash-earn-value--pending">{formatInr(pendingAmount)}</div>
-              </div>
-              <div class="dash-earn-card">
-                <div class="dash-earn-label">Withdrawable</div>
-                <div class="dash-earn-value dash-earn-value--green">{formatInr(withdrawable)}</div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Brand Requests -->
-          <section class="dash-section">
-            <h2 class="dash-section-title">
-              <Briefcase size={16} weight="bold" />
-              Brand requests
-              {#if activeBriefs > 0}
-                <span class="dash-count">{activeBriefs}</span>
-              {/if}
-            </h2>
-            {#if dashLoading}
-              <div class="dash-empty">Loading briefs...</div>
-            {:else if dashCampaigns.length === 0}
-              <div class="dash-empty">
-                <p>No pending requests right now.</p>
-                <p class="dash-empty-sub">New brand matches will appear here when they find you.</p>
-              </div>
-            {:else}
-              <div class="dash-briefs">
-                {#each dashCampaigns as campaign (campaign.campaign_id)}
-                  <div class="dash-brief">
-                    <div class="dash-brief-top">
-                      <div class="dash-brief-brand">{campaign.brand_name}</div>
-                      <div class="dash-brief-amount">{formatInr(campaign.reward_inr)}</div>
-                    </div>
-                    <div class="dash-brief-title">{campaign.title}</div>
-                    <div class="dash-brief-text">{campaign.creative_text.slice(0, 120)}{campaign.creative_text.length > 120 ? '...' : ''}</div>
-                    {#if campaign.match_reason}
-                      <div class="dash-brief-match">
-                        <span class="dash-match-score">{Math.round(campaign.match_score * 100)}% match</span>
-                        <span class="dash-match-reason">{campaign.match_reason}</span>
-                      </div>
-                    {/if}
-                    <div class="dash-brief-actions">
-                      <button
-                        class="dash-brief-btn dash-brief-btn--accept"
-                        disabled={dashRespondingId === String(campaign.campaign_id)}
-                        on:click={() => acceptCampaign(String(campaign.campaign_id))}
-                      >
-                        <CheckCircle size={16} weight="bold" />
-                        Accept
-                      </button>
-                      <button
-                        class="dash-brief-btn dash-brief-btn--decline"
-                        disabled={dashRespondingId === String(campaign.campaign_id)}
-                        on:click={() => declineCampaign(String(campaign.campaign_id))}
-                      >
-                        <XCircle size={16} weight="bold" />
-                        Decline
-                      </button>
-                    </div>
-                  </div>
-                {/each}
-              </div>
-            {/if}
-          </section>
-
-          <!-- Brand Portfolio -->
-          {#if dashAcceptedBrands.length > 0}
-            <section class="dash-section">
-              <h2 class="dash-section-title">
-                <CheckCircle size={16} weight="bold" />
-                Brand portfolio
-              </h2>
-              <div class="dash-portfolio">
-                {#each dashAcceptedBrands as brand}
-                  <div class="dash-portfolio-chip">{brand}</div>
-                {/each}
-              </div>
-            </section>
-          {/if}
-
-          <!-- Brands in Ecosystem -->
-          <section class="dash-section">
-            <h2 class="dash-section-title">
-              <Briefcase size={16} weight="bold" />
-              Brands in ecosystem
-              <span class="dash-count">{ecoBrands.length}</span>
-            </h2>
-            <div class="dash-eco-brands">
-              {#each ecoBrands as brand}
-                <div class="dash-eco-chip">
-                  <div class="dash-eco-dot" style="background: {brand.logo_color}"></div>
-                  <div class="dash-eco-info">
-                    <span class="dash-eco-name">{brand.name}</span>
-                    <span class="dash-eco-cat">{brand.category}</span>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          </section>
-
-          <!-- Recent Transactions -->
-          {#if dashWallet?.transactions?.length}
-            <section class="dash-section">
-              <h2 class="dash-section-title">
-                <Clock size={16} weight="bold" />
-                Recent activity
-              </h2>
-              <div class="dash-transactions">
-                {#each dashWallet.transactions.slice(0, 5) as tx (tx.id)}
-                  <div class="dash-tx">
-                    <div class="dash-tx-info">
-                      <span class="dash-tx-note">{tx.note || 'Transaction'}</span>
-                      <span class="dash-tx-date">{new Date(tx.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                    </div>
-                    <div class="dash-tx-amount" class:dash-tx-amount--pending={tx.status === 'pending'}>
-                      {tx.status === 'pending' ? '⏳' : ''}
-                      {formatInr(tx.amount_inr)}
-                    </div>
-                  </div>
-                {/each}
-              </div>
-            </section>
-          {/if}
-
-          <!-- Divider before lifestyle content -->
-          {#if dashCampaigns.length > 0 || dashAcceptedBrands.length > 0 || (dashWallet?.summary?.total_inr ?? 0) > 0}
-            <div class="dash-divider"></div>
-          {/if}
-
-          <!-- ── 📅 Today ── -->
-          {#if calEvents.length || $profile.googleConnected}
-            <NarrativeSection emoji="📅" label="Today">
-              <div class="narrative-card" style="width:100%;">
-                <CalendarToday events={calEvents} />
-              </div>
-            </NarrativeSection>
-          {/if}
-
-          <!-- ── 🎵 How You Listen ── -->
-          {#if musicNarrative || musicArtists.length || musicGenreSegments.length}
-            <NarrativeSection emoji="🎵" label="How You Listen">
-              {#if musicArtists.length}
-                <div class="narrative-card">
-                  <div class="narrative-card-label">Top Artists</div>
-                  <ArtistStrip artists={musicArtists} />
-                </div>
-              {/if}
-              {#if musicGenreSegments.length}
-                <div class="narrative-card">
-                  <div class="narrative-card-label">Your Sound</div>
-                  <MiniDonut segments={musicGenreSegments} />
-                </div>
-              {/if}
-              <div class="narrative-card">
-                <div class="narrative-card-label">When You Listen</div>
-                <MiniHeatmap data={musicHeatmapData} caption="Evenings. Your shipping hours." />
-              </div>
-              {#if musicNarrative}
-                <div class="narrative-card">
-                  <p class="narrative-text">{musicNarrative}</p>
-                </div>
-              {/if}
-            </NarrativeSection>
-          {/if}
-
-          <!-- ── Rich Recommendations ── -->
-          {#if displayMovies.length}
-            <RecommendationStrip
-              title="Watch Tonight"
-              emoji="🎬"
-              variant="tall"
-              items={displayMovies}
-            />
-          {/if}
-
-          {#if recMusic.length}
-            <RecommendationStrip
-              title="Listen Now"
-              emoji="🎵"
-              variant="square"
-              items={recMusic}
-            />
-          {/if}
-
-          {#if displayBooks.length}
-            <RecommendationStrip
-              title="Read Next"
-              emoji="📚"
-              variant="tall"
-              items={displayBooks}
-            />
-          {/if}
-
-          {#if recRestaurants.length}
-            <RecommendationStrip
-              title="Eat Here"
-              emoji="🍽️"
-              variant="wide"
-              items={recRestaurants}
-            />
-          {/if}
-
-          <!-- ── 📰 Your Brief ── -->
-          {#if morningNews.length}
-            <NarrativeSection emoji="📰" label="Your Brief" vertical>
-              <MorningBrief news={morningNews} />
-            </NarrativeSection>
-          {/if}
-
-
-          <!-- ── 📱 How You Show Up ── -->
-          {#if socialNarrative || socialBarData.length}
-            <NarrativeSection emoji="📱" label="How You Show Up">
-              {#if socialBarData.length}
-                <div class="narrative-card">
-                  <div class="narrative-card-label">What You Post</div>
-                  <MiniBarChart bars={socialBarData} />
-                </div>
-              {/if}
-              {#if socialReachText || igPostingCadence}
-                <div class="narrative-card">
-                  <div class="narrative-card-label">Your Reach</div>
-                  {#if socialReachText}<p class="narrative-stat">{socialReachText}</p>{/if}
-                  {#if igPostingCadence}<p class="narrative-subtext">Posting {igPostingCadence}</p>{/if}
-                </div>
-              {/if}
-              {#if socialNarrative}
-                <div class="narrative-card">
-                  <p class="narrative-text">{socialNarrative}</p>
-                </div>
-              {/if}
-            </NarrativeSection>
-          {/if}
-
-
-          <!-- ── 🧭 Where You're Headed ── -->
-          {#if trajectoryOneLiner || trajectoryScores.some(s => s.value > 0) || trajectoryPredictions.length}
-            <NarrativeSection emoji="🧭" label="Where You're Headed" vertical>
-              {#if trajectoryOneLiner}
-                <p class="trajectory-headline">{trajectoryOneLiner}</p>
-              {/if}
-              {#if trajectoryScores.some(s => s.value > 0)}
-                <ScoreRings scores={trajectoryScores} />
-              {/if}
-              {#each trajectoryPredictions as pred}
-                <TrajectoryCard emoji={pred.emoji} text={pred.text} />
-              {/each}
-              {#if nonObviousInsight}
-                <TrajectoryCard emoji="✨" text={nonObviousInsight} highlight />
-              {/if}
-            </NarrativeSection>
-          {/if}
-
-          {#if forYouTabs.length > 0 || recsLoading}
-            <section class="home-section home-section--foryou">
-              <h2 class="home-section__title">For you</h2>
-              <ForYouTabs
-                tabs={forYouTabs}
-                loading={recsLoading}
-                on:feedback={(e) => sendExpressionFeedback(e.detail.title, e.detail.vote)}
-              />
-            </section>
-          {/if}
-
-          {#if completeness < 80}
-            <div class="home-nudge">
-              <p class="home-nudge__text">Your AI knows you <strong>{completeness}%</strong></p>
-              <a href="/profile" class="home-nudge__link">Connect more →</a>
-            </div>
-          {/if}
-
-          <div class="home-bottom-spacer"></div>
-        </div>
+  <!-- Top bar -->
+  <header class="os-top">
+    <div class="os-profile-card">
+      {#if photoUrl}
+        <img src={photoUrl} alt="" class="os-avatar" />
+      {:else}
+        <div class="os-avatar os-avatar--init">{avatarInitial}</div>
+      {/if}
+      <div class="os-profile-info">
+        <span class="os-profile-name">{$profile.name?.trim() || firstName}</span>
+        {#if city}<span class="os-profile-meta">{city}</span>{/if}
+        {#if heroVibeTags.length}
+          <div class="os-profile-tags">
+            {#each heroVibeTags.slice(0, 3) as tag}
+              <span class="os-tag">{tag}</span>
+            {/each}
+          </div>
+        {/if}
       </div>
     </div>
 
-    <!-- ── Right: Chat column ── -->
+    <div class="os-greeting-block">
+      <span class="os-greeting-overline">WAGWAN OS</span>
+      <h1 class="os-greeting">{morningGreeting.split(',')[0]}, <em>{firstName}</em>.</h1>
+      <span class="os-greeting-date">{DATE_STR}</span>
+    </div>
+
+    <div class="os-clock-block">
+      <div class="os-clock">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+      <span class="os-clock-label">LOCAL TIME</span>
+    </div>
+
+    <div class="os-earn-hero">
+      <div class="os-earn-big">{formatInr(totalEarned)}</div>
+      <span class="os-earn-big-label">TOTAL EARNED</span>
+      <div class="os-earn-sub-row">
+        <span class="os-earn-sub"><span class="os-earn-sub-val os-earn-sub-val--pending">{formatInr(pendingAmount)}</span> pending</span>
+        <span class="os-earn-sub"><span class="os-earn-sub-val os-earn-sub-val--green">{formatInr(withdrawable)}</span> ready</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Bento grid -->
+  <div class="os-bento">
+
+    <!-- ── Brands in Ecosystem ── -->
+    <section class="os-card os-card--brands">
+      <div class="os-card-head">
+        <span class="os-card-label">BRANDS IN ECOSYSTEM</span>
+        <span class="os-card-count">{ecoBrands.length}</span>
+      </div>
+      <div class="os-brand-grid">
+        {#each ecoBrands as brand}
+          <div class="os-brand-row">
+            <div class="os-brand-dot" style="background:{brand.logo_color}"></div>
+            <span class="os-brand-name">{brand.name}</span>
+            <span class="os-brand-cat">{brand.category}</span>
+          </div>
+        {/each}
+      </div>
+    </section>
+
+    <!-- ── Brand Requests ── -->
+    <section class="os-card os-card--requests">
+      <div class="os-card-head">
+        <span class="os-card-label">BRAND REQUESTS</span>
+        {#if activeBriefs > 0}<span class="os-card-count os-card-count--live">{activeBriefs}</span>{/if}
+      </div>
+      {#if dashLoading}
+        <div class="os-card-empty">Loading...</div>
+      {:else if dashCampaigns.length === 0}
+        <div class="os-card-empty">No pending requests</div>
+      {:else}
+        <div class="os-request-list">
+          {#each dashCampaigns as campaign (campaign.campaign_id)}
+            <div class="os-request">
+              <div class="os-request-top">
+                <div class="os-request-avatar">{campaign.brand_name.charAt(0)}</div>
+                <div class="os-request-info">
+                  <span class="os-request-brand">{campaign.brand_name}</span>
+                  <span class="os-request-brief">{campaign.title}</span>
+                </div>
+                <span class="os-request-amount">{formatInr(campaign.reward_inr)}</span>
+              </div>
+              <div class="os-request-actions">
+                <button class="os-req-btn os-req-btn--accept" disabled={dashRespondingId === String(campaign.campaign_id)} on:click={() => acceptCampaign(String(campaign.campaign_id))}>Accept</button>
+                <button class="os-req-btn os-req-btn--decline" disabled={dashRespondingId === String(campaign.campaign_id)} on:click={() => declineCampaign(String(campaign.campaign_id))}>Decline</button>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </section>
+
+    <!-- ── Creator Metrics ── -->
+    <section class="os-card os-card--metrics">
+      <div class="os-card-head">
+        <span class="os-card-label">CREATOR METRICS</span>
+      </div>
+      <div class="os-metrics-grid">
+        <div class="os-metric">
+          <div class="os-metric-ring" style="--pct: {completeness}; --ring-color: #E8833A">
+            <span class="os-metric-val">{completeness}</span>
+          </div>
+          <span class="os-metric-label">GRAPH</span>
+        </div>
+        <div class="os-metric">
+          <div class="os-metric-ring" style="--pct: {Math.min(activeBriefs * 25, 100)}; --ring-color: #7FC8A9">
+            <span class="os-metric-val">{activeBriefs}</span>
+          </div>
+          <span class="os-metric-label">BRIEFS</span>
+        </div>
+        <div class="os-metric">
+          <div class="os-metric-ring" style="--pct: {Math.min(dashAcceptedBrands.length * 15, 100)}; --ring-color: #E87FA8">
+            <span class="os-metric-val">{dashAcceptedBrands.length}</span>
+          </div>
+          <span class="os-metric-label">BRANDS</span>
+        </div>
+        <div class="os-metric">
+          <div class="os-metric-ring" style="--pct: {Math.min((dashWallet?.transactions?.length ?? 0) * 10, 100)}; --ring-color: #D9C26E">
+            <span class="os-metric-val">{dashWallet?.transactions?.length ?? 0}</span>
+          </div>
+          <span class="os-metric-label">DEALS</span>
+        </div>
+      </div>
+      {#if dashAcceptedBrands.length > 0}
+        <div class="os-portfolio-strip">
+          <span class="os-card-sublabel">PORTFOLIO</span>
+          <div class="os-portfolio-chips">
+            {#each dashAcceptedBrands as brand}
+              <span class="os-portfolio-chip">{brand}</span>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </section>
+
+    <!-- ── Watch Tonight ── -->
+    <section class="os-card os-card--watch">
+      <div class="os-card-head">
+        <span class="os-card-label">WATCH TONIGHT</span>
+      </div>
+      <div class="os-watch-scroll">
+        {#each displayMovies.slice(0, 6) as movie}
+          <a href={movie.ctaUrl} target="_blank" rel="noopener" class="os-watch-item">
+            <img src={movie.image} alt={movie.title} class="os-watch-poster" loading="lazy" />
+            <div class="os-watch-info">
+              <span class="os-watch-title">{movie.title}</span>
+              <span class="os-watch-tag">{movie.tag}</span>
+            </div>
+          </a>
+        {/each}
+      </div>
+    </section>
+
+    <!-- ── Read Next ── -->
+    <section class="os-card os-card--books">
+      <div class="os-card-head">
+        <span class="os-card-label">READ NEXT</span>
+      </div>
+      <div class="os-book-list">
+        {#each displayBooks.slice(0, 5) as book}
+          <a href={book.ctaUrl} target="_blank" rel="noopener" class="os-book-row">
+            <img src={book.image} alt={book.title} class="os-book-cover" loading="lazy" />
+            <div class="os-book-info">
+              <span class="os-book-title">{book.title}</span>
+              <span class="os-book-sub">{book.subtitle.slice(0, 60)}</span>
+            </div>
+            <span class="os-book-tag">{book.tag}</span>
+          </a>
+        {/each}
+      </div>
+    </section>
+
+    <!-- ── Recent Activity ── -->
+    {#if dashWallet?.transactions?.length}
+      <section class="os-card os-card--activity">
+        <div class="os-card-head">
+          <span class="os-card-label">RECENT ACTIVITY</span>
+        </div>
+        <div class="os-activity-list">
+          {#each dashWallet.transactions.slice(0, 6) as tx (tx.id)}
+            <div class="os-activity-row">
+              <span class="os-activity-note">{tx.note || 'Transaction'}</span>
+              <span class="os-activity-date">{new Date(tx.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+              <span class="os-activity-amt" class:os-activity-amt--pending={tx.status === 'pending'}>{formatInr(tx.amount_inr)}</span>
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    <!-- ── Tagline / One-liner ── -->
+    {#if heroOneLiner}
+      <section class="os-card os-card--tagline">
+        <p class="os-tagline-text">{heroOneLiner}</p>
+        {#if heroArchetype}
+          <span class="os-tagline-archetype">{heroArchetype}</span>
+        {/if}
+      </section>
+    {/if}
+
+  </div>
+
+  <!-- Chat sidebar -->
+  <div class="os-chat-toggle">
+    <!-- old feed content purge marker -->
     <aside class="home-chat-col" aria-label="Ask your system">
       <div bind:this={homeChatScrollEl} class="home-chat-scroll">
         <div class="home-chat-meta">
@@ -2397,11 +2294,407 @@
 </div>
 
 <style>
-  .home-page-root {
+  /* ══════════════════════════════════════════════════════════
+     PERSONAL OS — Bento Grid Dashboard
+     ══════════════════════════════════════════════════════════ */
+  .os-root {
     position: relative;
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    background: #0A0A0C;
+    font-family: 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    color: #EDEDEF;
+    padding: clamp(16px, 3vw, 32px);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .os-root::-webkit-scrollbar { display: none; }
+
+  /* ── Top bar ── */
+  .os-top {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 20px;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 16px;
+  }
+
+  .os-profile-card {
+    display: flex; align-items: center; gap: 12px;
+    padding-right: 20px;
+    border-right: 1px solid rgba(255,255,255,0.04);
+  }
+  .os-avatar {
+    width: 48px; height: 48px; border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .os-avatar--init {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #E87FA8, #E8833A);
+    color: #fff; font-size: 18px; font-weight: 700;
+  }
+  .os-profile-info { display: flex; flex-direction: column; gap: 2px; }
+  .os-profile-name { font-size: 14px; font-weight: 700; color: #EDEDEF; }
+  .os-profile-meta {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; color: #4A4A50; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .os-profile-tags { display: flex; gap: 4px; margin-top: 4px; }
+  .os-tag {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #8A8A90;
+    padding: 2px 6px; border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+  }
+
+  .os-greeting-block { display: flex; flex-direction: column; gap: 2px; }
+  .os-greeting-overline {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.12em;
+    color: #3A3A40; text-transform: uppercase;
+  }
+  .os-greeting {
+    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-size: clamp(22px, 3vw, 32px); font-weight: 700;
+    color: #EDEDEF; margin: 0; letter-spacing: -0.03em;
+  }
+  .os-greeting em {
+    font-style: italic; font-family: 'Bodoni Moda', Georgia, serif;
+    color: #E8833A; font-weight: 400;
+  }
+  .os-greeting-date {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; color: #3A3A40; letter-spacing: 0.04em;
+  }
+
+  .os-clock-block { text-align: right; }
+  .os-clock {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 28px; font-weight: 300; color: #EDEDEF;
+    letter-spacing: 0.06em;
+  }
+  .os-clock-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  .os-earn-hero {
+    padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.04);
+    text-align: right;
+  }
+  .os-earn-big {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: clamp(24px, 3vw, 36px); font-weight: 700;
+    color: #EDEDEF; letter-spacing: -0.02em; line-height: 1;
+  }
+  .os-earn-big-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; letter-spacing: 0.1em; text-transform: uppercase;
+    display: block; margin-top: 2px;
+  }
+  .os-earn-sub-row { display: flex; gap: 12px; margin-top: 8px; justify-content: flex-end; }
+  .os-earn-sub {
+    font-size: 10px; color: #4A4A50;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+  }
+  .os-earn-sub-val { font-weight: 700; }
+  .os-earn-sub-val--pending { color: #D9C26E; }
+  .os-earn-sub-val--green { color: #4ade80; }
+
+  /* ── Bento grid ── */
+  .os-bento {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(180px, auto);
+    gap: 12px;
+  }
+
+  /* ── Card base ── */
+  .os-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 14px;
+    padding: 18px 16px;
+    display: flex; flex-direction: column;
     overflow: hidden;
+  }
+  .os-card-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px; flex-shrink: 0;
+  }
+  .os-card-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    color: #4A4A50; text-transform: uppercase;
+  }
+  .os-card-sublabel {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.08em;
+    color: #3A3A40; text-transform: uppercase;
+    margin-bottom: 8px; display: block;
+  }
+  .os-card-count {
+    font-size: 10px; font-weight: 700;
+    color: #8A8A90; background: rgba(255,255,255,0.04);
+    padding: 2px 7px; border-radius: 100px;
+  }
+  .os-card-count--live {
+    color: #fff; background: #E8464A;
+  }
+  .os-card-empty {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #3A3A40;
+  }
+
+  /* ── Card sizes ── */
+  .os-card--brands { grid-column: span 1; grid-row: span 2; }
+  .os-card--requests { grid-column: span 1; grid-row: span 2; }
+  .os-card--metrics { grid-column: span 2; grid-row: span 1; }
+  .os-card--watch { grid-column: span 2; grid-row: span 1; }
+  .os-card--books { grid-column: span 1; grid-row: span 1; }
+  .os-card--activity { grid-column: span 1; grid-row: span 1; }
+  .os-card--tagline { grid-column: span 2; grid-row: span 1; justify-content: center; align-items: center; }
+
+  /* ── Brands ecosystem ── */
+  .os-brand-grid {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .os-brand-grid::-webkit-scrollbar { display: none; }
+  .os-brand-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 6px; border-radius: 8px;
+    transition: background 0.15s ease;
+  }
+  .os-brand-row:hover { background: rgba(255,255,255,0.03); }
+  .os-brand-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .os-brand-name { font-size: 12px; font-weight: 600; color: #EDEDEF; flex: 1; }
+  .os-brand-cat {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* ── Brand requests ── */
+  .os-request-list {
+    flex: 1; overflow-y: auto; scrollbar-width: none;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .os-request-list::-webkit-scrollbar { display: none; }
+  .os-request {
+    padding: 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+  .os-request-top { display: flex; align-items: center; gap: 10px; }
+  .os-request-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(232,131,58,0.15); color: #E8833A;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .os-request-info { flex: 1; min-width: 0; }
+  .os-request-brand { font-size: 13px; font-weight: 700; color: #EDEDEF; display: block; }
+  .os-request-brief {
+    font-size: 11px; color: #4A4A50; display: block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .os-request-amount {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 16px; font-weight: 700; color: #4ade80;
+    flex-shrink: 0;
+  }
+  .os-request-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .os-req-btn {
+    flex: 1; padding: 6px 0; border-radius: 8px;
+    font-size: 11px; font-weight: 700; font-family: inherit;
+    cursor: pointer; border: 1px solid transparent;
+    transition: all 0.2s ease; text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .os-req-btn--accept {
+    background: rgba(74,222,128,0.08); color: #4ade80;
+    border-color: rgba(74,222,128,0.12);
+  }
+  .os-req-btn--accept:hover { background: rgba(74,222,128,0.15); }
+  .os-req-btn--decline {
+    background: rgba(255,255,255,0.02); color: #4A4A50;
+    border-color: rgba(255,255,255,0.03);
+  }
+  .os-req-btn--decline:hover { background: rgba(251,113,133,0.06); color: #fb7185; }
+  .os-req-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* ── Creator metrics ── */
+  .os-metrics-grid {
+    display: flex; gap: 24px; justify-content: center;
+    padding: 8px 0 16px;
+  }
+  .os-metric { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .os-metric-ring {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), rgba(255,255,255,0.04) 0);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .os-metric-ring::before {
+    content: ''; position: absolute;
+    inset: 5px; border-radius: 50%;
+    background: #0A0A0C;
+  }
+  .os-metric-val {
+    position: relative; z-index: 1;
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 16px; font-weight: 700; color: #EDEDEF;
+  }
+  .os-metric-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; font-weight: 600; color: #3A3A40;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .os-portfolio-strip {
+    border-top: 1px solid rgba(255,255,255,0.03);
+    padding-top: 12px; margin-top: auto;
+  }
+  .os-portfolio-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .os-portfolio-chip {
+    font-size: 10px; font-weight: 600; color: #8A8A90;
+    padding: 4px 10px; border-radius: 100px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* ── Watch Tonight ── */
+  .os-watch-scroll {
+    display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none;
+    flex: 1; align-items: flex-start;
+  }
+  .os-watch-scroll::-webkit-scrollbar { display: none; }
+  .os-watch-item {
+    flex-shrink: 0; width: 100px;
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .os-watch-poster {
+    width: 100px; height: 140px;
+    border-radius: 8px; object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .os-watch-info { display: flex; flex-direction: column; gap: 1px; }
+  .os-watch-title { font-size: 11px; font-weight: 600; color: #EDEDEF; line-height: 1.3; }
+  .os-watch-tag {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; text-transform: uppercase;
+  }
+
+  /* ── Read Next ── */
+  .os-book-list {
+    flex: 1; display: flex; flex-direction: column; gap: 2px;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .os-book-list::-webkit-scrollbar { display: none; }
+  .os-book-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px; border-radius: 8px;
+    text-decoration: none; color: inherit;
+    transition: background 0.15s ease;
+  }
+  .os-book-row:hover { background: rgba(255,255,255,0.03); }
+  .os-book-cover {
+    width: 28px; height: 40px; border-radius: 4px;
+    object-fit: cover; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .os-book-info { flex: 1; min-width: 0; }
+  .os-book-title { font-size: 12px; font-weight: 600; color: #EDEDEF; display: block; }
+  .os-book-sub {
+    font-size: 10px; color: #4A4A50; display: block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .os-book-tag {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; text-transform: uppercase; flex-shrink: 0;
+  }
+
+  /* ── Recent Activity ── */
+  .os-activity-list { display: flex; flex-direction: column; gap: 2px; }
+  .os-activity-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 6px; border-radius: 6px;
+    transition: background 0.15s ease;
+  }
+  .os-activity-row:hover { background: rgba(255,255,255,0.02); }
+  .os-activity-note { flex: 1; font-size: 12px; font-weight: 600; color: #EDEDEF; }
+  .os-activity-date {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40;
+  }
+  .os-activity-amt {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 14px; font-weight: 700; color: #4ade80;
+  }
+  .os-activity-amt--pending { color: #D9C26E; }
+
+  /* ── Tagline card ── */
+  .os-card--tagline { text-align: center; padding: 24px; }
+  .os-tagline-text {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 18px; font-weight: 400; font-style: italic;
+    color: #8A8A90; line-height: 1.5; margin: 0;
+  }
+  .os-tagline-archetype {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-top: 8px; display: inline-block;
+  }
+
+  /* ── Chat toggle wrapper ── */
+  .os-chat-toggle { display: none; }
+
+  /* ── Mobile responsive ── */
+  @media (max-width: 1024px) {
+    .os-top {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+    }
+    .os-profile-card { border-right: none; padding-right: 0; }
+    .os-earn-hero { border-left: none; padding-left: 0; text-align: left; }
+    .os-earn-sub-row { justify-content: flex-start; }
+    .os-bento { grid-template-columns: repeat(2, 1fr); }
+    .os-card--brands { grid-column: span 1; grid-row: span 1; }
+    .os-card--requests { grid-column: span 1; grid-row: span 1; }
+    .os-card--metrics { grid-column: span 2; }
+    .os-card--watch { grid-column: span 2; }
+    .os-card--tagline { grid-column: span 2; }
+  }
+
+  @media (max-width: 640px) {
+    .os-root { padding: 12px; gap: 12px; }
+    .os-top {
+      grid-template-columns: 1fr;
+      gap: 12px; padding: 14px;
+    }
+    .os-greeting { font-size: 22px; }
+    .os-clock { font-size: 22px; }
+    .os-bento {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto;
+    }
+    .os-card--brands,
+    .os-card--requests,
+    .os-card--metrics,
+    .os-card--watch,
+    .os-card--books,
+    .os-card--activity,
+    .os-card--tagline { grid-column: span 1; grid-row: span 1; }
+    .os-metrics-grid { gap: 16px; }
+    .os-metric-ring { width: 48px; height: 48px; }
   }
 
   /* ── 2-column split (identity + chat) ── */
