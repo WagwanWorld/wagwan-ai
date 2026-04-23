@@ -45,7 +45,7 @@
   .plan-list { display: flex; flex-direction: column; gap: 12px; }
   .plan-empty {
     text-align: center; padding: 32px;
-    border: 1px dashed var(--border-subtle); border-radius: 14px;
+    border: 1px dashed var(--g-border, rgba(255,255,255,0.06)); border-radius: 14px;
   }
-  .plan-empty p { font-size: 14px; color: var(--text-muted); margin: 0; }
+  .plan-empty p { font-size: 14px; color: var(--g-text-3, #4A4A50); margin: 0; }
 </style>

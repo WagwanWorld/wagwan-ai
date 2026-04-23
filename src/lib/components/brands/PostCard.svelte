@@ -90,7 +90,7 @@
 <style>
   .post-card {
     display: flex; gap: 16px; padding: 16px;
-    background: var(--panel-surface); border: 1px solid var(--panel-border);
+    background: var(--g-surface, #17171A); border: 1px solid var(--g-border, rgba(255,255,255,0.06));
     border-radius: 14px; position: relative;
   }
   .post-thumb {
@@ -100,7 +100,7 @@
   .post-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .post-video-badge {
     width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-    background: var(--glass-medium); font-size: 11px; font-weight: 700; color: var(--text-muted);
+    background: var(--g-surface, #17171A); font-size: 11px; font-weight: 700; color: var(--g-text-3, #4A4A50);
   }
   .post-type-badge {
     position: absolute; bottom: 4px; left: 4px;
@@ -110,32 +110,32 @@
   .post-body { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .post-meta {
     display: flex; align-items: center; gap: 8px;
-    font-size: 12px; color: var(--text-muted);
+    font-size: 12px; color: var(--g-text-3, #4A4A50);
   }
   .post-status { font-weight: 700; text-transform: uppercase; font-size: 10px; }
   .post-caption {
-    font-size: 13px; color: var(--text-primary); line-height: 1.5;
+    font-size: 13px; color: var(--g-text, #EDEDEF); line-height: 1.5;
     margin: 0; cursor: pointer; display: flex; align-items: start; gap: 6px;
   }
   .post-caption-edit {
     width: 100%; font-size: 13px; font-family: inherit;
-    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
-    border-radius: 8px; padding: 8px; color: var(--text-primary); resize: vertical;
+    background: var(--g-elevated, #1E1E22); border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-radius: 8px; padding: 8px; color: var(--g-text, #EDEDEF); resize: vertical;
   }
   :global(.edit-icon) { opacity: 0.3; flex-shrink: 0; margin-top: 3px; }
   .post-hashtags { display: flex; flex-wrap: wrap; gap: 4px; }
-  .hashtag { font-size: 11px; color: var(--accent-secondary); font-weight: 600; }
+  .hashtag { font-size: 11px; color: var(--g-metric-shares, #7BA7D9); font-weight: 600; }
   .reasoning-toggle {
-    background: none; border: none; font-size: 11px; color: var(--text-muted);
+    background: none; border: none; font-size: 11px; color: var(--g-text-3, #4A4A50);
     cursor: pointer; padding: 0; display: flex; align-items: center; gap: 4px;
     font-family: inherit;
   }
-  .reasoning-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
-  .permalink { font-size: 12px; color: var(--accent-primary); text-decoration: none; }
+  .reasoning-text { font-size: 12px; color: var(--g-text-2, #8A8A90); line-height: 1.5; margin: 0; }
+  .permalink { font-size: 12px; color: var(--g-accent, #E8464A); text-decoration: none; }
   .post-delete {
     position: absolute; top: 12px; right: 12px;
-    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    background: none; border: none; color: var(--g-text-3, #4A4A50); cursor: pointer;
     padding: 4px; transition: color 0.15s;
   }
-  .post-delete:hover { color: var(--accent-primary); }
+  .post-delete:hover { color: var(--g-accent, #E8464A); }
 </style>

@@ -234,7 +234,7 @@
   .type-card:hover {
     border-color: var(--g-accent, #E8464A);
     color: var(--g-text, #EDEDEF);
-    background: var(--panel-hover);
+    background: rgba(255,255,255,0.03);
   }
   .type-name { font-size: 13px; font-weight: 700; color: var(--g-text, #EDEDEF); }
   .type-size { font-size: 11px; color: var(--g-text-3, #4A4A50); }
@@ -274,7 +274,7 @@
   }
   .upload-zone:hover, .upload-zone.dragging {
     border-color: var(--g-accent, #E8464A);
-    background: var(--panel-surface-soft);
+    background: var(--g-surface, #17171A);
   }
   .upload-label { font-size: 14px; font-weight: 600; color: var(--g-text-2, #8A8A90); margin: 0; }
   .upload-hint { font-size: 12px; color: var(--g-text-3, #4A4A50); margin: 0; line-height: 1.5; }

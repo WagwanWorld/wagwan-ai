@@ -51,27 +51,27 @@
   .login-card {
     position: relative; z-index: 1; width: 100%; max-width: 26rem;
     padding: 2rem; border-radius: 1.25rem;
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    background: var(--glass-light, rgba(255, 255, 255, 0.055));
+    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    background: rgba(255,255,255,0.025);
     backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     box-shadow: inset 0 1px 1px rgba(255,255,255,0.06), 0 24px 64px rgba(0, 0, 0, 0.4);
   }
 
   .overline {
     font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.24em; color: var(--text-muted, #6d7684); margin: 0;
+    letter-spacing: 0.24em; color: var(--g-text-3, #4A4A50); margin: 0;
   }
   .title {
     margin: 0.75rem 0 0; font-size: 1.5rem; font-weight: 600;
-    color: var(--text-primary, #e8ecf3);
+    color: var(--g-text, #EDEDEF);
   }
   .description {
     margin-top: 0.5rem; font-size: 0.875rem; line-height: 1.6;
-    color: var(--text-muted, #6d7684);
+    color: var(--g-text-3, #4A4A50);
   }
   .error {
     margin-top: 1rem; font-size: 0.875rem;
-    color: var(--state-error, var(--accent-primary, #FF4D4D));
+    color: var(--g-accent, #E8464A);
   }
 
   .ig-btn {
@@ -93,8 +93,8 @@
     margin-top: 2rem; text-align: center; font-size: 0.75rem;
   }
   .footer-link {
-    color: var(--text-muted, #6d7684); text-decoration: none; transition: color 0.2s;
+    color: var(--g-text-3, #4A4A50); text-decoration: none; transition: color 0.2s;
   }
-  .footer-link:hover { color: var(--text-primary, #e8ecf3); }
-  .footer-sep { margin: 0 0.5rem; color: var(--border-strong, rgba(255, 255, 255, 0.14)); }
+  .footer-link:hover { color: var(--g-text, #EDEDEF); }
+  .footer-sep { margin: 0 0.5rem; color: var(--g-border-strong, rgba(255,255,255,0.14)); }
 </style>
