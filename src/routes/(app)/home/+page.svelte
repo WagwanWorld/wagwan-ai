@@ -2574,7 +2574,7 @@
   .os-card--requests { grid-column: span 1; grid-row: auto; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; justify-content: center; }
   .os-card--watch { grid-column: span 2; grid-row: auto; max-height: 210px; overflow: hidden; }
-  .os-card--books { grid-column: span 3; grid-row: auto; min-height: 260px; }
+  .os-card--books { grid-column: span 3; grid-row: auto; max-height: 240px; overflow: hidden; }
   .os-card--activity { grid-column: span 1; grid-row: auto; }
 
   /* ── Brands ecosystem ── */
@@ -2768,40 +2768,33 @@
 
   /* ── Read Next ── */
   .os-book-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 14px;
+    display: flex; gap: 10px;
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; flex-wrap: nowrap;
   }
+  .os-book-list::-webkit-scrollbar { display: none; }
   .os-book-row {
-    display: flex; flex-direction: column; gap: 8px;
+    flex: 0 0 90px; width: 90px;
+    display: flex; flex-direction: column; gap: 4px;
     text-decoration: none; color: inherit;
-    transition: transform 0.15s ease;
   }
-  .os-book-row:hover { transform: translateY(-2px); }
   .os-book-cover {
-    width: 100%; height: 140px; border-radius: 6px;
+    width: 90px; height: 130px; border-radius: 6px;
     object-fit: cover;
     border: 1px solid rgba(255,255,255,0.04);
     background: rgba(255,255,255,0.03);
-    flex-shrink: 0;
   }
-  .os-book-info { min-width: 0; flex-shrink: 0; padding-top: 2px; }
+  .os-book-info { min-width: 0; }
   .os-book-title {
-    font-size: 11px; font-weight: 600; color: #EDEDEF;
+    font-size: 10px; font-weight: 600; color: #EDEDEF;
     line-height: 1.3;
     overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .os-book-sub {
-    font-size: 9px; color: #4A4A50;
-    margin-top: 2px;
-    overflow: hidden; text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+  .os-book-sub { display: none; }
   .os-book-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 8px; color: #3A3A40; text-transform: uppercase;
-    margin-top: 2px;
   }
 
   /* ── Recent Activity ── */
