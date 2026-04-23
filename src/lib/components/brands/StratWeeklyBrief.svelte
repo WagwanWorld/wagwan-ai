@@ -21,11 +21,14 @@
   function formatDate(dateStr: string): string {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }).toUpperCase().replace(',', '');
+      return d
+        .toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+        .toUpperCase()
+        .replace(',', '');
     } catch {
       return dateStr.toUpperCase();
     }
@@ -90,7 +93,7 @@
 
       <!-- Right: key metrics -->
       <div class="metrics-col">
-        <span class="label" style="display:block; margin-bottom:12px;">Key Metrics</span>
+        <span class="label brief-metrics-label">Key Metrics</span>
         <div class="metrics-list">
           {#each brief.key_metrics as km}
             <div class="metric-row">
@@ -98,11 +101,12 @@
                 <span class="metric-name">{km.metric}</span>
                 <span class="metric-val">{km.current.toLocaleString()}</span>
               </div>
-              <span class="delta"
+              <span
+                class="delta"
                 class:delta-up={km.trend === 'up'}
                 class:delta-down={km.trend === 'down'}
-                class:delta-stable={km.trend === 'stable'}
-              >{formatDelta(km.deltaPct)}</span>
+                class:delta-stable={km.trend === 'stable'}>{formatDelta(km.deltaPct)}</span
+              >
             </div>
           {/each}
         </div>
@@ -139,17 +143,19 @@
     align-items: center;
     gap: 12px;
     padding: 48px 24px;
-    border: 1px dashed rgba(255,255,255,0.04);
+    border: 1px dashed var(--border-subtle-2);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-subtle) 62%, transparent);
     text-align: center;
   }
   .empty-dash {
     font-size: 1.5rem;
     font-weight: 300;
-    color: var(--g-text-ghost);
+    color: var(--text-muted);
   }
   .empty-text {
     font-size: 13px;
-    color: var(--g-text-4);
+    color: var(--text-body);
     margin: 0;
     max-width: 280px;
     line-height: 1.6;
@@ -168,34 +174,38 @@
     gap: 16px;
   }
   .brief-date {
-    font-family: var(--g-font-mono, monospace);
+    font-family: var(--font-mono, monospace);
     font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.06em;
-    color: var(--g-text-ghost);
+    color: var(--text-muted);
   }
   .brief-headline {
     font-size: 18px;
     font-weight: 400;
     letter-spacing: -0.02em;
     line-height: 1.35;
-    color: var(--g-text);
+    color: var(--text-strong);
     margin: 0;
   }
 
   /* Shared label */
   .label {
-    font-size: var(--g-label-size);
-    font-weight: var(--g-label-weight);
-    letter-spacing: var(--g-label-spacing);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
     text-transform: uppercase;
-    color: var(--g-label-color);
+    color: var(--text-muted);
+  }
+  .brief-metrics-label {
+    display: block;
+    margin-bottom: 12px;
   }
 
   /* Divider */
   .divider {
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+    background: linear-gradient(90deg, transparent, var(--border-subtle-2), transparent);
   }
 
   /* Grid */
@@ -211,7 +221,7 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    border-right: 1px solid rgba(255,255,255,0.03);
+    border-right: 1px solid var(--border-subtle-2);
     padding-right: 24px;
     padding-bottom: 20px;
   }
@@ -232,18 +242,24 @@
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .dot-green { background: rgba(110,231,183,0.7); }
-  .dot-red   { background: rgba(251,113,133,0.7); }
-  .dot-accent { background: var(--g-accent, rgba(255,64,64,0.6)); }
+  .dot-green {
+    background: color-mix(in srgb, oklch(78% 0.15 162) 72%, transparent);
+  }
+  .dot-red {
+    background: color-mix(in srgb, oklch(70% 0.22 25) 72%, transparent);
+  }
+  .dot-accent {
+    background: color-mix(in srgb, var(--accent-main) 70%, transparent);
+  }
 
   .body {
     font-size: 14px;
-    color: var(--g-text-3);
+    color: var(--text-body);
     line-height: 1.7;
     margin: 0;
   }
   .body--accent {
-    color: var(--g-text-2);
+    color: var(--text-strong);
     font-weight: 500;
   }
 
@@ -264,9 +280,11 @@
     justify-content: space-between;
     gap: 12px;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.025);
+    border-bottom: 1px solid var(--border-subtle-2);
   }
-  .metric-row:last-child { border-bottom: none; }
+  .metric-row:last-child {
+    border-bottom: none;
+  }
   .metric-info {
     display: flex;
     flex-direction: column;
@@ -274,18 +292,18 @@
   }
   .metric-name {
     font-size: 12px;
-    color: var(--g-text-4);
+    color: var(--text-muted);
     line-height: 1.3;
   }
   .metric-val {
     font-size: 15px;
     font-weight: 300;
     letter-spacing: -0.04em;
-    color: var(--g-text);
+    color: var(--text-strong);
     line-height: 1.2;
   }
   .delta {
-    font-family: var(--g-font-mono, monospace);
+    font-family: var(--font-mono, monospace);
     font-size: 10px;
     font-weight: 500;
     padding: 3px 10px;
@@ -294,16 +312,16 @@
     letter-spacing: 0.01em;
   }
   .delta-up {
-    background: rgba(52,211,153,0.08);
-    color: rgba(110,231,183,0.85);
+    background: color-mix(in srgb, oklch(78% 0.15 162) 14%, transparent);
+    color: oklch(79% 0.14 162);
   }
   .delta-down {
-    background: rgba(244,63,94,0.08);
-    color: rgba(251,113,133,0.85);
+    background: color-mix(in srgb, oklch(68% 0.21 26) 14%, transparent);
+    color: oklch(70% 0.2 26);
   }
   .delta-stable {
-    background: rgba(255,255,255,0.025);
-    color: var(--g-text-4);
+    background: color-mix(in srgb, var(--surface-subtle) 88%, transparent);
+    color: var(--text-muted);
   }
 
   /* Footer */
@@ -319,30 +337,45 @@
     gap: 8px;
     padding: 0 20px 0 0;
   }
-  .footer-block:last-child { padding: 0 0 0 20px; }
+  .footer-block:last-child {
+    padding: 0 0 0 20px;
+  }
   .footer-sep {
     width: 1px;
-    background: rgba(255,255,255,0.03);
+    background: var(--border-subtle-2);
     flex-shrink: 0;
   }
   .footer-body {
     font-size: 12px;
     line-height: 1.65;
-    color: var(--g-text-3);
+    color: var(--text-body);
     margin: 0;
   }
 
   /* Mobile */
   @media (max-width: 640px) {
-    .brief-grid { grid-template-columns: 1fr; }
+    .brief-grid {
+      grid-template-columns: 1fr;
+    }
     .brief-sections {
       border-right: none;
       padding-right: 0;
-      border-bottom: 1px solid rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border-subtle-2);
     }
-    .metrics-col { padding: 14px 0 20px; }
-    .brief-footer { flex-direction: column; gap: 18px; }
-    .footer-block, .footer-block:last-child { padding: 0; }
-    .footer-sep { width: 100%; height: 1px; }
+    .metrics-col {
+      padding: 14px 0 20px;
+    }
+    .brief-footer {
+      flex-direction: column;
+      gap: 18px;
+    }
+    .footer-block,
+    .footer-block:last-child {
+      padding: 0;
+    }
+    .footer-sep {
+      width: 100%;
+      height: 1px;
+    }
   }
 </style>
