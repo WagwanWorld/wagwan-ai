@@ -2557,13 +2557,12 @@
   }
 
   /* ── Card sizes ── */
-  .os-card--personality { grid-column: span 1; grid-row: span 1; overflow-y: auto; scrollbar-width: none; max-height: 320px; }
-  .os-card--personality::-webkit-scrollbar { display: none; }
+  .os-card--personality { grid-column: span 1; grid-row: auto; overflow: visible; }
   .os-card--brands { grid-column: span 1; grid-row: span 1; max-height: 320px; }
   .os-card--requests { grid-column: span 1; grid-row: span 1; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; }
   .os-card--watch { grid-column: span 2; grid-row: span 1; max-height: 200px; overflow: hidden; }
-  .os-card--books { grid-column: span 2; grid-row: span 1; max-height: 280px; }
+  .os-card--books { grid-column: span 3; grid-row: auto; }
   .os-card--activity { grid-column: span 1; grid-row: span 1; }
 
   /* ── Brands ecosystem ── */
@@ -2757,34 +2756,39 @@
 
   /* ── Read Next ── */
   .os-book-list {
-    flex: 1; display: flex; gap: 10px;
-    overflow-x: auto; overflow-y: hidden;
-    scrollbar-width: none; flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 14px;
   }
-  .os-book-list::-webkit-scrollbar { display: none; }
   .os-book-row {
-    flex: 0 0 auto; width: 140px;
-    display: flex; flex-direction: column; gap: 6px;
-    padding: 0; border-radius: 0;
+    display: flex; flex-direction: column; gap: 8px;
     text-decoration: none; color: inherit;
+    transition: transform 0.15s ease;
   }
+  .os-book-row:hover { transform: translateY(-2px); }
   .os-book-cover {
-    width: 140px; height: 180px; border-radius: 6px;
-    object-fit: cover; flex-shrink: 0;
+    width: 100%; aspect-ratio: 2/3; border-radius: 6px;
+    object-fit: cover;
     border: 1px solid rgba(255,255,255,0.04);
     background: rgba(255,255,255,0.03);
   }
   .os-book-info { min-width: 0; }
   .os-book-title {
     font-size: 11px; font-weight: 600; color: #EDEDEF; display: block;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
   }
   .os-book-sub {
-    font-size: 9px; color: #4A4A50; display: none;
+    font-size: 9px; color: #4A4A50; display: block;
+    margin-top: 2px;
+    display: -webkit-box; -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical; overflow: hidden;
   }
   .os-book-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
-    font-size: 9px; color: #3A3A40; text-transform: uppercase;
+    font-size: 8px; color: #3A3A40; text-transform: uppercase;
+    margin-top: 2px;
   }
 
   /* ── Recent Activity ── */
