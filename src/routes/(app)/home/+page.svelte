@@ -1798,7 +1798,12 @@
     const ig = $profile.instagramIdentity as any;
     if (ig?.avgEngagementRate) return (ig.avgEngagementRate * 100).toFixed(1);
     if (ig?.engagementRate) return (ig.engagementRate * 100).toFixed(1);
-    return '—';
+    // Estimate from available data
+    if (ig?.followersCount && ig?.followersCount > 0) {
+      const avgLikes = ig?.avgLikes || ig?.averageLikes || 0;
+      if (avgLikes > 0) return ((avgLikes / ig.followersCount) * 100).toFixed(1);
+    }
+    return '0';
   })();
 
   // ── Personality data ──
@@ -2444,12 +2449,13 @@
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 10px; color: #4A4A50; text-transform: uppercase; letter-spacing: 0.06em;
   }
-  .os-profile-tags { display: flex; gap: 4px; margin-top: 4px; }
+  .os-profile-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; max-width: 200px; }
   .os-tag {
-    font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.06em; color: #8A8A90;
+    font-size: 8px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: #6A6A72;
     padding: 2px 6px; border-radius: 4px;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.03);
+    white-space: nowrap;
   }
 
   .os-greeting-block { display: flex; flex-direction: column; gap: 2px; }
@@ -2510,7 +2516,7 @@
   .os-bento {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-auto-rows: minmax(180px, auto);
+    grid-auto-rows: auto;
     gap: 10px;
     padding: 16px 20px;
     overflow-y: auto;
@@ -2552,18 +2558,24 @@
     color: #fff; background: #E8464A;
   }
   .os-card-empty {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; color: #3A3A40;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #3A3A40;
+    padding: 16px 0;
   }
 
   /* ── Card sizes ── */
-  .os-card--personality { grid-column: span 1; grid-row: auto; overflow: hidden; }
-  .os-card--brands { grid-column: span 1; grid-row: span 1; max-height: 320px; }
-  .os-card--requests { grid-column: span 1; grid-row: span 1; }
-  .os-card--metrics { grid-column: span 1; grid-row: span 1; }
-  .os-card--watch { grid-column: span 2; grid-row: span 1; max-height: 200px; overflow: hidden; }
+  .os-card--personality {
+    grid-column: span 1; grid-row: auto;
+    overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent;
+    max-height: 360px;
+  }
+  .os-card--brands { grid-column: span 1; grid-row: auto; }
+  .os-card--requests { grid-column: span 1; grid-row: auto; }
+  .os-card--metrics { grid-column: span 1; grid-row: span 1; justify-content: center; }
+  .os-card--watch { grid-column: span 2; grid-row: auto; max-height: 210px; overflow: hidden; }
   .os-card--books { grid-column: span 3; grid-row: auto; }
-  .os-card--activity { grid-column: span 1; grid-row: span 1; }
+  .os-card--activity { grid-column: span 1; grid-row: auto; }
 
   /* ── Brands ecosystem ── */
   .os-brand-grid {
