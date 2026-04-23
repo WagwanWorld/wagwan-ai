@@ -49,8 +49,8 @@ This audit maps current frontend surfaces to the canonical design contract in `d
 | `src/styles/tokens-light.css`          | migrate       | Align naming to unified semantic system.                            |
 | `src/styles/tokens-home-dark.css`      | migrate       | Merge into unified light/dark contract.                             |
 | `src/styles/tokens-glass.css`          | migrate       | Alias `--g-*` to semantic tokens and reduce drift.                  |
-| `src/styles/tokens-editorial.css`      | remove-legacy | Deprecate or merge into canonical token contract.                   |
-| `src/styles/tokens-editorial-dark.css` | remove-legacy | Deprecate or merge into canonical token contract.                   |
+| `src/styles/tokens-editorial.css`      | remove-legacy | Removed from codebase and superseded by Brand OS semantic tokens.   |
+| `src/styles/tokens-editorial-dark.css` | remove-legacy | Removed from codebase and superseded by Brand OS semantic tokens.   |
 | `src/styles/components.css`            | migrate       | Add canonical `Os*` primitive styles and remove duplicate patterns. |
 
 ## Priority Order
