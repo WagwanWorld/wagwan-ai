@@ -11,22 +11,6 @@ import pg from 'pg';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 
-const url = process.env.SUPABASE_DB_URL;
-if (!url || url.trim() === '') {
-  console.error(
-    'Missing SUPABASE_DB_URL. Add it to .env (Postgres URI from Supabase → Settings → Database),\n' +
-      'or paste and run these files in order in the SQL Editor:\n' +
-      '  supabase/migration.sql\n' +
-      '  supabase/002_identity_graph.sql\n' +
-      '  supabase/003_multi_agent_chats.sql\n' +
-      '  supabase/004_marketplace_mvp.sql\n' +
-      '  supabase/005_identity_inference_snapshots.sql\n' +
-      '  supabase/006_identity_claims.sql\n' +
-      '  supabase/007_wagwan_user_link.sql'
-  );
-  process.exit(1);
-}
-
 const files = [
   'supabase/migration.sql',
   'supabase/002_identity_graph.sql',
@@ -40,6 +24,16 @@ const files = [
   'supabase/010_creator_marketplace.sql',
   'supabase/011_flow_hardening.sql',
 ];
+
+const url = process.env.SUPABASE_DB_URL;
+if (!url || url.trim() === '') {
+  console.error(
+    'Missing SUPABASE_DB_URL. Add it to .env (Postgres URI from Supabase → Settings → Database),\n' +
+      'or paste and run these files in order in the SQL Editor:\n' +
+      files.map((f) => `  ${f}`).join('\n'),
+  );
+  process.exit(1);
+}
 
 const client = new pg.Client({
   connectionString: url,
