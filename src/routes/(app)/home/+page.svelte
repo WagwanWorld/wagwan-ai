@@ -1772,9 +1772,9 @@
     { image: 'https://covers.openlibrary.org/b/isbn/9780670024964-M.jpg', title: 'Quiet', subtitle: 'Susan Cain makes the case for introverts.', tag: 'Psychology', matchReason: 'Self-understanding', ctaLabel: 'Read', ctaUrl: 'https://www.goodreads.com/book/show/8520610' },
   ];
 
-  // Merge seed data with API results (API overrides if available)
-  $: displayMovies = recMovies.length >= 4 ? recMovies : seedMovies;
-  $: displayBooks = recBooks.length >= 4 ? recBooks : seedBooks;
+  // Always use seed data — append any valid API results after
+  $: displayMovies = [...seedMovies, ...recMovies.filter(m => m.image && m.image.startsWith('http') && !seedMovies.some(s => s.title === m.title))];
+  $: displayBooks = [...seedBooks, ...recBooks.filter(b => b.image && b.image.startsWith('http') && !seedBooks.some(s => s.title === b.title))];
 
   // ── Brands in ecosystem (from DB) ──
   type EcoBrand = { username: string; name: string; picture: string | null; followers: number; category: string };
@@ -2516,8 +2516,8 @@
   .os-card--brands { grid-column: span 1; grid-row: span 2; }
   .os-card--requests { grid-column: span 1; grid-row: span 2; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; }
-  .os-card--watch { grid-column: span 2; grid-row: span 1; }
-  .os-card--books { grid-column: span 1; grid-row: span 1; }
+  .os-card--watch { grid-column: span 2; grid-row: span 1; max-height: 280px; }
+  .os-card--books { grid-column: span 1; grid-row: span 2; max-height: 400px; }
   .os-card--activity { grid-column: span 1; grid-row: span 1; }
   .os-card--chat { grid-column: span 2; grid-row: span 2; }
 
@@ -2683,14 +2683,15 @@
   }
   .os-watch-scroll::-webkit-scrollbar { display: none; }
   .os-watch-item {
-    flex-shrink: 0; width: 100px;
+    flex-shrink: 0; width: 90px;
     text-decoration: none; color: inherit;
     display: flex; flex-direction: column; gap: 6px;
   }
   .os-watch-poster {
-    width: 100px; height: 140px;
+    width: 90px; height: 130px;
     border-radius: 8px; object-fit: cover;
     border: 1px solid rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.03);
   }
   .os-watch-info { display: flex; flex-direction: column; gap: 1px; }
   .os-watch-title { font-size: 11px; font-weight: 600; color: #EDEDEF; line-height: 1.3; }
