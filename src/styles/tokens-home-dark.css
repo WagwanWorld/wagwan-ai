@@ -5,6 +5,7 @@
  */
 @layer base {
   .home-page-root[data-home-surface='dark'],
+  .os-root[data-home-surface='dark'],
   html:has([data-app-chrome='dark']) {
     --home-accent: #FF4D4D;
     --home-accent-soft: rgba(255, 77, 77, 0.14);
