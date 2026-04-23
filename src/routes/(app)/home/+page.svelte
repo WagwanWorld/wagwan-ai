@@ -2259,8 +2259,12 @@
       </section>
     {/if}
 
-        <!-- ── Chat ── -->
-    <section class="os-card os-card--chat">
+  </div>
+  <!-- end bento -->
+
+  <!-- ── Chat column (right sidebar) ── -->
+  <aside class="os-chat-aside">
+    <div class="os-chat-inner">
       <div bind:this={homeChatScrollEl} class="home-chat-scroll">
         <div class="home-chat-meta">
           <div class="home-chat-mode" role="tablist" aria-label="Composer mode">
@@ -2345,9 +2349,8 @@
           </button>
         </div>
       </div>
-    </section>
-
-  </div>
+    </div>
+  </aside>
 </div>
 
 <style>
@@ -2358,17 +2361,16 @@
     position: relative;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: none;
+    overflow: hidden;
     background: #0A0A0C;
     font-family: 'Geist Variable', 'Inter', -apple-system, sans-serif;
     color: #EDEDEF;
-    padding: clamp(16px, 3vw, 32px);
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr;
+    gap: 0;
   }
+  .os-root > header { grid-column: 1 / -1; }
   .os-root::-webkit-scrollbar { display: none; }
 
   /* ── Top bar ── */
@@ -2377,10 +2379,10 @@
     grid-template-columns: auto 1fr auto auto;
     gap: 20px;
     align-items: center;
-    padding: 16px 20px;
+    padding: 16px 24px;
     background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.04);
-    border-radius: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin: 0;
   }
 
   .os-profile-card {
@@ -2469,15 +2471,20 @@
   /* ── Bento grid ── */
   .os-bento {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     grid-auto-rows: minmax(180px, auto);
-    gap: 12px;
+    gap: 10px;
+    padding: 16px 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
   }
+  .os-bento::-webkit-scrollbar { display: none; }
 
   /* ── Card base ── */
   .os-card {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.07);
     border-radius: 14px;
     padding: 18px 16px;
     display: flex; flex-direction: column;
@@ -2516,10 +2523,9 @@
   .os-card--brands { grid-column: span 1; grid-row: span 2; }
   .os-card--requests { grid-column: span 1; grid-row: span 2; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; }
-  .os-card--watch { grid-column: span 2; grid-row: span 1; max-height: 280px; }
-  .os-card--books { grid-column: span 1; grid-row: span 2; max-height: 400px; }
+  .os-card--watch { grid-column: span 2; grid-row: span 1; max-height: 260px; }
+  .os-card--books { grid-column: span 1; grid-row: span 2; max-height: 380px; }
   .os-card--activity { grid-column: span 1; grid-row: span 1; }
-  .os-card--chat { grid-column: span 2; grid-row: span 2; }
 
   /* ── Brands ecosystem ── */
   .os-brand-grid {
@@ -2761,10 +2767,21 @@
     letter-spacing: 0.1em; margin-top: 8px; display: inline-block;
   }
 
-  /* ── Chat card ── */
-  .os-card--chat { padding: 0; overflow: hidden; }
-  .os-card--chat .home-chat-scroll { flex: 1; }
-  .os-card--chat .home-composer { border-top: 1px solid rgba(255,255,255,0.04); }
+  /* ── Chat aside (right column) ── */
+  .os-chat-aside {
+    grid-row: 2;
+    grid-column: 2;
+    display: flex; flex-direction: column;
+    border-left: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.015);
+    overflow: hidden;
+  }
+  .os-chat-inner {
+    flex: 1; display: flex; flex-direction: column;
+    min-height: 0; overflow: hidden;
+  }
+  .os-chat-inner .home-chat-scroll { flex: 1; overflow-y: auto; }
+  .os-chat-inner .home-composer { border-top: 1px solid rgba(255,255,255,0.06); }
 
   /* ── Mobile responsive ── */
   @media (max-width: 1024px) {
@@ -2776,12 +2793,13 @@
     .os-earn-hero { border-left: none; padding-left: 0; text-align: left; }
     .os-earn-sub-row { justify-content: flex-start; }
     .os-bento { grid-template-columns: repeat(2, 1fr); }
+    .os-root { grid-template-columns: 1fr; }
+    .os-chat-aside { display: none; }
     .os-card--personality { grid-column: span 1; grid-row: span 1; }
     .os-card--brands { grid-column: span 1; grid-row: span 1; }
     .os-card--requests { grid-column: span 2; grid-row: span 1; }
     .os-card--metrics { grid-column: span 2; }
     .os-card--watch { grid-column: span 2; }
-    .os-card--chat { grid-column: span 2; grid-row: span 1; min-height: 300px; }
   }
 
   @media (max-width: 640px) {
@@ -2796,14 +2814,16 @@
       grid-template-columns: 1fr;
       grid-auto-rows: auto;
     }
+    .os-root { grid-template-columns: 1fr; }
+    .os-chat-aside { display: none; }
+    .os-bento { grid-template-columns: 1fr; padding: 12px; }
     .os-card--personality,
     .os-card--brands,
     .os-card--requests,
     .os-card--metrics,
     .os-card--watch,
     .os-card--books,
-    .os-card--activity,
-    .os-card--chat { grid-column: span 1; grid-row: span 1; min-height: 280px; }
+    .os-card--activity { grid-column: span 1; grid-row: span 1; min-height: 200px; max-height: none; }
     .os-metrics-grid { gap: 16px; }
     .os-metric-ring { width: 48px; height: 48px; }
   }
