@@ -2404,7 +2404,7 @@
     font-family: 'Geist Variable', 'Inter', -apple-system, sans-serif;
     color: #EDEDEF;
     display: grid;
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: 1fr 360px;
     grid-template-rows: auto 1fr;
     gap: 0;
   }
@@ -2557,13 +2557,13 @@
   }
 
   /* ── Card sizes ── */
-  .os-card--personality { grid-column: span 1; grid-row: span 2; overflow-y: auto; scrollbar-width: none; }
+  .os-card--personality { grid-column: span 1; grid-row: span 1; overflow-y: auto; scrollbar-width: none; max-height: 320px; }
   .os-card--personality::-webkit-scrollbar { display: none; }
-  .os-card--brands { grid-column: span 1; grid-row: span 2; }
-  .os-card--requests { grid-column: span 1; grid-row: span 2; }
+  .os-card--brands { grid-column: span 1; grid-row: span 1; max-height: 320px; }
+  .os-card--requests { grid-column: span 1; grid-row: span 1; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; }
-  .os-card--watch { grid-column: span 2; grid-row: span 1; max-height: 260px; }
-  .os-card--books { grid-column: span 1; grid-row: span 2; max-height: 380px; }
+  .os-card--watch { grid-column: span 2; grid-row: span 1; max-height: 200px; overflow: hidden; }
+  .os-card--books { grid-column: span 2; grid-row: span 1; max-height: 280px; }
   .os-card--activity { grid-column: span 1; grid-row: span 1; }
 
   /* ── Brands ecosystem ── */
@@ -2687,25 +2687,26 @@
 
   /* ── Creator metrics ── */
   .os-metrics-grid {
-    display: flex; gap: 24px; justify-content: center;
-    padding: 8px 0 16px;
+    display: flex; gap: 16px; justify-content: center;
+    padding: 4px 0 8px;
+    flex-wrap: wrap;
   }
-  .os-metric { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .os-metric { display: flex; flex-direction: column; align-items: center; gap: 5px; }
   .os-metric-ring {
-    width: 56px; height: 56px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: 50%;
     background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), rgba(255,255,255,0.04) 0);
     display: flex; align-items: center; justify-content: center;
-    position: relative;
+    position: relative; flex-shrink: 0;
   }
   .os-metric-ring::before {
     content: ''; position: absolute;
-    inset: 5px; border-radius: 50%;
-    background: #0A0A0C;
+    inset: 4px; border-radius: 50%;
+    background: rgba(10,10,12,0.95);
   }
   .os-metric-val {
     position: relative; z-index: 1;
     font-family: 'Bodoni Moda', Georgia, serif;
-    font-size: 16px; font-weight: 700; color: #EDEDEF;
+    font-size: 14px; font-weight: 700; color: #EDEDEF;
   }
   .os-metric-label {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
@@ -2726,23 +2727,29 @@
 
   /* ── Watch Tonight ── */
   .os-watch-scroll {
-    display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none;
+    display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
     flex: 1; align-items: flex-start;
+    flex-wrap: nowrap;
+    min-height: 0;
   }
   .os-watch-scroll::-webkit-scrollbar { display: none; }
   .os-watch-item {
-    flex-shrink: 0; width: 90px;
+    flex: 0 0 80px; width: 80px;
     text-decoration: none; color: inherit;
-    display: flex; flex-direction: column; gap: 6px;
+    display: flex; flex-direction: column; gap: 4px;
   }
   .os-watch-poster {
-    width: 90px; height: 130px;
-    border-radius: 8px; object-fit: cover;
+    width: 80px; height: 110px;
+    border-radius: 6px; object-fit: cover;
     border: 1px solid rgba(255,255,255,0.04);
     background: rgba(255,255,255,0.03);
   }
   .os-watch-info { display: flex; flex-direction: column; gap: 1px; }
-  .os-watch-title { font-size: 11px; font-weight: 600; color: #EDEDEF; line-height: 1.3; }
+  .os-watch-title {
+    font-size: 10px; font-weight: 600; color: #EDEDEF; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .os-watch-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 9px; color: #3A3A40; text-transform: uppercase;
@@ -2750,31 +2757,34 @@
 
   /* ── Read Next ── */
   .os-book-list {
-    flex: 1; display: flex; flex-direction: column; gap: 2px;
-    overflow-y: auto; scrollbar-width: none;
+    flex: 1; display: flex; gap: 10px;
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; flex-wrap: nowrap;
   }
   .os-book-list::-webkit-scrollbar { display: none; }
   .os-book-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 6px; border-radius: 8px;
+    flex: 0 0 auto; width: 140px;
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 0; border-radius: 0;
     text-decoration: none; color: inherit;
-    transition: background 0.15s ease;
   }
-  .os-book-row:hover { background: rgba(255,255,255,0.03); }
   .os-book-cover {
-    width: 28px; height: 40px; border-radius: 4px;
+    width: 140px; height: 180px; border-radius: 6px;
     object-fit: cover; flex-shrink: 0;
     border: 1px solid rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.03);
   }
-  .os-book-info { flex: 1; min-width: 0; }
-  .os-book-title { font-size: 12px; font-weight: 600; color: #EDEDEF; display: block; }
-  .os-book-sub {
-    font-size: 10px; color: #4A4A50; display: block;
+  .os-book-info { min-width: 0; }
+  .os-book-title {
+    font-size: 11px; font-weight: 600; color: #EDEDEF; display: block;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .os-book-sub {
+    font-size: 9px; color: #4A4A50; display: none;
   }
   .os-book-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
-    font-size: 9px; color: #3A3A40; text-transform: uppercase; flex-shrink: 0;
+    font-size: 9px; color: #3A3A40; text-transform: uppercase;
   }
 
   /* ── Recent Activity ── */
