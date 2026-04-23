@@ -2557,7 +2557,7 @@
   }
 
   /* ── Card sizes ── */
-  .os-card--personality { grid-column: span 1; grid-row: auto; overflow: visible; }
+  .os-card--personality { grid-column: span 1; grid-row: auto; overflow: hidden; }
   .os-card--brands { grid-column: span 1; grid-row: span 1; max-height: 320px; }
   .os-card--requests { grid-column: span 1; grid-row: span 1; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; }
@@ -2767,23 +2767,23 @@
   }
   .os-book-row:hover { transform: translateY(-2px); }
   .os-book-cover {
-    width: 100%; aspect-ratio: 2/3; border-radius: 6px;
+    width: 100%; height: 150px; border-radius: 6px;
     object-fit: cover;
     border: 1px solid rgba(255,255,255,0.04);
     background: rgba(255,255,255,0.03);
   }
-  .os-book-info { min-width: 0; }
+  .os-book-info { min-width: 0; flex-shrink: 0; padding-top: 2px; }
   .os-book-title {
-    font-size: 11px; font-weight: 600; color: #EDEDEF; display: block;
+    font-size: 11px; font-weight: 600; color: #EDEDEF;
     line-height: 1.3;
-    display: -webkit-box; -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical; overflow: hidden;
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .os-book-sub {
-    font-size: 9px; color: #4A4A50; display: block;
+    font-size: 9px; color: #4A4A50;
     margin-top: 2px;
-    display: -webkit-box; -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical; overflow: hidden;
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .os-book-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
