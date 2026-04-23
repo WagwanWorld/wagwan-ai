@@ -2574,7 +2574,7 @@
   .os-card--requests { grid-column: span 1; grid-row: auto; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; justify-content: center; }
   .os-card--watch { grid-column: span 2; grid-row: auto; max-height: 210px; overflow: hidden; }
-  .os-card--books { grid-column: span 3; grid-row: auto; }
+  .os-card--books { grid-column: span 3; grid-row: auto; min-height: 260px; }
   .os-card--activity { grid-column: span 1; grid-row: auto; }
 
   /* ── Brands ecosystem ── */
@@ -2779,10 +2779,11 @@
   }
   .os-book-row:hover { transform: translateY(-2px); }
   .os-book-cover {
-    width: 100%; height: 150px; border-radius: 6px;
+    width: 100%; height: 140px; border-radius: 6px;
     object-fit: cover;
     border: 1px solid rgba(255,255,255,0.04);
     background: rgba(255,255,255,0.03);
+    flex-shrink: 0;
   }
   .os-book-info { min-width: 0; flex-shrink: 0; padding-top: 2px; }
   .os-book-title {
