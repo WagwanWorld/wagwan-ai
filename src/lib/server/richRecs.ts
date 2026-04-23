@@ -23,21 +23,25 @@ async function searchMovieTmdb(title: string): Promise<MovieResult | null> {
   const key = env.TMDB_API_KEY?.trim();
   if (!key) return null;
   try {
-    const res = await fetch(
-      `${TMDB_BASE}/search/movie?query=${encodeURIComponent(title)}&api_key=${key}&language=en-US&page=1`,
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const movie = data.results?.[0];
-    if (!movie?.poster_path) return null;
-    return {
-      title: movie.title || title,
-      posterUrl: `${TMDB_IMG}/w300${movie.poster_path}`,
-      overview: (movie.overview || '').slice(0, 150),
-      year: (movie.release_date || '').slice(0, 4),
-      rating: movie.vote_average ?? 0,
-    };
+    // Try movie search first, then TV show search
+    for (const type of ['movie', 'tv'] as const) {
+      const res = await fetch(
+        `${TMDB_BASE}/search/${type}?query=${encodeURIComponent(title)}&api_key=${key}&language=en-US&page=1`,
+        { signal: AbortSignal.timeout(6000) }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const item = data.results?.[0];
+      if (!item?.poster_path) continue;
+      return {
+        title: (type === 'movie' ? item.title : item.name) || title,
+        posterUrl: `${TMDB_IMG}/w300${item.poster_path}`,
+        overview: (item.overview || '').slice(0, 150),
+        year: ((type === 'movie' ? item.release_date : item.first_air_date) || '').slice(0, 4),
+        rating: item.vote_average ?? 0,
+      };
+    }
+    return null;
   } catch {
     return null;
   }

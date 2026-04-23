@@ -2218,7 +2218,29 @@
       <div class="os-watch-scroll">
         {#each displayMovies as movie}
           <a href={movie.ctaUrl} target="_blank" rel="noopener" class="os-watch-item">
-            <img src={movie.image} alt={movie.title} class="os-watch-poster" loading="lazy" />
+            {#if movie.image}
+              <img
+                src={movie.image}
+                alt={movie.title}
+                class="os-watch-poster"
+                loading="lazy"
+                on:error={(e) => {
+                  const el = e.currentTarget as HTMLImageElement;
+                  el.style.display = 'none';
+                  const ph = el.nextElementSibling;
+                  if (ph?.classList.contains('os-poster-placeholder')) ph.style.display = 'flex';
+                }}
+              />
+              <div class="os-poster-placeholder" style="display:none">
+                <span class="os-poster-placeholder__icon">🎬</span>
+                <span class="os-poster-placeholder__title">{movie.title}</span>
+              </div>
+            {:else}
+              <div class="os-poster-placeholder">
+                <span class="os-poster-placeholder__icon">🎬</span>
+                <span class="os-poster-placeholder__title">{movie.title}</span>
+              </div>
+            {/if}
             <div class="os-watch-info">
               <span class="os-watch-title">{movie.title}</span>
               <span class="os-watch-tag">{movie.tag}</span>
@@ -2236,7 +2258,29 @@
       <div class="os-book-list">
         {#each displayBooks as book}
           <a href={book.ctaUrl} target="_blank" rel="noopener" class="os-book-row">
-            <img src={book.image} alt={book.title} class="os-book-cover" loading="lazy" />
+            {#if book.image}
+              <img
+                src={book.image}
+                alt={book.title}
+                class="os-book-cover"
+                loading="lazy"
+                on:error={(e) => {
+                  const el = e.currentTarget as HTMLImageElement;
+                  el.style.display = 'none';
+                  const ph = el.nextElementSibling;
+                  if (ph?.classList.contains('os-cover-placeholder')) ph.style.display = 'flex';
+                }}
+              />
+              <div class="os-cover-placeholder" style="display:none">
+                <span class="os-cover-placeholder__icon">📖</span>
+                <span class="os-cover-placeholder__title">{book.title}</span>
+              </div>
+            {:else}
+              <div class="os-cover-placeholder">
+                <span class="os-cover-placeholder__icon">📖</span>
+                <span class="os-cover-placeholder__title">{book.title}</span>
+              </div>
+            {/if}
             <div class="os-book-info">
               <span class="os-book-title">{book.title}</span>
               <span class="os-book-sub">{book.subtitle.slice(0, 60)}</span>
@@ -3848,6 +3892,43 @@
     margin: 0;
   }
 
+  /* ── Image placeholders ── */
+  .os-poster-placeholder {
+    width: 80px; height: 110px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px; flex-shrink: 0;
+  }
+  .os-poster-placeholder__icon { font-size: 20px; opacity: 0.5; }
+  .os-poster-placeholder__title {
+    font-size: 8px; font-weight: 600; color: #4A4A50;
+    text-align: center; padding: 0 4px;
+    line-height: 1.2;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  .os-cover-placeholder {
+    width: 90px; height: 130px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px; flex-shrink: 0;
+  }
+  .os-cover-placeholder__icon { font-size: 22px; opacity: 0.5; }
+  .os-cover-placeholder__title {
+    font-size: 8px; font-weight: 600; color: #4A4A50;
+    text-align: center; padding: 0 4px;
+    line-height: 1.2;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+
   /* ══════════════════════════════════════════════════════════
      LIGHT MODE OVERRIDES
      ══════════════════════════════════════════════════════════ */
@@ -4051,4 +4132,15 @@
   }
   .os-root[data-home-surface='light'] .os-earn-sub-val--pending { color: #ca8a04; }
   .os-root[data-home-surface='light'] .os-earn-sub-val--green { color: #059669; }
+
+  /* Placeholders light */
+  .os-root[data-home-surface='light'] .os-poster-placeholder,
+  .os-root[data-home-surface='light'] .os-cover-placeholder {
+    background: rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .os-poster-placeholder__title,
+  .os-root[data-home-surface='light'] .os-cover-placeholder__title {
+    color: #999;
+  }
 </style>

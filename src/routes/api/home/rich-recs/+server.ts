@@ -87,7 +87,7 @@ Return ONLY valid JSON: { "movies": [...], "books": [...], "restaurants": [...] 
       searchBooks(bookItems),
     ]);
 
-    // Build movie recs
+    // Build movie recs — filter out items with no poster
     const movies: RecItem[] = (llmResult?.movies ?? []).map(m => {
       const img = movieImages[m.title];
       return {
@@ -99,7 +99,7 @@ Return ONLY valid JSON: { "movies": [...], "books": [...], "restaurants": [...] 
         ctaLabel: 'Watch on Netflix',
         ctaUrl: `https://www.netflix.com/search?q=${encodeURIComponent(m.title)}`,
       };
-    });
+    }).filter(m => m.image);
 
     // Build book recs
     const books: RecItem[] = (llmResult?.books ?? []).map(b => {
