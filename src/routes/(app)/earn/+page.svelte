@@ -29,6 +29,11 @@
     match_reason: string;
     match_score: number;
     created_at: string;
+    brief_status: 'sent' | 'accepted' | 'live' | 'completed' | 'declined';
+    ig_post_url: string | null;
+    accepted_at: string | null;
+    live_at: string | null;
+    completed_at: string | null;
   }> = [];
 
   let wallet: {
@@ -216,9 +221,31 @@
 
   async function tryWithdraw() {
     withdrawMsg = '';
-    const res = await fetch('/api/user/wallet/withdraw', { method: 'POST' });
-    const j = await res.json();
-    withdrawMsg = j.message || j.error || 'Unavailable';
+    if (!sub) return;
+    try {
+      const res = await fetch('/api/user/wallet/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSub: sub }),
+      });
+      const j = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        simulated?: boolean;
+        withdrawn_inr?: number;
+        message?: string;
+        error?: string;
+      };
+      if (res.ok && j.ok) {
+        withdrawMsg = j.simulated
+          ? `Simulated payout · ₹${(j.withdrawn_inr ?? 0).toLocaleString()} marked as withdrawn.`
+          : `Withdrew ₹${(j.withdrawn_inr ?? 0).toLocaleString()}.`;
+        await loadAll();
+        return;
+      }
+      withdrawMsg = j.message || j.error || 'Unavailable';
+    } catch {
+      withdrawMsg = 'Network error';
+    }
   }
 
   async function runOperatorIntelligence() {
@@ -324,30 +351,88 @@
 
   async function acceptOffer(e: CustomEvent) {
     const { campaignId } = e.detail;
-    const phone = localStorage.getItem('wagwan_user_id') ? (localStorage.getItem('wagwan_phone') || '') : '';
-    const campaign = campaigns.find(c => String(c.campaign_id) === String(campaignId));
-    const res = await fetch('/api/creator/brief-response', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sub, campaignId, action: 'accept',
-        phone,
-        briefText: campaign?.creative_text || '',
-      }),
-    });
-    const data = await res.json();
-    if (data.whatsappLink) whatsappLink = data.whatsappLink;
-    campaigns = campaigns.filter(c => String(c.campaign_id) !== String(campaignId));
+    const phone =
+      localStorage.getItem('wagwan_user_id') ? localStorage.getItem('wagwan_phone') || '' : '';
+    const campaign = campaigns.find((c) => c.campaign_id === campaignId);
+    try {
+      const res = await fetch('/api/creator/brief-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sub,
+          campaignId,
+          action: 'accept',
+          phone,
+          briefText: campaign?.creative_text || '',
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        whatsappLink?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.ok) {
+        err = data.error || 'Could not accept this brief. Try again.';
+        return;
+      }
+      if (data.whatsappLink) whatsappLink = data.whatsappLink;
+    } catch {
+      err = 'Network error accepting brief.';
+      return;
+    }
+    // Refetch so the card transitions sent -> accepted instead of
+    // disappearing optimistically. Matches server truth.
+    await loadAll();
   }
 
   async function declineOffer(e: CustomEvent) {
     const { campaignId } = e.detail;
-    await fetch('/api/creator/brief-response', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sub, campaignId, action: 'decline' }),
-    }).catch(() => {});
-    campaigns = campaigns.filter(c => String(c.campaign_id) !== String(campaignId));
+    try {
+      const res = await fetch('/api/creator/brief-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sub, campaignId, action: 'decline' }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        err = data.error || 'Could not decline this brief.';
+        return;
+      }
+    } catch {
+      err = 'Network error declining brief.';
+      return;
+    }
+    await loadAll();
+  }
+
+  async function completeOffer(e: CustomEvent) {
+    const { campaignId } = e.detail;
+    const igPostUrl = window.prompt('Paste the Instagram post URL for this campaign:');
+    if (!igPostUrl || !/^https?:\/\/(www\.)?instagram\.com\//i.test(igPostUrl.trim())) {
+      err = 'Please paste a valid instagram.com post URL.';
+      return;
+    }
+    try {
+      const res = await fetch('/api/creator/brief-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sub,
+          campaignId,
+          action: 'complete',
+          igPostUrl: igPostUrl.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        err = data.error || 'Could not mark this brief as posted.';
+        return;
+      }
+    } catch {
+      err = 'Network error submitting post.';
+      return;
+    }
+    await loadAll();
   }
 
   const categoryKeys = ['music', 'fashion', 'events', 'sports', 'tech'];
@@ -420,8 +505,11 @@
             rewardInr={campaign.reward_inr}
             matchReason={campaign.match_reason}
             matchScore={campaign.match_score}
+            briefStatus={campaign.brief_status}
+            igPostUrl={campaign.ig_post_url}
             on:accept={acceptOffer}
             on:decline={declineOffer}
+            on:complete={completeOffer}
           />
         {/each}
       </div>

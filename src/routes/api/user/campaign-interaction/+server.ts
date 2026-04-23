@@ -39,20 +39,10 @@ export const POST: RequestHandler = async ({ request }) => {
     throw error(500, 'Log failed');
   }
 
-  if (action === 'click') {
-    const { data: camp } = await sb.from('campaigns').select('reward_inr').eq('id', campaignId).maybeSingle();
-    const reward = Number(camp?.reward_inr ?? 0);
-    const amount = Math.round(reward * 0.25 * 100) / 100;
-    if (amount > 0) {
-      await sb.from('user_earnings').insert({
-        user_google_sub: sub,
-        campaign_id: campaignId,
-        amount_inr: amount,
-        status: 'pending',
-        note: 'Simulated engagement credit (25% of offer)',
-      });
-    }
-  }
+  // NOTE: Earnings are credited exclusively on brief completion via
+  // creatorMarketplace.completeBrief. The old "25% of click" simulation was
+  // removed to avoid double-crediting and to align the wallet ledger with the
+  // real brand → creator state machine.
 
   return json({ ok: true });
 };

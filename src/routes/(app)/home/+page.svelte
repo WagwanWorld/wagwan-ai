@@ -76,6 +76,7 @@
   import Clock from 'phosphor-svelte/lib/Clock';
 
   // ── Creator Dashboard state ───────────────────────────────────────────────
+  type BriefStatus = 'sent' | 'accepted' | 'live' | 'completed' | 'declined';
   type Campaign = {
     campaign_id: string;
     brand_name: string;
@@ -85,20 +86,32 @@
     match_reason: string;
     match_score: number;
     created_at: string;
+    brief_status: BriefStatus;
+    ig_post_url: string | null;
   };
 
   let dashLoading = true;
   let dashCampaigns: Campaign[] = [];
   let dashWallet: {
     summary: { total_inr: number; pending_inr: number; withdrawable_inr: number };
-    transactions: Array<{ id: string; amount_inr: number; status: string; note: string; created_at: string }>;
+    transactions: Array<{
+      id: string;
+      amount_inr: number;
+      status: string;
+      note: string;
+      created_at: string;
+    }>;
   } | null = null;
   let dashAcceptedBrands: string[] = [];
   let dashRespondingId = '';
+  let dashErr = '';
 
   async function loadDashboard() {
     const sub = $profile.googleSub?.trim();
-    if (!sub) { dashLoading = false; return; }
+    if (!sub) {
+      dashLoading = false;
+      return;
+    }
     try {
       const [cRes, wRes] = await Promise.all([
         fetch(`/api/user/campaigns?sub=${encodeURIComponent(sub)}`),
@@ -108,15 +121,22 @@
       const wJson = await wRes.json();
       if (cJson.ok) dashCampaigns = cJson.campaigns ?? [];
       if (wJson.ok) dashWallet = wJson;
-      // Load accepted brands from transaction notes
-      if (dashWallet?.transactions?.length) {
-        const brands = new Set<string>();
-        for (const tx of dashWallet.transactions) {
-          if (tx.note) brands.add(tx.note.replace(/^Payment.*?from\s+/i, '').trim());
-        }
-        dashAcceptedBrands = [...brands].filter(Boolean).slice(0, 8);
-      }
-    } catch { /* non-fatal */ }
+
+      // Accepted brand chips are driven by the brief_responses pipeline
+      // (accepted / live / completed), not by parsing wallet notes.
+      dashAcceptedBrands = [
+        ...new Set(
+          dashCampaigns
+            .filter((c) =>
+              (['accepted', 'live', 'completed'] as BriefStatus[]).includes(c.brief_status),
+            )
+            .map((c) => c.brand_name)
+            .filter(Boolean),
+        ),
+      ].slice(0, 8);
+    } catch {
+      /* non-fatal */
+    }
     dashLoading = false;
   }
 
@@ -124,20 +144,32 @@
     const sub = $profile.googleSub?.trim();
     if (!sub || dashRespondingId) return;
     dashRespondingId = campaignId;
-    const campaign = dashCampaigns.find(c => String(c.campaign_id) === String(campaignId));
+    dashErr = '';
+    const campaign = dashCampaigns.find((c) => c.campaign_id === campaignId);
+    const phone =
+      (typeof window !== 'undefined' && localStorage.getItem('wagwan_phone')) || '';
     try {
-      await fetch('/api/creator/brief-response', {
+      const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sub, campaignId, action: 'accept',
+          sub,
+          campaignId,
+          action: 'accept',
+          phone,
           brandName: campaign?.brand_name || '',
           briefText: campaign?.creative_text || '',
         }),
       });
-      dashCampaigns = dashCampaigns.filter(c => String(c.campaign_id) !== String(campaignId));
-      if (campaign?.brand_name) dashAcceptedBrands = [...dashAcceptedBrands, campaign.brand_name];
-    } catch { /* */ }
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        dashErr = data.error || 'Could not accept this brief.';
+      } else {
+        await loadDashboard();
+      }
+    } catch {
+      dashErr = 'Network error';
+    }
     dashRespondingId = '';
   }
 
@@ -145,14 +177,58 @@
     const sub = $profile.googleSub?.trim();
     if (!sub || dashRespondingId) return;
     dashRespondingId = campaignId;
+    dashErr = '';
     try {
-      await fetch('/api/creator/brief-response', {
+      const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sub, campaignId, action: 'decline' }),
       });
-      dashCampaigns = dashCampaigns.filter(c => String(c.campaign_id) !== String(campaignId));
-    } catch { /* */ }
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        dashErr = data.error || 'Could not decline this brief.';
+      } else {
+        await loadDashboard();
+      }
+    } catch {
+      dashErr = 'Network error';
+    }
+    dashRespondingId = '';
+  }
+
+  async function completeCampaign(campaignId: string) {
+    const sub = $profile.googleSub?.trim();
+    if (!sub || dashRespondingId) return;
+    const igPostUrl =
+      typeof window !== 'undefined'
+        ? window.prompt('Paste the Instagram post URL for this campaign:')
+        : null;
+    if (!igPostUrl || !/^https?:\/\/(www\.)?instagram\.com\//i.test(igPostUrl.trim())) {
+      dashErr = 'Please paste a valid instagram.com post URL.';
+      return;
+    }
+    dashRespondingId = campaignId;
+    dashErr = '';
+    try {
+      const res = await fetch('/api/creator/brief-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sub,
+          campaignId,
+          action: 'complete',
+          igPostUrl: igPostUrl.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        dashErr = data.error || 'Could not mark as posted.';
+      } else {
+        await loadDashboard();
+      }
+    } catch {
+      dashErr = 'Network error';
+    }
     dashRespondingId = '';
   }
 
@@ -2157,12 +2233,53 @@
                 </div>
                 <span class="os-request-amount">{formatInr(campaign.reward_inr)}</span>
               </div>
-              <div class="os-request-actions">
-                <button class="os-req-btn os-req-btn--accept" disabled={dashRespondingId === String(campaign.campaign_id)} on:click={() => acceptCampaign(String(campaign.campaign_id))}>Accept</button>
-                <button class="os-req-btn os-req-btn--decline" disabled={dashRespondingId === String(campaign.campaign_id)} on:click={() => declineCampaign(String(campaign.campaign_id))}>Decline</button>
+              <div class="os-request-state os-request-state--{campaign.brief_status}">
+                {campaign.brief_status === 'sent'
+                  ? 'NEW'
+                  : campaign.brief_status === 'accepted'
+                    ? 'ACCEPTED · WAITING ON BRAND'
+                    : campaign.brief_status === 'live'
+                      ? 'LIVE · POST NOW'
+                      : campaign.brief_status === 'completed'
+                        ? 'SUBMITTED FOR PAYOUT'
+                        : 'DECLINED'}
               </div>
+              {#if campaign.brief_status === 'sent'}
+                <div class="os-request-actions">
+                  <button
+                    class="os-req-btn os-req-btn--accept"
+                    disabled={dashRespondingId === campaign.campaign_id}
+                    on:click={() => acceptCampaign(campaign.campaign_id)}>Accept</button
+                  >
+                  <button
+                    class="os-req-btn os-req-btn--decline"
+                    disabled={dashRespondingId === campaign.campaign_id}
+                    on:click={() => declineCampaign(campaign.campaign_id)}>Decline</button
+                  >
+                </div>
+              {:else if campaign.brief_status === 'live'}
+                <div class="os-request-actions">
+                  <button
+                    class="os-req-btn os-req-btn--accept"
+                    disabled={dashRespondingId === campaign.campaign_id}
+                    on:click={() => completeCampaign(campaign.campaign_id)}>Mark as posted</button
+                  >
+                </div>
+              {:else if campaign.brief_status === 'completed' && campaign.ig_post_url}
+                <div class="os-request-actions">
+                  <a
+                    class="os-req-btn os-req-btn--decline"
+                    href={campaign.ig_post_url}
+                    target="_blank"
+                    rel="noreferrer">View post</a
+                  >
+                </div>
+              {/if}
             </div>
           {/each}
+          {#if dashErr}
+            <p class="os-card-empty">{dashErr}</p>
+          {/if}
         </div>
       {/if}
     </section>
@@ -2721,7 +2838,21 @@
     font-size: 16px; font-weight: 700; color: #4ade80;
     flex-shrink: 0;
   }
+  .os-request-state {
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8A8A90;
+  }
+  .os-request-state--sent { color: #FFB84D; }
+  .os-request-state--accepted { color: #4D7CFF; }
+  .os-request-state--live { color: #4ade80; }
+  .os-request-state--completed { color: #C1A0E8; }
+  .os-request-state--declined { color: #8A8A90; }
   .os-request-actions { display: flex; gap: 6px; margin-top: 8px; }
+  a.os-req-btn { text-align: center; text-decoration: none; display: inline-block; }
   .os-req-btn {
     flex: 1; padding: 6px 0; border-radius: 8px;
     font-size: 11px; font-weight: 700; font-family: inherit;

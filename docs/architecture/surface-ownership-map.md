@@ -59,14 +59,14 @@ This document maps the current production-aligned ownership model across Landing
 
 ## Creator API
 
-- `src/routes/api/user/*`
-- `src/routes/api/creator/*`
+- `src/routes/api/user/*` — campaigns, earnings wallet (`/wallet/settle`, `/wallet/withdraw`)
+- `src/routes/api/creator/*` — brief responses (`/brief-response`), marketplace
 - `src/routes/api/home/*`
 - `src/routes/api/chat/*`
 
 ## Brand API
 
-- `src/routes/api/brand/*`
+- `src/routes/api/brand/*` — `create-campaign`, `search-audience`, `requests`
 - `src/routes/api/brands/logout/+server.ts`
 
 ## Shared Integrations
@@ -127,3 +127,36 @@ flowchart TD
     sharedStores[SharedStoresProfileTheme] --> landingSurface
     sharedStores --> creatorSurface
 ```
+
+## 6) Brand → Creator → Payout State Machine
+
+The source of truth for allowed transitions lives in
+`src/lib/server/flowState.ts` and the Postgres check constraints in
+`supabase/011_flow_hardening.sql`. Unit tests pin the transition graph in
+`tests/flow-state-machine.test.ts`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> sent: brand launches campaign
+    sent --> accepted: creator accepts
+    sent --> declined: creator declines
+    accepted --> live: brand marks live (/api/brand/requests PATCH mark_live)
+    live --> completed: creator submits IG post URL (/api/creator/brief-response complete)
+    completed --> payoutPending: creditPendingEarnings inserts user_earnings (status=pending)
+    payoutPending --> payoutAvailable: /api/user/wallet/settle moves rows to available
+    payoutAvailable --> withdrawn: /api/user/wallet/withdraw marks rows withdrawn
+    declined --> [*]
+    withdrawn --> [*]
+```
+
+### API ownership for the lifecycle
+
+| Endpoint                      | Method    | Owner   | Responsibility                                                                                              |
+| ----------------------------- | --------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| `/api/brand/create-campaign`  | POST      | Brand   | Creates `campaigns` + `campaign_audience` + seeds `brief_responses` (transactional via compensating delete) |
+| `/api/brand/search-audience`  | POST      | Brand   | Returns matched creators with rates attached by `user_google_sub`                                           |
+| `/api/brand/requests`         | GET/PATCH | Brand   | Lists brand campaigns with status counts; transitions briefs `mark_live` / closes campaigns                 |
+| `/api/creator/brief-response` | POST      | Creator | Accept / decline / complete briefs (UUID-validated campaign ids)                                            |
+| `/api/user/campaigns`         | GET       | Creator | Creator inbox joined with `brief_responses.status`                                                          |
+| `/api/user/wallet/settle`     | POST      | Creator | Simulated settlement of `user_earnings.status` pending → available                                          |
+| `/api/user/wallet/withdraw`   | POST      | Creator | Simulated payout: marks `available` rows `withdrawn`, returns `{simulated: true, withdrawn_inr}`            |

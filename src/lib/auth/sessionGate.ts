@@ -25,11 +25,23 @@ export function maybeRepairIgOnlyAccountKey(p: UserProfile): UserProfile | null 
 /** Clear local session and send user through onboarding again. Does not delete Supabase rows. */
 export function invalidateAndGoToOnboarding(): void {
   try {
+    // Orphan auth artifacts that must also die on invalidation, otherwise a
+    // refresh-without-session will repeatedly try to hydrate from stale tokens.
+    const explicitKeys = ['wagwan_access_token', 'wagwan_refresh_token', 'wagwan_user_id'];
+    for (const k of explicitKeys) {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        /* ignore */
+      }
+    }
     for (const k of Object.keys(localStorage)) {
       if (
         k.startsWith('onboarding_') ||
         k.startsWith('wagwan_home_') ||
-        k.startsWith('wagwan_google_')
+        k.startsWith('wagwan_google_') ||
+        k.startsWith('wagwan_ig_') ||
+        k.startsWith('wagwan_session_')
       ) {
         localStorage.removeItem(k);
       }

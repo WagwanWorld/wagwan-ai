@@ -35,6 +35,10 @@ const files = [
   'supabase/005_identity_inference_snapshots.sql',
   'supabase/006_identity_claims.sql',
   'supabase/007_wagwan_user_link.sql',
+  'supabase/008_cached_content.sql',
+  'supabase/009_location_updated_at.sql',
+  'supabase/010_creator_marketplace.sql',
+  'supabase/011_flow_hardening.sql',
 ];
 
 const client = new pg.Client({

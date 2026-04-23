@@ -14,24 +14,6 @@ import { env } from '$env/dynamic/private';
 
 const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
 
-async function supabaseQuery(query: string, params: unknown[]): Promise<void> {
-  const url = env.SUPABASE_URL;
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Supabase not configured');
-
-  const res = await fetch(`${url}/rest/v1/rpc/`, {
-    method: 'POST',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify({ query, params }),
-  });
-  // RPC won't work without a function, use the REST API directly instead
-}
-
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');

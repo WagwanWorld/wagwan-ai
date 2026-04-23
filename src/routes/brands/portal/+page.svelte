@@ -50,7 +50,12 @@
       follower_count: number;
       content_themes: string[];
       location: string;
-      rates: { ig_post_rate_inr: number; ig_story_rate_inr: number; ig_reel_rate_inr: number; available: boolean } | null;
+      rates: {
+        ig_post_rate_inr: number;
+        ig_story_rate_inr: number;
+        ig_reel_rate_inr: number;
+        available: boolean;
+      } | null;
       graph_strength: number;
     };
     score: number;
@@ -170,7 +175,7 @@
     enrichedContext = '';
   }
 
-  const loginNext = '/brands/login?next=/brands/portal';
+  const loginNext = '/brands/login';
 
   type ParsedAudience = {
     age_range: [number, number] | null;
@@ -181,11 +186,26 @@
   };
 
   const presetChips = [
-    { label: 'Nightlife audience', text: 'People who go out every weekend and care about music and venues.' },
-    { label: 'Fashion-forward Gen Z', text: 'Gen Z into streetwear, drops, and underground music scenes.' },
-    { label: 'Football community', text: 'Football players who train or play matches at least twice a week.' },
-    { label: 'Music lovers', text: 'Heavy listeners who discover artists early and go to live shows.' },
-    { label: 'High spenders', text: 'Urban professionals with premium taste in dining, travel, and brands.' },
+    {
+      label: 'Nightlife audience',
+      text: 'People who go out every weekend and care about music and venues.',
+    },
+    {
+      label: 'Fashion-forward Gen Z',
+      text: 'Gen Z into streetwear, drops, and underground music scenes.',
+    },
+    {
+      label: 'Football community',
+      text: 'Football players who train or play matches at least twice a week.',
+    },
+    {
+      label: 'Music lovers',
+      text: 'Heavy listeners who discover artists early and go to live shows.',
+    },
+    {
+      label: 'High spenders',
+      text: 'Urban professionals with premium taste in dining, travel, and brands.',
+    },
   ];
 
   const ghostHints = [
@@ -244,6 +264,29 @@
   let dropActive = false;
   /** True after a successful search response (even if zero rows) — avoids snapping back to hero on empty DB. */
   let inResultsMode = false;
+
+  type BrandRequestMember = {
+    user_google_sub: string;
+    status: 'sent' | 'accepted' | 'declined' | 'live' | 'completed';
+    accepted_at: string | null;
+    live_at: string | null;
+    completed_at: string | null;
+    ig_post_url: string | null;
+  };
+  type BrandRequestCampaign = {
+    id: string;
+    title: string;
+    status: string;
+    created_at: string;
+    reward_inr: number;
+    counts: Record<string, number>;
+    members: BrandRequestMember[];
+  };
+
+  let requestCampaigns: BrandRequestCampaign[] = [];
+  let requestsLoading = false;
+  let requestsErr = '';
+  let requestActionBusy: string | null = null;
 
   type BrandAudienceIntel = {
     trying_to_achieve: string;
@@ -314,20 +357,24 @@
     return out.slice(0, 3);
   })();
 
-  $: manualSelectedUsers = users.filter(u => selected.has(u.user_google_sub));
+  $: manualSelectedUsers = users.filter((u) => selected.has(u.user_google_sub));
   $: manualTotalReach = manualSelectedUsers.reduce((s, u) => s + (u.followers || 0), 0);
-  $: manualEstimatedCost = manualSelectedUsers.reduce((s, u) => s + (u.rates?.ig_post_rate_inr ?? 0), 0) || null;
-  $: manualAvgMatchScore = users.length ? users.reduce((s, u) => s + u.match_score, 0) / users.length : 0;
+  $: manualEstimatedCost =
+    manualSelectedUsers.reduce((s, u) => s + (u.rates?.ig_post_rate_inr ?? 0), 0) || null;
+  $: manualAvgMatchScore = users.length
+    ? users.reduce((s, u) => s + u.match_score, 0) / users.length
+    : 0;
   $: manualCostBreakdown = {
-    posts: manualSelectedUsers.filter(u => u.rates?.ig_post_rate_inr).length,
-    stories: manualSelectedUsers.filter(u => u.rates?.ig_story_rate_inr).length,
-    reels: manualSelectedUsers.filter(u => u.rates?.ig_reel_rate_inr).length,
+    posts: manualSelectedUsers.filter((u) => u.rates?.ig_post_rate_inr).length,
+    stories: manualSelectedUsers.filter((u) => u.rates?.ig_story_rate_inr).length,
+    reels: manualSelectedUsers.filter((u) => u.rates?.ig_reel_rate_inr).length,
   };
 
   onMount(() => {
     const t = setInterval(() => {
       ghostIdx = (ghostIdx + 1) % ghostHints.length;
     }, 4200);
+    void loadRequests();
     return () => clearInterval(t);
   });
 
@@ -371,10 +418,7 @@
         return;
       }
       if (!pr.ok) {
-        parseErr =
-          (pj.message as string) ||
-          (pj.error as string) ||
-          `Parse failed (${pr.status})`;
+        parseErr = (pj.message as string) || (pj.error as string) || `Parse failed (${pr.status})`;
         return;
       }
       structured = pj.structured as ParsedAudience;
@@ -400,9 +444,7 @@
       }
       if (!sr.ok) {
         searchErr =
-          (sj.message as string) ||
-          (sj.error as string) ||
-          `Search failed (${sr.status})`;
+          (sj.message as string) || (sj.error as string) || `Search failed (${sr.status})`;
         users = [];
         return;
       }
@@ -418,7 +460,7 @@
       avgGraphStrength = Number(sj.avg_graph_strength) || 0;
       pctHighStrength = Number(sj.pct_high_strength_graphs) || 0;
       rankStrengthBoostApplied = Boolean(sj.rank_strength_boost_applied);
-      selected = new Set(users.slice(0, 10).map(u => u.user_google_sub));
+      selected = new Set(users.slice(0, 10).map((u) => u.user_google_sub));
     } finally {
       searching = false;
     }
@@ -468,7 +510,7 @@
       avgGraphStrength = Number(j.avg_graph_strength) || 0;
       pctHighStrength = Number(j.pct_high_strength_graphs) || 0;
       rankStrengthBoostApplied = Boolean(j.rank_strength_boost_applied);
-      selected = new Set(users.slice(0, 10).map(u => u.user_google_sub));
+      selected = new Set(users.slice(0, 10).map((u) => u.user_google_sub));
     } finally {
       searching = false;
     }
@@ -512,7 +554,7 @@
   }
 
   function selectTop(n: number) {
-    selected = new Set(users.slice(0, n).map(u => u.user_google_sub));
+    selected = new Set(users.slice(0, n).map((u) => u.user_google_sub));
   }
 
   async function runAudienceIntelligence() {
@@ -528,7 +570,7 @@
     const max = 32;
     const cohort =
       selected.size > 0
-        ? users.filter(u => selected.has(u.user_google_sub)).slice(0, max)
+        ? users.filter((u) => selected.has(u.user_google_sub)).slice(0, max)
         : users.slice(0, 24);
     if (!cohort.length) {
       audienceIntelErr = 'No members in cohort.';
@@ -546,7 +588,7 @@
           actorGoogleSub: null,
           structured,
           key_traits: keyTraits,
-          members: cohort.map(u => ({
+          members: cohort.map((u) => ({
             user_google_sub: u.user_google_sub,
             match_score: u.match_score,
             match_reason: u.match_reason,
@@ -557,9 +599,7 @@
       const j = (await res.json()) as Record<string, unknown>;
       if (!res.ok || !j.ok) {
         audienceIntelErr =
-          (j.error as string) ||
-          (j.message as string) ||
-          `Request failed (${res.status})`;
+          (j.error as string) || (j.message as string) || `Request failed (${res.status})`;
         return;
       }
       audienceIntel = j.intel as BrandAudienceIntel;
@@ -616,8 +656,8 @@
       return;
     }
     const targets = users
-      .filter(u => selected.has(u.user_google_sub))
-      .map(u => ({
+      .filter((u) => selected.has(u.user_google_sub))
+      .map((u) => ({
         user_google_sub: u.user_google_sub,
         match_score: u.match_score,
         match_reason: u.match_reason,
@@ -658,12 +698,62 @@
     }
     campaignMsg = `Live · ${j.audience_count as number} people · ${String(j.campaign_id ?? '').slice(0, 8)}…`;
     campaignPanelOpen = false;
+    await invalidateAll();
+    await loadRequests();
+  }
+
+  async function loadRequests() {
+    if (!data.brandSessionValid) return;
+    requestsLoading = true;
+    requestsErr = '';
+    try {
+      const res = await fetch('/api/brand/requests', { ...fetchOpts });
+      const j = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        campaigns?: BrandRequestCampaign[];
+        error?: string;
+      };
+      if (!res.ok || !j.ok) {
+        requestsErr = j.error || 'Could not load requests';
+        requestCampaigns = [];
+        return;
+      }
+      requestCampaigns = j.campaigns ?? [];
+    } catch {
+      requestsErr = 'Network error';
+    } finally {
+      requestsLoading = false;
+    }
+  }
+
+  async function patchRequest(campaignId: string, action: 'mark_live' | 'close', userSub?: string) {
+    if (!data.brandSessionValid) return;
+    const busyKey = `${campaignId}:${action}:${userSub ?? '*'}`;
+    requestActionBusy = busyKey;
+    try {
+      const res = await fetch('/api/brand/requests', {
+        method: 'PATCH',
+        headers: jsonHeaders(),
+        ...fetchOpts,
+        body: JSON.stringify({ campaignId, action, userSub }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !j.ok) {
+        requestsErr = j.error || 'Action failed';
+        return;
+      }
+      await loadRequests();
+    } catch {
+      requestsErr = 'Network error';
+    } finally {
+      requestActionBusy = null;
+    }
   }
 
   function exportCsv() {
     if (!data.brandSessionValid) return;
     const lines = ['google_sub,match_score,match_reason,name,city'];
-    for (const u of users.filter(x => selected.has(x.user_google_sub))) {
+    for (const u of users.filter((x) => selected.has(x.user_google_sub))) {
       lines.push(
         `"${u.user_google_sub}",${u.match_score},"${u.match_reason.replace(/"/g, '""')}","${u.name}","${u.city}"`,
       );
@@ -711,13 +801,15 @@
   {#if portalTab === 'content' && data.brandProfile}
     <div class="portal-content-studio">
       <!-- Brand Strategist Dashboard -->
-      <BrandStrategist brandProfile={{
-        ig_user_id: String(data.brandProfile.ig_user_id || ''),
-        ig_username: String(data.brandProfile.ig_username || ''),
-        ig_name: String(data.brandProfile.ig_name || ''),
-        ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
-        ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
-      }} />
+      <BrandStrategist
+        brandProfile={{
+          ig_user_id: String(data.brandProfile.ig_user_id || ''),
+          ig_username: String(data.brandProfile.ig_username || ''),
+          ig_name: String(data.brandProfile.ig_name || ''),
+          ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
+          ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
+        }}
+      />
 
       <!-- Divider before Content Studio -->
       <div class="studio-divider" id="create-publish-section">
@@ -726,13 +818,15 @@
         <span class="divider-rule"></span>
       </div>
 
-      <ContentStudio brandProfile={{
-        ig_user_id: String(data.brandProfile.ig_user_id || ''),
-        ig_username: String(data.brandProfile.ig_username || ''),
-        ig_name: String(data.brandProfile.ig_name || ''),
-        ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
-        ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
-      }} />
+      <ContentStudio
+        brandProfile={{
+          ig_user_id: String(data.brandProfile.ig_user_id || ''),
+          ig_username: String(data.brandProfile.ig_username || ''),
+          ig_name: String(data.brandProfile.ig_name || ''),
+          ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
+          ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
+        }}
+      />
     </div>
   {:else if portalTab === 'profile' && data.brandProfile}
     <div class="portal-content-studio">
@@ -744,279 +838,320 @@
     </div>
   {:else if showManualSearch}
     <div class="manual-search-header">
-      <button class="back-to-chat" on:click={() => showManualSearch = false}>
+      <button class="back-to-chat" on:click={() => (showManualSearch = false)}>
         Back to AI matching
       </button>
     </div>
 
-  <!-- Ambient -->
-  <div
-    class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-30%,rgba(77,124,255,0.10),transparent)]"
-    aria-hidden="true"
-  ></div>
+    <!-- Ambient -->
+    <div
+      class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_100%_80%_at_50%_-30%,rgba(77,124,255,0.10),transparent)]"
+      aria-hidden="true"
+    ></div>
 
-  {#if !inResultsMode}
-    <!-- Hero -->
-    <section class="relative z-10 flex min-h-[calc(100vh-56px)] flex-col items-center justify-center px-4 py-16">
-      <p class="hero-label mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.3em]">
-        Describe your audience
-      </p>
-      <h1 class="hero-title max-w-3xl text-center text-3xl font-semibold leading-tight md:text-5xl">
-        Who are you directing
-        <span class="hero-title-accent">
-          tonight?
-        </span>
-      </h1>
-
-      <div class="relative mt-12 w-full max-w-2xl">
-        <label for="studio-prompt" class="sr-only">Audience prompt</label>
-        <textarea
-          id="studio-prompt"
-          class="studio-textarea studio-textarea-hero min-h-[140px] w-full resize-none rounded-2xl px-5 py-4 text-base leading-relaxed outline-none transition-[border,box-shadow] duration-300 md:min-h-[120px] md:text-lg"
-          bind:value={promptText}
-          placeholder={ghostHints[ghostIdx]}
-        ></textarea>
-        <div class="mt-3 flex flex-wrap justify-center gap-2">
-          {#each presetChips as chip}
-            <button
-              type="button"
-              class="preset-chip rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-300"
-              on:click={() => applyChip(chip.text)}
-            >
-              {chip.label}
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <button
-        type="button"
-        disabled={searching}
-        class="discover-btn group mt-10 inline-flex items-center gap-2 rounded-full px-10 py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50"
-        on:click={() => runDiscovery()}
+    {#if !inResultsMode}
+      <!-- Hero -->
+      <section
+        class="relative z-10 flex min-h-[calc(100vh-56px)] flex-col items-center justify-center px-4 py-16"
       >
-        {searching ? 'Composing…' : 'Discover audience'}
-        {#if !searching}<ArrowRight size={18} class="transition-transform group-hover:translate-x-0.5" />{/if}
-      </button>
+        <p class="hero-label mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.3em]">
+          Describe your audience
+        </p>
+        <h1
+          class="hero-title max-w-3xl text-center text-3xl font-semibold leading-tight md:text-5xl"
+        >
+          Who are you directing
+          <span class="hero-title-accent"> tonight? </span>
+        </h1>
 
-      {#if parseErr || searchErr}
-        <p class="mt-6 max-w-md text-center text-sm text-red-400/90">{parseErr || searchErr}</p>
-      {/if}
-
-      <div class="hero-footer absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-4 text-xs">
-        {#if data.brandSessionValid}
-          <button
-            type="button"
-            class="hero-sign-out inline-flex items-center gap-1.5 transition-colors"
-            on:click={() => signOut()}
-          >
-            <SignOut size={14} /> Sign out
-          </button>
-        {:else}
-          <a href={loginNext} class="hero-sign-in underline-offset-4 hover:underline">
-            Operator sign-in
-          </a>
-        {/if}
-      </div>
-    </section>
-  {:else}
-    <!-- Results -->
-    <div class="relative z-10 pb-28 pt-6 md:pt-8">
-      <!-- Docked prompt -->
-      <div
-        class="docked-prompt sticky top-0 z-40 px-4 py-4 backdrop-blur-xl"
-      >
-        <div class="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-end">
-          <div class="min-w-0 flex-1">
-            <label for="studio-prompt-dock" class="sr-only">Refine prompt</label>
-            <textarea
-              id="studio-prompt-dock"
-              class="studio-textarea studio-textarea-dock min-h-[72px] w-full resize-y rounded-xl px-4 py-3 text-sm outline-none transition-colors md:min-h-[56px]"
-              bind:value={promptText}
-            ></textarea>
-          </div>
-          <div class="flex shrink-0 flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={searching}
-              class="rerun-btn rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-              on:click={smartRerun}
-            >
-              {searching ? '…' : 'Re-run'}
-            </button>
-            <button
-              type="button"
-              class="new-scene-btn rounded-xl px-4 py-2.5 text-sm transition-colors"
-              on:click={confirmNewScene}
-            >
-              New scene
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="mx-auto max-w-6xl space-y-8 px-4 py-8">
-        {#if users.length === 0}
-          <div
-            class="rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] px-5 py-4 text-sm leading-relaxed text-amber-100/95"
-            role="status"
-          >
-            <strong class="text-amber-50">No results found.</strong>
-            Try broadening your search — use fewer constraints or describe a wider audience.
-          </div>
-        {/if}
-        <!-- Top bar -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p class="section-label text-[11px] font-semibold uppercase tracking-[0.2em]">Live audience</p>
-            <h2 class="results-heading mt-2 text-3xl font-semibold md:text-4xl">
-              {audienceSize.toLocaleString()} people
-              <span class="results-heading-muted">found</span>
-            </h2>
-            {#if structured}
-              <p class="text-secondary mt-3 max-w-2xl text-sm leading-relaxed">
-                {structured.human_summary}
-              </p>
-            {/if}
-          </div>
-          <div class="flex flex-wrap gap-2">
-            {#if data.brandSessionValid}
+        <div class="relative mt-12 w-full max-w-2xl">
+          <label for="studio-prompt" class="sr-only">Audience prompt</label>
+          <textarea
+            id="studio-prompt"
+            class="studio-textarea studio-textarea-hero min-h-[140px] w-full resize-none rounded-2xl px-5 py-4 text-base leading-relaxed outline-none transition-[border,box-shadow] duration-300 md:min-h-[120px] md:text-lg"
+            bind:value={promptText}
+            placeholder={ghostHints[ghostIdx]}
+          ></textarea>
+          <div class="mt-3 flex flex-wrap justify-center gap-2">
+            {#each presetChips as chip}
               <button
                 type="button"
-                class="toolbar-btn inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all"
-                on:click={() => exportCsv()}
+                class="preset-chip rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-300"
+                on:click={() => applyChip(chip.text)}
               >
-                <Download size={14} /> Export
+                {chip.label}
               </button>
-              <button
-                type="button"
-                class="toolbar-btn inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all"
-                on:click={() => signOut()}
-              >
-                <SignOut size={14} /> Out
-              </button>
-            {/if}
-          </div>
-        </div>
-
-        <!-- Dashboard summary -->
-        <DashboardSummaryBar
-          creatorCount={users.length}
-          selectedCount={selected.size}
-          totalReach={manualTotalReach}
-          estimatedCost={manualEstimatedCost}
-          avgMatchScore={manualAvgMatchScore}
-          {keyTraits}
-          {pctHighStrength}
-        />
-
-        <!-- Audience intelligence -->
-        {#if users.length > 0}
-          <div class="audience-intel-panel rounded-2xl p-6">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p class="intel-label text-[11px] font-semibold uppercase tracking-wider">Audience intelligence</p>
-                <p class="text-secondary mt-2 max-w-xl text-sm">
-                  Monetization read — goals, friction, converting content. Uses selected rows if any, otherwise top 24.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={audienceIntelLoading}
-                class="generate-intel-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-lg transition-opacity disabled:opacity-50"
-                on:click={() => runAudienceIntelligence()}
-              >
-                {audienceIntelLoading ? 'Generating\u2026' : 'Generate'}
-              </button>
-            </div>
-            {#if audienceIntelErr}
-              <p class="mt-3 text-sm text-red-400/90">{audienceIntelErr}</p>
-            {/if}
-            {#if audienceIntelMembersUsed != null && audienceIntel}
-              <p class="text-muted mt-2 text-xs">Based on {audienceIntelMembersUsed} profiles.</p>
-            {/if}
-            {#if audienceIntel}
-              <div class="mt-5 grid gap-4 sm:grid-cols-2">
-                <div class="intel-card rounded-xl p-4">
-                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Trying to achieve</p>
-                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.trying_to_achieve}</p>
-                </div>
-                <div class="intel-card rounded-xl p-4">
-                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Struggling with</p>
-                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.struggling_with}</p>
-                </div>
-                <div class="intel-card rounded-xl p-4">
-                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Content that converts</p>
-                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.content_that_converts}</p>
-                </div>
-                <div class="intel-card rounded-xl p-4">
-                  <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">Will pay for</p>
-                  <p class="intel-card-body mt-2 text-sm leading-relaxed">{audienceIntel.will_pay_for}</p>
-                </div>
-              </div>
-            {/if}
-          </div>
-        {/if}
-
-        <!-- Creator cards -->
-        <div>
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p class="text-muted text-sm">
-              <span class="text-primary">{selected.size}</span> selected &middot; click to expand, checkbox to select
-            </p>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" class="toolbar-btn rounded-lg px-3 py-1 text-xs" on:click={() => selectTop(10)}>Top 10</button>
-              <button type="button" class="toolbar-btn rounded-lg px-3 py-1 text-xs" on:click={() => selectTop(25)}>Top 25</button>
-              <button type="button" class="toolbar-btn rounded-lg px-3 py-1 text-xs" on:click={() => { selected = new Set(users.map(u => u.user_google_sub)); }}>All</button>
-            </div>
-          </div>
-          <div class="grid gap-3 md:grid-cols-2">
-            {#each users as u (u.user_google_sub)}
-              <CreatorCard
-                user={u}
-                selected={selected.has(u.user_google_sub)}
-                brief={memberBriefBySub[u.user_google_sub] ?? null}
-                briefLoading={memberBriefLoading === u.user_google_sub}
-                on:toggle={(e) => toggleRow(e.detail)}
-                on:loadBrief={(e) => loadMemberBrief(users.find(x => x.user_google_sub === e.detail))}
-              />
             {/each}
           </div>
         </div>
+
+        <button
+          type="button"
+          disabled={searching}
+          class="discover-btn group mt-10 inline-flex items-center gap-2 rounded-full px-10 py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50"
+          on:click={() => runDiscovery()}
+        >
+          {searching ? 'Composing…' : 'Discover audience'}
+          {#if !searching}<ArrowRight
+              size={18}
+              class="transition-transform group-hover:translate-x-0.5"
+            />{/if}
+        </button>
+
+        {#if parseErr || searchErr}
+          <p class="mt-6 max-w-md text-center text-sm text-red-400/90">{parseErr || searchErr}</p>
+        {/if}
+
+        <div
+          class="hero-footer absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-4 text-xs"
+        >
+          {#if data.brandSessionValid}
+            <button
+              type="button"
+              class="hero-sign-out inline-flex items-center gap-1.5 transition-colors"
+              on:click={() => signOut()}
+            >
+              <SignOut size={14} /> Sign out
+            </button>
+          {:else}
+            <a href={loginNext} class="hero-sign-in underline-offset-4 hover:underline">
+              Operator sign-in
+            </a>
+          {/if}
+        </div>
+      </section>
+    {:else}
+      <!-- Results -->
+      <div class="relative z-10 pb-28 pt-6 md:pt-8">
+        <!-- Docked prompt -->
+        <div class="docked-prompt sticky top-0 z-40 px-4 py-4 backdrop-blur-xl">
+          <div class="mx-auto flex max-w-6xl flex-col gap-3 md:flex-row md:items-end">
+            <div class="min-w-0 flex-1">
+              <label for="studio-prompt-dock" class="sr-only">Refine prompt</label>
+              <textarea
+                id="studio-prompt-dock"
+                class="studio-textarea studio-textarea-dock min-h-[72px] w-full resize-y rounded-xl px-4 py-3 text-sm outline-none transition-colors md:min-h-[56px]"
+                bind:value={promptText}
+              ></textarea>
+            </div>
+            <div class="flex shrink-0 flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={searching}
+                class="rerun-btn rounded-xl px-5 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+                on:click={smartRerun}
+              >
+                {searching ? '…' : 'Re-run'}
+              </button>
+              <button
+                type="button"
+                class="new-scene-btn rounded-xl px-4 py-2.5 text-sm transition-colors"
+                on:click={confirmNewScene}
+              >
+                New scene
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mx-auto max-w-6xl space-y-8 px-4 py-8">
+          {#if users.length === 0}
+            <div
+              class="rounded-2xl border border-amber-500/25 bg-amber-500/[0.07] px-5 py-4 text-sm leading-relaxed text-amber-100/95"
+              role="status"
+            >
+              <strong class="text-amber-50">No results found.</strong>
+              Try broadening your search — use fewer constraints or describe a wider audience.
+            </div>
+          {/if}
+          <!-- Top bar -->
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="section-label text-[11px] font-semibold uppercase tracking-[0.2em]">
+                Live audience
+              </p>
+              <h2 class="results-heading mt-2 text-3xl font-semibold md:text-4xl">
+                {audienceSize.toLocaleString()} people
+                <span class="results-heading-muted">found</span>
+              </h2>
+              {#if structured}
+                <p class="text-secondary mt-3 max-w-2xl text-sm leading-relaxed">
+                  {structured.human_summary}
+                </p>
+              {/if}
+            </div>
+            <div class="flex flex-wrap gap-2">
+              {#if data.brandSessionValid}
+                <button
+                  type="button"
+                  class="toolbar-btn inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all"
+                  on:click={() => exportCsv()}
+                >
+                  <Download size={14} /> Export
+                </button>
+                <button
+                  type="button"
+                  class="toolbar-btn inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all"
+                  on:click={() => signOut()}
+                >
+                  <SignOut size={14} /> Out
+                </button>
+              {/if}
+            </div>
+          </div>
+
+          <!-- Dashboard summary -->
+          <DashboardSummaryBar
+            creatorCount={users.length}
+            selectedCount={selected.size}
+            totalReach={manualTotalReach}
+            estimatedCost={manualEstimatedCost}
+            avgMatchScore={manualAvgMatchScore}
+            {keyTraits}
+            {pctHighStrength}
+          />
+
+          <!-- Audience intelligence -->
+          {#if users.length > 0}
+            <div class="audience-intel-panel rounded-2xl p-6">
+              <div class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p class="intel-label text-[11px] font-semibold uppercase tracking-wider">
+                    Audience intelligence
+                  </p>
+                  <p class="text-secondary mt-2 max-w-xl text-sm">
+                    Monetization read — goals, friction, converting content. Uses selected rows if
+                    any, otherwise top 24.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={audienceIntelLoading}
+                  class="generate-intel-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-lg transition-opacity disabled:opacity-50"
+                  on:click={() => runAudienceIntelligence()}
+                >
+                  {audienceIntelLoading ? 'Generating\u2026' : 'Generate'}
+                </button>
+              </div>
+              {#if audienceIntelErr}
+                <p class="mt-3 text-sm text-red-400/90">{audienceIntelErr}</p>
+              {/if}
+              {#if audienceIntelMembersUsed != null && audienceIntel}
+                <p class="text-muted mt-2 text-xs">Based on {audienceIntelMembersUsed} profiles.</p>
+              {/if}
+              {#if audienceIntel}
+                <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div class="intel-card rounded-xl p-4">
+                    <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">
+                      Trying to achieve
+                    </p>
+                    <p class="intel-card-body mt-2 text-sm leading-relaxed">
+                      {audienceIntel.trying_to_achieve}
+                    </p>
+                  </div>
+                  <div class="intel-card rounded-xl p-4">
+                    <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">
+                      Struggling with
+                    </p>
+                    <p class="intel-card-body mt-2 text-sm leading-relaxed">
+                      {audienceIntel.struggling_with}
+                    </p>
+                  </div>
+                  <div class="intel-card rounded-xl p-4">
+                    <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">
+                      Content that converts
+                    </p>
+                    <p class="intel-card-body mt-2 text-sm leading-relaxed">
+                      {audienceIntel.content_that_converts}
+                    </p>
+                  </div>
+                  <div class="intel-card rounded-xl p-4">
+                    <p class="intel-card-label text-[10px] font-bold uppercase tracking-wide">
+                      Will pay for
+                    </p>
+                    <p class="intel-card-body mt-2 text-sm leading-relaxed">
+                      {audienceIntel.will_pay_for}
+                    </p>
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+
+          <!-- Creator cards -->
+          <div>
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p class="text-muted text-sm">
+                <span class="text-primary">{selected.size}</span> selected &middot; click to expand, checkbox
+                to select
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="toolbar-btn rounded-lg px-3 py-1 text-xs"
+                  on:click={() => selectTop(10)}>Top 10</button
+                >
+                <button
+                  type="button"
+                  class="toolbar-btn rounded-lg px-3 py-1 text-xs"
+                  on:click={() => selectTop(25)}>Top 25</button
+                >
+                <button
+                  type="button"
+                  class="toolbar-btn rounded-lg px-3 py-1 text-xs"
+                  on:click={() => {
+                    selected = new Set(users.map((u) => u.user_google_sub));
+                  }}>All</button
+                >
+              </div>
+            </div>
+            <div class="grid gap-3 md:grid-cols-2">
+              {#each users as u (u.user_google_sub)}
+                <CreatorCard
+                  user={u}
+                  selected={selected.has(u.user_google_sub)}
+                  brief={memberBriefBySub[u.user_google_sub] ?? null}
+                  briefLoading={memberBriefLoading === u.user_google_sub}
+                  on:toggle={(e) => toggleRow(e.detail)}
+                  on:loadBrief={(e) =>
+                    loadMemberBrief(users.find((x) => x.user_google_sub === e.detail))}
+                />
+              {/each}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  {/if}
+    {/if}
 
-  {#if inResultsMode && users.length > 0}
-    <StickyLaunchBar
-      selectedCount={selected.size}
-      totalCount={users.length}
-      totalReach={manualTotalReach}
-      estimatedCost={manualEstimatedCost}
-      costBreakdown={manualCostBreakdown}
-      on:launch={() => campaignPanelOpen = true}
-      on:startOver={confirmNewScene}
-    />
-  {/if}
+    {#if inResultsMode && users.length > 0}
+      <StickyLaunchBar
+        selectedCount={selected.size}
+        totalCount={users.length}
+        totalReach={manualTotalReach}
+        estimatedCost={manualEstimatedCost}
+        costBreakdown={manualCostBreakdown}
+        on:launch={() => (campaignPanelOpen = true)}
+        on:startOver={confirmNewScene}
+      />
+    {/if}
 
-  {#if campaignPanelOpen}
-    <LaunchModal
-      selectedCount={selected.size}
-      estimatedCost={manualEstimatedCost}
-      {brandName}
-      on:confirm={(e) => {
-        const d = e.detail;
-        campaignTitle = d.title;
-        creativeText = d.creativeText;
-        rewardInr = d.rewardInr;
-        channelEmail = d.channels.email;
-        channelInApp = d.channels.in_app;
-        createCampaign();
-      }}
-      on:close={() => campaignPanelOpen = false}
-    />
-  {/if}
-
+    {#if campaignPanelOpen}
+      <LaunchModal
+        selectedCount={selected.size}
+        estimatedCost={manualEstimatedCost}
+        {brandName}
+        on:confirm={(e) => {
+          const d = e.detail;
+          campaignTitle = d.title;
+          creativeText = d.creativeText;
+          rewardInr = d.rewardInr;
+          channelEmail = d.channels.email;
+          channelInApp = d.channels.in_app;
+          createCampaign();
+        }}
+        on:close={() => (campaignPanelOpen = false)}
+      />
+    {/if}
   {:else}
     <div class="agent-full">
       {#if currentStep === 'intake'}
@@ -1040,7 +1175,15 @@
         <div class="confirm-root">
           <div class="confirm-card">
             <div class="confirm-badge">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7.5l3.5 3.5L12 3" stroke="var(--g-accent, #E8464A)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                ><path
+                  d="M2 7.5l3.5 3.5L12 3"
+                  stroke="var(--g-accent, #E8464A)"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg
+              >
               <span>Brief ready</span>
             </div>
             <h2 class="confirm-title">Here's your campaign brief</h2>
@@ -1049,7 +1192,8 @@
             <div class="confirm-fields">
               <div class="confirm-field">
                 <label>What you're promoting</label>
-                <textarea bind:value={editableBriefSummary} rows="2" class="confirm-input"></textarea>
+                <textarea bind:value={editableBriefSummary} rows="2" class="confirm-input"
+                ></textarea>
               </div>
               <div class="confirm-row">
                 <div class="confirm-field">
@@ -1063,7 +1207,12 @@
                 </div>
                 <div class="confirm-field">
                   <label>Location</label>
-                  <input type="text" bind:value={editableLocation} class="confirm-input" placeholder="India" />
+                  <input
+                    type="text"
+                    bind:value={editableLocation}
+                    class="confirm-input"
+                    placeholder="India"
+                  />
                 </div>
               </div>
               {#if extractedBrief?.buyer_roles?.length}
@@ -1092,18 +1241,25 @@
               <button class="confirm-btn" on:click={confirmBrief}>
                 <span>Find my creators</span>
                 <span class="confirm-btn-icon">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                    ><path
+                      d="M2 7h10M8 3l4 4-4 4"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                  >
                 </span>
               </button>
-              <button class="confirm-back" on:click={() => currentStep = 'questions'}>Edit answers</button>
+              <button class="confirm-back" on:click={() => (currentStep = 'questions')}
+                >Edit answers</button
+              >
             </div>
           </div>
         </div>
       {:else if currentStep === 'thinking'}
-        <ThinkingStepper
-          activeStep={thinkingActiveStep}
-          completedSteps={thinkingCompleted}
-        />
+        <ThinkingStepper activeStep={thinkingActiveStep} completedSteps={thinkingCompleted} />
       {:else if currentStep === 'results'}
         <ResultsDashboard
           matches={matchResults}
@@ -1121,10 +1277,102 @@
           }}
         />
       {/if}
+
+      {#if currentStep === 'intake' && data.brandSessionValid}
+        <section class="requests-panel" aria-label="Your campaign requests">
+          <div class="requests-panel__header">
+            <h3 class="requests-panel__title">Your campaigns</h3>
+            <button
+              type="button"
+              class="requests-panel__refresh"
+              on:click={() => loadRequests()}
+              disabled={requestsLoading}
+            >
+              {requestsLoading ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
+          {#if requestsErr}
+            <p class="requests-panel__error">{requestsErr}</p>
+          {/if}
+          {#if !requestsLoading && requestCampaigns.length === 0}
+            <p class="requests-panel__empty">
+              No campaigns yet. Launch one above and you'll see sent / accepted / live counts here.
+            </p>
+          {/if}
+          {#each requestCampaigns as c (c.id)}
+            <article class="requests-card">
+              <header class="requests-card__head">
+                <div class="requests-card__title-wrap">
+                  <h4 class="requests-card__title">{c.title}</h4>
+                  <span class="requests-card__status requests-card__status--{c.status}">
+                    {c.status}
+                  </span>
+                </div>
+                <div class="requests-card__counts">
+                  <span>Sent {c.counts.sent ?? 0}</span>
+                  <span>Accepted {c.counts.accepted ?? 0}</span>
+                  <span>Live {c.counts.live ?? 0}</span>
+                  <span>Completed {c.counts.completed ?? 0}</span>
+                  <span class="requests-card__declined">Declined {c.counts.declined ?? 0}</span>
+                </div>
+              </header>
+
+              <div class="requests-card__actions">
+                {#if (c.counts.accepted ?? 0) > 0}
+                  <button
+                    type="button"
+                    class="requests-card__action"
+                    disabled={requestActionBusy === `${c.id}:mark_live:*`}
+                    on:click={() => patchRequest(c.id, 'mark_live')}
+                  >
+                    {requestActionBusy === `${c.id}:mark_live:*`
+                      ? 'Marking…'
+                      : `Mark ${c.counts.accepted} accepted → live`}
+                  </button>
+                {/if}
+                {#if c.status !== 'ended'}
+                  <button
+                    type="button"
+                    class="requests-card__action requests-card__action--ghost"
+                    disabled={requestActionBusy === `${c.id}:close:*`}
+                    on:click={() => patchRequest(c.id, 'close')}
+                  >
+                    Close campaign
+                  </button>
+                {/if}
+              </div>
+
+              {#if c.members.length > 0}
+                <ul class="requests-card__members">
+                  {#each c.members.slice(0, 6) as m (m.user_google_sub)}
+                    <li class="requests-card__member">
+                      <code class="requests-card__sub">{m.user_google_sub.slice(0, 8)}…</code>
+                      <span class="requests-card__status requests-card__status--{m.status}"
+                        >{m.status}</span
+                      >
+                      {#if m.ig_post_url}
+                        <a
+                          class="requests-card__link"
+                          href={m.ig_post_url}
+                          target="_blank"
+                          rel="noreferrer">Post</a
+                        >
+                      {/if}
+                    </li>
+                  {/each}
+                  {#if c.members.length > 6}
+                    <li class="requests-card__more">+{c.members.length - 6} more</li>
+                  {/if}
+                </ul>
+              {/if}
+            </article>
+          {/each}
+        </section>
+      {/if}
     </div>
     {#if currentStep === 'intake' || currentStep === 'questions'}
       <div class="manual-link">
-        <button class="switch-link" on:click={() => showManualSearch = true}>
+        <button class="switch-link" on:click={() => (showManualSearch = true)}>
           Switch to manual search
         </button>
       </div>
@@ -1150,6 +1398,172 @@
     flex-direction: column;
   }
 
+  .requests-panel {
+    margin-top: 32px;
+    padding: 20px;
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
+    background: var(--g-surface-1, rgba(255, 255, 255, 0.02));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .requests-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .requests-panel__title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--g-text-1, #e8e8ea);
+  }
+  .requests-panel__refresh {
+    background: none;
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.12));
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--g-text-2, #8a8a90);
+    cursor: pointer;
+  }
+  .requests-panel__refresh:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .requests-panel__empty,
+  .requests-panel__error {
+    font-size: 13px;
+    color: var(--g-text-3, #4a4a50);
+    margin: 0;
+  }
+  .requests-panel__error {
+    color: #e8464a;
+  }
+  .requests-card {
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--g-surface-2, rgba(255, 255, 255, 0.01));
+  }
+  .requests-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .requests-card__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .requests-card__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--g-text-1, #e8e8ea);
+  }
+  .requests-card__counts {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--g-text-3, #4a4a50);
+  }
+  .requests-card__declined {
+    color: #b88;
+  }
+  .requests-card__status {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.1));
+    color: var(--g-text-2, #8a8a90);
+  }
+  .requests-card__status--active,
+  .requests-card__status--accepted {
+    color: #7ba7d9;
+    border-color: rgba(123, 167, 217, 0.4);
+  }
+  .requests-card__status--live {
+    color: #9bdb9b;
+    border-color: rgba(155, 219, 155, 0.4);
+  }
+  .requests-card__status--completed {
+    color: #c1a0e8;
+    border-color: rgba(193, 160, 232, 0.4);
+  }
+  .requests-card__status--declined {
+    color: #b88;
+    border-color: rgba(187, 136, 136, 0.4);
+  }
+  .requests-card__status--ended {
+    color: #777;
+    border-color: rgba(120, 120, 120, 0.3);
+  }
+  .requests-card__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .requests-card__action {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.12));
+    background: var(--g-accent, #e8464a);
+    color: white;
+    cursor: pointer;
+  }
+  .requests-card__action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .requests-card__action--ghost {
+    background: transparent;
+    color: var(--g-text-2, #8a8a90);
+  }
+  .requests-card__members {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .requests-card__member {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    font-size: 11px;
+    color: var(--g-text-2, #8a8a90);
+  }
+  .requests-card__sub {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+  }
+  .requests-card__link {
+    color: #7ba7d9;
+    text-decoration: underline;
+  }
+  .requests-card__more {
+    font-size: 11px;
+    color: var(--g-text-3, #4a4a50);
+  }
+
   .manual-link {
     text-align: center;
     padding: 8px 0 16px;
@@ -1158,14 +1572,16 @@
   .switch-link {
     background: none;
     border: none;
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
     font-size: 12px;
     cursor: pointer;
     font-family: inherit;
     padding: 4px 8px;
     transition: color 0.2s;
   }
-  .switch-link:hover { color: var(--g-text-2, #8A8A90); }
+  .switch-link:hover {
+    color: var(--g-text-2, #8a8a90);
+  }
 
   .enriching-state {
     display: flex;
@@ -1178,98 +1594,138 @@
   .enriching-spinner {
     width: 24px;
     height: 24px;
-    border: 2px solid var(--g-border, rgba(255,255,255,0.06));
-    border-top-color: var(--g-metric-shares, #7BA7D9);
+    border: 2px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border-top-color: var(--g-metric-shares, #7ba7d9);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
   .enriching-text {
     font-size: 14px;
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
     margin: 0;
   }
 
   .manual-search-header {
     padding: 12px 24px;
-    border-bottom: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
   }
 
   .back-to-chat {
     background: none;
     border: none;
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
     font-size: 13px;
     cursor: pointer;
     font-family: inherit;
     padding: 4px 0;
     transition: color 0.2s;
   }
-  .back-to-chat:hover { color: var(--g-text, #EDEDEF); }
+  .back-to-chat:hover {
+    color: var(--g-text, #ededef);
+  }
 
   .brand-user-rates {
-    display: flex; gap: 8px; margin-top: 6px;
-    font-size: 11px; font-family: var(--font-mono); color: var(--g-text-2, #8A8A90);
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--g-text-2, #8a8a90);
   }
 
   /* === Token-based utility classes === */
-  .text-primary { color: var(--g-text, #EDEDEF); }
-  .text-secondary { color: var(--g-text-2, #8A8A90); }
-  .text-muted { color: var(--g-text-3, #4A4A50); }
-  .section-label { color: var(--g-text-3, #4A4A50); }
-  .accent-secondary { color: var(--g-metric-shares, #7BA7D9); }
-  .accent-tertiary { color: var(--g-accent-tertiary, #E8833A); }
+  .text-primary {
+    color: var(--g-text, #ededef);
+  }
+  .text-secondary {
+    color: var(--g-text-2, #8a8a90);
+  }
+  .text-muted {
+    color: var(--g-text-3, #4a4a50);
+  }
+  .section-label {
+    color: var(--g-text-3, #4a4a50);
+  }
+  .accent-secondary {
+    color: var(--g-metric-shares, #7ba7d9);
+  }
+  .accent-tertiary {
+    color: var(--g-accent-tertiary, #e8833a);
+  }
 
   /* === Hero section === */
-  .hero-label { color: var(--g-text-3, #4A4A50); }
-  .hero-title { color: var(--g-text, #EDEDEF); }
-  .hero-title-accent { color: var(--g-text-2, #8A8A90); }
-  .hero-footer { color: var(--g-text-3, #4A4A50); }
+  .hero-label {
+    color: var(--g-text-3, #4a4a50);
+  }
+  .hero-title {
+    color: var(--g-text, #ededef);
+  }
+  .hero-title-accent {
+    color: var(--g-text-2, #8a8a90);
+  }
+  .hero-footer {
+    color: var(--g-text-3, #4a4a50);
+  }
   .hero-sign-out {
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
   }
-  .hero-sign-out:hover { color: var(--g-text, #EDEDEF); }
+  .hero-sign-out:hover {
+    color: var(--g-text, #ededef);
+  }
   .hero-sign-in {
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
   }
-  .hero-sign-in:hover { color: var(--g-metric-shares, #7BA7D9); }
+  .hero-sign-in:hover {
+    color: var(--g-metric-shares, #7ba7d9);
+  }
 
   .studio-textarea-hero {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
-    background: var(--g-surface, #17171A);
-    color: var(--g-text, #EDEDEF);
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 24px 80px -24px rgba(0,0,0,0.6);
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    background: var(--g-surface, #17171a);
+    color: var(--g-text, #ededef);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+      0 24px 80px -24px rgba(0, 0, 0, 0.6);
   }
-  .studio-textarea-hero::placeholder { color: var(--g-text-3, #4A4A50); }
+  .studio-textarea-hero::placeholder {
+    color: var(--g-text-3, #4a4a50);
+  }
 
   .preset-chip {
-    border: 1px solid var(--g-surface, #17171A);
-    background: rgba(255,255,255,0.025);
-    color: var(--g-text-2, #8A8A90);
+    border: 1px solid var(--g-surface, #17171a);
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--g-text-2, #8a8a90);
   }
 
   .discover-btn {
     background: white;
     color: var(--g-bg, #111113);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   }
   .discover-btn:hover {
-    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
   }
 
   /* === Docked prompt / Results toolbar === */
   .docked-prompt {
-    border-bottom: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
     background: rgba(11, 11, 13, 0.85);
   }
   @supports (backdrop-filter: blur(1px)) {
-    .docked-prompt { background: rgba(11, 11, 13, 0.70); }
+    .docked-prompt {
+      background: rgba(11, 11, 13, 0.7);
+    }
   }
 
   .studio-textarea-dock {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
-    background: var(--g-surface, #17171A);
-    color: var(--g-text, #EDEDEF);
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    background: var(--g-surface, #17171a);
+    color: var(--g-text, #ededef);
   }
 
   .rerun-btn {
@@ -1278,8 +1734,8 @@
   }
 
   .new-scene-btn {
-    border: 1px solid var(--g-border-strong, rgba(255,255,255,0.14));
-    color: var(--g-text-3, #4A4A50);
+    border: 1px solid var(--g-border-strong, rgba(255, 255, 255, 0.14));
+    color: var(--g-text-3, #4a4a50);
   }
   .new-scene-btn:hover {
     border-color: rgba(239, 68, 68, 0.3);
@@ -1287,49 +1743,57 @@
   }
 
   /* === Results header === */
-  .results-heading { color: var(--g-text, #EDEDEF); }
-  .results-heading-muted { color: var(--g-text-3, #4A4A50); }
+  .results-heading {
+    color: var(--g-text, #ededef);
+  }
+  .results-heading-muted {
+    color: var(--g-text-3, #4a4a50);
+  }
 
   .toolbar-btn {
-    border: 1px solid var(--g-border-strong, rgba(255,255,255,0.14));
-    color: var(--g-text-2, #8A8A90);
+    border: 1px solid var(--g-border-strong, rgba(255, 255, 255, 0.14));
+    color: var(--g-text-2, #8a8a90);
   }
   .toolbar-btn:hover {
     border-color: rgba(255, 255, 255, 0.2);
-    color: var(--g-text, #EDEDEF);
+    color: var(--g-text, #ededef);
   }
 
   /* === Overview panel === */
   .overview-panel {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
-    background: rgba(255,255,255,0.025);
-    box-shadow: 0 0 60px rgba(0,0,0,0.35);
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.35);
   }
   .overview-panel:hover {
     border-color: rgba(255, 255, 255, 0.1);
   }
 
   .overview-row {
-    color: var(--g-text-2, #8A8A90);
-    border-bottom: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    color: var(--g-text-2, #8a8a90);
+    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
   }
-  .overview-row-last { border-bottom: none; }
-  .overview-value { color: var(--g-text, #EDEDEF); }
+  .overview-row-last {
+    border-bottom: none;
+  }
+  .overview-value {
+    color: var(--g-text, #ededef);
+  }
 
   .interest-tag {
-    border: 1px solid var(--g-border-strong, rgba(255,255,255,0.14));
-    background: rgba(255,255,255,0.025);
-    color: var(--g-text, #EDEDEF);
+    border: 1px solid var(--g-border-strong, rgba(255, 255, 255, 0.14));
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--g-text, #ededef);
   }
   .behavior-tag {
     border: 1px solid rgba(77, 124, 255, 0.2);
     background: rgba(77, 124, 255, 0.1);
-    color: #8BABFF;
+    color: #8babff;
   }
 
   /* === Mosaic === */
   .mosaic-tile {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
   }
   .mosaic-initials {
     color: rgba(255, 255, 255, 0.9);
@@ -1337,21 +1801,33 @@
 
   /* === Insight cards === */
   .insight-card {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
-    background: linear-gradient(to bottom right, rgba(255,255,255,0.025), transparent);
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.025), transparent);
   }
-  .insight-stat { color: var(--g-text, #EDEDEF); }
-  .insight-title { color: var(--g-text, #EDEDEF); }
-  .insight-caption { color: var(--g-text-3, #4A4A50); }
+  .insight-stat {
+    color: var(--g-text, #ededef);
+  }
+  .insight-title {
+    color: var(--g-text, #ededef);
+  }
+  .insight-caption {
+    color: var(--g-text-3, #4a4a50);
+  }
 
   /* === Intel cards === */
-  .intel-label { color: var(--g-accent-tertiary, #E8833A); }
+  .intel-label {
+    color: var(--g-accent-tertiary, #e8833a);
+  }
   .intel-card {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
     background: rgba(0, 0, 0, 0.2);
   }
-  .intel-card-label { color: var(--g-text-3, #4A4A50); }
-  .intel-card-body { color: var(--g-text, #EDEDEF); }
+  .intel-card-label {
+    color: var(--g-text-3, #4a4a50);
+  }
+  .intel-card-body {
+    color: var(--g-text, #ededef);
+  }
 
   /* === Member cards === */
   .member-card-selected {
@@ -1360,40 +1836,46 @@
     box-shadow: 0 0 24px rgba(77, 124, 255, 0.15);
   }
   .member-card-default {
-    border-color: var(--g-border, rgba(255,255,255,0.06));
-    background: rgba(255,255,255,0.025);
+    border-color: var(--g-border, rgba(255, 255, 255, 0.06));
+    background: rgba(255, 255, 255, 0.025);
   }
   .member-card-default:hover {
     border-color: rgba(255, 255, 255, 0.15);
-    background: var(--g-surface, #17171A);
+    background: var(--g-surface, #17171a);
   }
-  .member-avatar { color: var(--g-text, #EDEDEF); }
+  .member-avatar {
+    color: var(--g-text, #ededef);
+  }
   .member-card-footer {
-    border-top: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-top: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
     background: rgba(0, 0, 0, 0.2);
   }
-  .brief-body { color: var(--g-text, #EDEDEF); }
-  .brief-label { color: var(--g-text-3, #4A4A50); }
+  .brief-body {
+    color: var(--g-text, #ededef);
+  }
+  .brief-label {
+    color: var(--g-text-3, #4a4a50);
+  }
 
   /* === Campaign slide-over === */
   .campaign-aside {
-    border-left: 1px solid var(--g-border, rgba(255,255,255,0.06));
-    background: var(--g-surface, #17171A);
-    box-shadow: -16px 0 64px rgba(0,0,0,0.5);
+    border-left: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    background: var(--g-surface, #17171a);
+    box-shadow: -16px 0 64px rgba(0, 0, 0, 0.5);
   }
   .campaign-header {
-    border-bottom: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
   }
   .campaign-close-btn {
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
   }
   .campaign-close-btn:hover {
-    background: rgba(255,255,255,0.025);
-    color: var(--g-text, #EDEDEF);
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--g-text, #ededef);
   }
   .campaign-option {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
-    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    background: rgba(255, 255, 255, 0.025);
   }
   .campaign-option:hover {
     border-color: rgba(255, 255, 255, 0.1);
@@ -1402,23 +1884,23 @@
     border-color: rgba(255, 255, 255, 0.04);
   }
   .campaign-input {
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
     background: var(--g-bg, #111113);
-    color: var(--g-text, #EDEDEF);
+    color: var(--g-text, #ededef);
   }
   .campaign-input:focus {
     border-color: rgba(77, 124, 255, 0.4);
   }
   .creative-drop {
-    border: 1px dashed var(--g-border-strong, rgba(255,255,255,0.14));
-    background: rgba(255,255,255,0.025);
+    border: 1px dashed var(--g-border-strong, rgba(255, 255, 255, 0.14));
+    background: rgba(255, 255, 255, 0.025);
   }
   .creative-drop-active {
     border-color: rgba(77, 124, 255, 0.5);
     background: rgba(77, 124, 255, 0.1);
   }
   .campaign-footer {
-    border-top: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border-top: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
   }
 
   /* Textarea focus states */
@@ -1436,8 +1918,12 @@
 
   /* Launch campaign buttons */
   .launch-btn {
-    background: linear-gradient(135deg, var(--g-accent, #E8464A), var(--g-accent-tertiary, #E8833A));
-    color: var(--g-text, #EDEDEF);
+    background: linear-gradient(
+      135deg,
+      var(--g-accent, #e8464a),
+      var(--g-accent-tertiary, #e8833a)
+    );
+    color: var(--g-text, #ededef);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   }
   .launch-btn:hover {
@@ -1462,8 +1948,8 @@
 
   /* Generate intelligence button */
   .generate-intel-btn {
-    background: var(--g-metric-shares, #7BA7D9);
-    color: var(--g-text, #EDEDEF);
+    background: var(--g-metric-shares, #7ba7d9);
+    color: var(--g-text, #ededef);
     box-shadow: 0 4px 14px rgba(77, 124, 255, 0.3);
   }
   .generate-intel-btn:hover {
@@ -1476,7 +1962,11 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: linear-gradient(145deg, var(--g-accent, #E8464A), var(--g-accent-tertiary, #E8833A));
+    background: linear-gradient(
+      145deg,
+      var(--g-accent, #e8464a),
+      var(--g-accent-tertiary, #e8833a)
+    );
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     cursor: pointer;
   }
@@ -1485,7 +1975,11 @@
     height: 18px;
     border: none;
     border-radius: 50%;
-    background: linear-gradient(145deg, var(--g-accent, #E8464A), var(--g-accent-tertiary, #E8833A));
+    background: linear-gradient(
+      145deg,
+      var(--g-accent, #e8464a),
+      var(--g-accent-tertiary, #e8833a)
+    );
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     cursor: pointer;
   }
@@ -1504,11 +1998,13 @@
     width: 100%;
     padding: 32px;
     border-radius: 1.25rem;
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
-    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    background: rgba(255, 255, 255, 0.025);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.04), 0 16px 48px rgba(0,0,0,0.3);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.04),
+      0 16px 48px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -1516,8 +2012,14 @@
   }
 
   @keyframes card-in {
-    from { opacity: 0; transform: translateY(16px) scale(0.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   .confirm-badge {
@@ -1529,9 +2031,9 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--g-accent, #E8464A);
-    background: rgba(255,77,77,0.08);
-    border: 1px solid rgba(255,77,77,0.15);
+    color: var(--g-accent, #e8464a);
+    background: rgba(255, 77, 77, 0.08);
+    border: 1px solid rgba(255, 77, 77, 0.15);
     border-radius: 9999px;
     padding: 5px 12px;
   }
@@ -1539,7 +2041,7 @@
   .confirm-title {
     font-size: 20px;
     font-weight: 600;
-    color: var(--g-text, #EDEDEF);
+    color: var(--g-text, #ededef);
     text-align: center;
     margin: 0;
     letter-spacing: -0.02em;
@@ -1547,7 +2049,7 @@
 
   .confirm-sub {
     font-size: 13px;
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
     text-align: center;
     margin: -12px 0 0;
   }
@@ -1565,7 +2067,9 @@
   }
 
   @media (max-width: 480px) {
-    .confirm-row { grid-template-columns: 1fr; }
+    .confirm-row {
+      grid-template-columns: 1fr;
+    }
   }
 
   .confirm-field {
@@ -1579,17 +2083,17 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
   }
 
   .confirm-input,
   .confirm-select {
     background: var(--g-bg, #111113);
-    border: 1px solid var(--g-border, rgba(255,255,255,0.06));
+    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
     border-radius: 10px;
     padding: 10px 14px;
     font-size: 14px;
-    color: var(--g-text, #EDEDEF);
+    color: var(--g-text, #ededef);
     font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
@@ -1597,7 +2101,7 @@
 
   .confirm-input:focus,
   .confirm-select:focus {
-    border-color: rgba(77,124,255,0.4);
+    border-color: rgba(77, 124, 255, 0.4);
   }
 
   .confirm-select {
@@ -1622,15 +2126,15 @@
     font-weight: 600;
     padding: 4px 10px;
     border-radius: 9999px;
-    background: rgba(255,77,77,0.08);
-    color: #FF6B6B;
-    border: 1px solid rgba(255,77,77,0.15);
+    background: rgba(255, 77, 77, 0.08);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 77, 77, 0.15);
   }
 
   .confirm-tag--blue {
-    background: rgba(77,124,255,0.08);
-    color: #6B9AFF;
-    border-color: rgba(77,124,255,0.15);
+    background: rgba(77, 124, 255, 0.08);
+    color: #6b9aff;
+    border-color: rgba(77, 124, 255, 0.15);
   }
 
   .confirm-actions {
@@ -1644,7 +2148,11 @@
     padding: 14px 20px;
     border: none;
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--g-accent, #E8464A), var(--g-accent-tertiary, #E8833A));
+    background: linear-gradient(
+      135deg,
+      var(--g-accent, #e8464a),
+      var(--g-accent-tertiary, #e8833a)
+    );
     color: white;
     font-size: 15px;
     font-weight: 600;
@@ -1657,14 +2165,18 @@
     transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  .confirm-btn:hover { transform: translateY(-1px); }
-  .confirm-btn:active { transform: scale(0.98); }
+  .confirm-btn:hover {
+    transform: translateY(-1px);
+  }
+  .confirm-btn:active {
+    transform: scale(0.98);
+  }
 
   .confirm-btn-icon {
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1673,7 +2185,7 @@
   .confirm-back {
     background: none;
     border: none;
-    color: var(--g-text-3, #4A4A50);
+    color: var(--g-text-3, #4a4a50);
     font-size: 13px;
     font-family: inherit;
     cursor: pointer;
@@ -1681,7 +2193,9 @@
     text-align: center;
     transition: color 0.2s;
   }
-  .confirm-back:hover { color: var(--g-text-2, #8A8A90); }
+  .confirm-back:hover {
+    color: var(--g-text-2, #8a8a90);
+  }
 
   /* ── Content studio / profile wrapper ── */
   .portal-content-studio {
@@ -1689,7 +2203,6 @@
     margin: 0 auto;
     padding: 0 0 80px;
   }
-
 
   /* ── Studio divider ── */
   .studio-divider {
@@ -1701,14 +2214,14 @@
   .divider-rule {
     flex: 1;
     height: 1px;
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
   }
   .divider-label {
     font-size: 9px;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--g-text-ghost, rgba(255,255,255,0.1));
+    color: var(--g-text-ghost, rgba(255, 255, 255, 0.1));
     white-space: nowrap;
   }
 
@@ -1718,7 +2231,7 @@
     flex-direction: column;
     gap: 8px;
     padding-bottom: 40px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     margin-bottom: 40px;
   }
   .section-headline {
@@ -1727,7 +2240,7 @@
     font-weight: 600;
     line-height: 1.1;
     letter-spacing: -0.02em;
-    color: var(--g-text, rgba(255,255,255,0.92));
+    color: var(--g-text, rgba(255, 255, 255, 0.92));
     margin: 0;
   }
 </style>

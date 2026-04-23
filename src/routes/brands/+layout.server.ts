@@ -15,6 +15,11 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
     ig_name: string;
     ig_profile_picture: string;
   } | null = null;
+  // True when the signed session cookie verifies but no matching row exists in
+  // `brand_accounts`. This typically means the row was deleted or never
+  // persisted; the UI should show a "reconnect" state rather than the generic
+  // "Connect Instagram" CTA that implies the user is not signed in at all.
+  let sessionOutOfSync = false;
 
   if (isValid && igUserId && igUserId !== '__legacy__') {
     try {
@@ -35,11 +40,15 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
           brandAccount = rows[0] || null;
         }
       }
-    } catch {}
+    } catch {
+      // ignore — we treat this as "session valid but can't reach DB".
+    }
+    if (!brandAccount) sessionOutOfSync = true;
   }
 
   return {
     brandAuthenticated: isValid,
     brandAccount,
+    sessionOutOfSync,
   };
 };

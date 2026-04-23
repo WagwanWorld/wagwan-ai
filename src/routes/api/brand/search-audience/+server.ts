@@ -100,10 +100,12 @@ export const POST: RequestHandler = async ({ request }) => {
     rankStrengthBoost,
   });
 
-  // Enrich results with rates
-  const enrichedUsers = (result.users ?? []).map((u: any) => ({
+  // Enrich results with rates. AudienceSearchUserRow uses `user_google_sub`,
+  // NOT `google_sub`; prior to this fix `ratesBySub.get(u.google_sub)` always
+  // returned undefined, so rates never reached the portal UI.
+  const enrichedUsers = (result.users ?? []).map((u) => ({
     ...u,
-    rates: ratesBySub.get(u.google_sub) ?? null,
+    rates: ratesBySub.get(u.user_google_sub) ?? null,
   }));
 
   return json({ ok: true, ...result, users: enrichedUsers });

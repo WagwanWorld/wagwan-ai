@@ -5,6 +5,7 @@
   export let data: {
     brandAuthenticated: boolean;
     brandAccount: { ig_username: string; ig_name: string; ig_profile_picture: string } | null;
+    sessionOutOfSync: boolean;
   };
 
   $: pathname = $page.url.pathname;
@@ -16,14 +17,27 @@
 
   const sections = [
     { num: '01', label: 'Content Studio', href: '/brands/portal?tab=content' },
-    { num: '02', label: 'Find Creators',  href: '/brands/creators' },
+    { num: '02', label: 'Find Creators', href: '/brands/creators' },
     { num: '03', label: 'Profile & Insights', href: '/brands/portal?tab=profile' },
   ] as const;
 
   $: activeSection = onCreators ? '02' : onPortal ? '01' : null;
 
   const now = new Date();
-  const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const monthNames = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC',
+  ];
   const issueDate = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
   const issueVol = `VOL.01`;
 
@@ -71,11 +85,7 @@
       {#if authed && !onLogin}
         <nav class="pill-switcher desktop-only" aria-label="Main sections">
           {#each sections as section}
-            <a
-              href={section.href}
-              class="pill-tab"
-              class:active={activeSection === section.num}
-            >
+            <a href={section.href} class="pill-tab" class:active={activeSection === section.num}>
               {section.label}
             </a>
           {/each}
@@ -85,11 +95,31 @@
       <!-- Right: actions -->
       <div class="topbar-right">
         <!-- Dark mode toggle -->
-        <button class="theme-toggle" on:click={toggleTheme} aria-label="Toggle theme" title={deepMode ? 'Dim mode' : 'Deep mode'}>
+        <button
+          class="theme-toggle"
+          on:click={toggleTheme}
+          aria-label="Toggle theme"
+          title={deepMode ? 'Dim mode' : 'Deep mode'}
+        >
           {#if deepMode}
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3.5" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2M3.05 3.05l1.4 1.4M10.55 10.55l1.4 1.4M11.95 3.05l-1.4 1.4M4.45 10.55l-1.4 1.4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+              ><circle cx="7.5" cy="7.5" r="3.5" stroke="currentColor" stroke-width="1.2" /><path
+                d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2M3.05 3.05l1.4 1.4M10.55 10.55l1.4 1.4M11.95 3.05l-1.4 1.4M4.45 10.55l-1.4 1.4"
+                stroke="currentColor"
+                stroke-width="1"
+                stroke-linecap="round"
+              /></svg
+            >
           {:else}
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M13 9a5.5 5.5 0 1 1-7-7 4.5 4.5 0 0 0 7 7z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+              ><path
+                d="M13 9a5.5 5.5 0 1 1-7-7 4.5 4.5 0 0 0 7 7z"
+                stroke="currentColor"
+                stroke-width="1.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >
           {/if}
         </button>
 
@@ -99,17 +129,61 @@
             {#if brand.ig_profile_picture}
               <img src={brand.ig_profile_picture} alt="" class="account-avatar" />
             {:else}
-              <div class="account-avatar account-avatar--fallback">{(brand.ig_name || 'B').charAt(0)}</div>
+              <div class="account-avatar account-avatar--fallback">
+                {(brand.ig_name || 'B').charAt(0)}
+              </div>
             {/if}
             <span class="account-handle">@{brand.ig_username}</span>
             <button class="sign-out-btn" on:click={handleSignOut} title="Sign out">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 10.5H2.5a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h2M8 8.5l2.5-2.5L8 3.5M10.5 6H4.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                ><path
+                  d="M4.5 10.5H2.5a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h2M8 8.5l2.5-2.5L8 3.5M10.5 6H4.5"
+                  stroke="currentColor"
+                  stroke-width="1"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg
+              >
             </button>
           </div>
+        {:else if authed && data.sessionOutOfSync && !onLogin}
+          <!-- Valid cookie but brand_accounts row missing: prompt reconnect -->
+          <a href="/brands/login" class="connect-cta connect-cta--resync">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+              ><path
+                d="M2 7a5 5 0 1 1 5 5"
+                stroke="currentColor"
+                stroke-width="1.2"
+                stroke-linecap="round"
+              /><path
+                d="M12 2v3h-3"
+                stroke="currentColor"
+                stroke-width="1.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >
+            Reconnect Instagram
+          </a>
         {:else if !onLogin}
           <!-- Signed out: Connect CTA -->
-          <a href="/brands/login?next=/brands/portal" class="connect-cta">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1"/><circle cx="7" cy="5.5" r="1.5" stroke="currentColor" stroke-width="0.8"/><path d="M4 10.5c0-1.66 1.34-3 3-3s3 1.34 3 3" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/></svg>
+          <a href="/brands/login" class="connect-cta">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+              ><rect
+                x="1"
+                y="1"
+                width="12"
+                height="12"
+                rx="3"
+                stroke="currentColor"
+                stroke-width="1"
+              /><circle cx="7" cy="5.5" r="1.5" stroke="currentColor" stroke-width="0.8" /><path
+                d="M4 10.5c0-1.66 1.34-3 3-3s3 1.34 3 3"
+                stroke="currentColor"
+                stroke-width="0.8"
+                stroke-linecap="round"
+              /></svg
+            >
             Connect Instagram
           </a>
         {/if}
@@ -122,11 +196,21 @@
         >
           {#if mobileMenuOpen}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path
+                d="M3 3l10 10M13 3L3 13"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
           {:else}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M1 4h14M1 8h14M1 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path
+                d="M1 4h14M1 8h14M1 12h14"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
           {/if}
         </button>
@@ -151,7 +235,13 @@
         <div class="mobile-divider"></div>
         <a href="/" class="mobile-link" on:click={() => (mobileMenuOpen = false)}>Creator App</a>
         {#if authed}
-          <button class="mobile-link mobile-link--signout" on:click={() => { mobileMenuOpen = false; handleSignOut(); }}>
+          <button
+            class="mobile-link mobile-link--signout"
+            on:click={() => {
+              mobileMenuOpen = false;
+              handleSignOut();
+            }}
+          >
             Sign out
           </button>
         {/if}
@@ -161,6 +251,18 @@
 
   <!-- Main content area -->
   <main class="glass-main">
+    {#if authed && data.sessionOutOfSync && !onLogin}
+      <div class="resync-banner" role="status">
+        <span class="resync-banner__dot"></span>
+        <div class="resync-banner__body">
+          <strong>Session out of sync.</strong>
+          <span
+            >We couldn't find your Instagram brand account. Reconnect to restore campaign tools.</span
+          >
+        </div>
+        <a href="/brands/login" class="resync-banner__btn">Reconnect</a>
+      </div>
+    {/if}
     <slot />
   </main>
 </div>
@@ -215,35 +317,95 @@
   }
 
   @keyframes orb-morph-1 {
-    0%   { transform: translate(0, 0) scale(1);   border-radius: 50% 40% 55% 45%; }
-    25%  { transform: translate(40px, 30px) scale(1.08); border-radius: 45% 55% 40% 50%; }
-    50%  { transform: translate(-20px, 60px) scale(0.95); border-radius: 55% 45% 50% 40%; }
-    75%  { transform: translate(30px, -20px) scale(1.05); border-radius: 40% 50% 45% 55%; }
-    100% { transform: translate(0, 0) scale(1);   border-radius: 50% 40% 55% 45%; }
+    0% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 50% 40% 55% 45%;
+    }
+    25% {
+      transform: translate(40px, 30px) scale(1.08);
+      border-radius: 45% 55% 40% 50%;
+    }
+    50% {
+      transform: translate(-20px, 60px) scale(0.95);
+      border-radius: 55% 45% 50% 40%;
+    }
+    75% {
+      transform: translate(30px, -20px) scale(1.05);
+      border-radius: 40% 50% 45% 55%;
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 50% 40% 55% 45%;
+    }
   }
 
   @keyframes orb-morph-2 {
-    0%   { transform: translate(0, 0) scale(1);   border-radius: 45% 55% 50% 40%; }
-    25%  { transform: translate(-35px, 45px) scale(1.06); border-radius: 50% 40% 45% 55%; }
-    50%  { transform: translate(25px, -30px) scale(0.97); border-radius: 40% 50% 55% 45%; }
-    75%  { transform: translate(-15px, -40px) scale(1.04); border-radius: 55% 45% 40% 50%; }
-    100% { transform: translate(0, 0) scale(1);   border-radius: 45% 55% 50% 40%; }
+    0% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 45% 55% 50% 40%;
+    }
+    25% {
+      transform: translate(-35px, 45px) scale(1.06);
+      border-radius: 50% 40% 45% 55%;
+    }
+    50% {
+      transform: translate(25px, -30px) scale(0.97);
+      border-radius: 40% 50% 55% 45%;
+    }
+    75% {
+      transform: translate(-15px, -40px) scale(1.04);
+      border-radius: 55% 45% 40% 50%;
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 45% 55% 50% 40%;
+    }
   }
 
   @keyframes orb-morph-3 {
-    0%   { transform: translate(0, 0) scale(1);   border-radius: 55% 45% 40% 50%; }
-    25%  { transform: translate(30px, -35px) scale(0.96); border-radius: 40% 50% 55% 45%; }
-    50%  { transform: translate(-40px, 20px) scale(1.07); border-radius: 50% 40% 45% 55%; }
-    75%  { transform: translate(20px, 40px) scale(1.02); border-radius: 45% 55% 50% 40%; }
-    100% { transform: translate(0, 0) scale(1);   border-radius: 55% 45% 40% 50%; }
+    0% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 55% 45% 40% 50%;
+    }
+    25% {
+      transform: translate(30px, -35px) scale(0.96);
+      border-radius: 40% 50% 55% 45%;
+    }
+    50% {
+      transform: translate(-40px, 20px) scale(1.07);
+      border-radius: 50% 40% 45% 55%;
+    }
+    75% {
+      transform: translate(20px, 40px) scale(1.02);
+      border-radius: 45% 55% 50% 40%;
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 55% 45% 40% 50%;
+    }
   }
 
   @keyframes orb-morph-4 {
-    0%   { transform: translate(0, 0) scale(1);   border-radius: 40% 50% 55% 45%; }
-    25%  { transform: translate(-25px, -30px) scale(1.05); border-radius: 55% 45% 40% 50%; }
-    50%  { transform: translate(35px, 25px) scale(0.94); border-radius: 45% 55% 50% 40%; }
-    75%  { transform: translate(-20px, 35px) scale(1.03); border-radius: 50% 40% 55% 45%; }
-    100% { transform: translate(0, 0) scale(1);   border-radius: 40% 50% 55% 45%; }
+    0% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 40% 50% 55% 45%;
+    }
+    25% {
+      transform: translate(-25px, -30px) scale(1.05);
+      border-radius: 55% 45% 40% 50%;
+    }
+    50% {
+      transform: translate(35px, 25px) scale(0.94);
+      border-radius: 45% 55% 50% 40%;
+    }
+    75% {
+      transform: translate(-20px, 35px) scale(1.03);
+      border-radius: 50% 40% 55% 45%;
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+      border-radius: 40% 50% 55% 45%;
+    }
   }
 
   /* ================================================================
@@ -291,7 +453,9 @@
     text-decoration: none;
     transition: opacity var(--g-dur-fast) var(--g-ease);
   }
-  .brand-mark:hover { opacity: 0.7; }
+  .brand-mark:hover {
+    opacity: 0.7;
+  }
 
   .brand-logo {
     height: 18px;
@@ -460,7 +624,9 @@
     padding-left: 10px;
     transition: color var(--g-dur-fast) var(--g-ease);
   }
-  .sign-out-btn:hover { color: var(--g-accent); }
+  .sign-out-btn:hover {
+    color: var(--g-accent);
+  }
 
   /* Connect CTA (signed out) — glass with accent tint */
   .connect-cta {
@@ -474,11 +640,7 @@
     text-transform: uppercase;
     padding: 8px 18px;
     border-radius: 12px;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 64, 64, 0.12) 0%,
-      rgba(255, 64, 64, 0.06) 100%
-    );
+    background: linear-gradient(135deg, rgba(255, 64, 64, 0.12) 0%, rgba(255, 64, 64, 0.06) 100%);
     border: 1px solid rgba(255, 64, 64, 0.15);
     color: var(--g-text);
     text-decoration: none;
@@ -493,15 +655,70 @@
       box-shadow var(--g-dur-fast) var(--g-ease);
   }
   .connect-cta:hover {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 64, 64, 0.18) 0%,
-      rgba(255, 64, 64, 0.1) 100%
-    );
+    background: linear-gradient(135deg, rgba(255, 64, 64, 0.18) 0%, rgba(255, 64, 64, 0.1) 100%);
     border-color: rgba(255, 64, 64, 0.22);
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
       0 4px 16px rgba(255, 64, 64, 0.12);
+  }
+
+  .connect-cta--resync {
+    background: linear-gradient(135deg, rgba(255, 184, 77, 0.18) 0%, rgba(255, 184, 77, 0.08) 100%);
+    border-color: rgba(255, 184, 77, 0.28);
+  }
+  .connect-cta--resync:hover {
+    background: linear-gradient(135deg, rgba(255, 184, 77, 0.26) 0%, rgba(255, 184, 77, 0.12) 100%);
+    border-color: rgba(255, 184, 77, 0.36);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+      0 4px 16px rgba(255, 184, 77, 0.18);
+  }
+
+  /* ── Session-out-of-sync banner ── */
+  .resync-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 80rem;
+    margin: 16px auto 0;
+    padding: 12px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 184, 77, 0.12), rgba(255, 184, 77, 0.04));
+    border: 1px solid rgba(255, 184, 77, 0.32);
+    color: var(--g-text, #ededef);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .resync-banner__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffb84d;
+    box-shadow: 0 0 12px rgba(255, 184, 77, 0.6);
+    flex-shrink: 0;
+  }
+  .resync-banner__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .resync-banner__body strong {
+    font-weight: 600;
+  }
+  .resync-banner__btn {
+    margin-left: auto;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1a1a;
+    background: #ffb84d;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .resync-banner__btn:hover {
+    background: #ffc970;
   }
 
   /* ================================================================
@@ -569,8 +786,12 @@
     background: rgba(255, 255, 255, 0.04);
   }
 
-  .mobile-link--signout { color: var(--g-accent); }
-  .mobile-link--signout:hover { opacity: 0.8; }
+  .mobile-link--signout {
+    color: var(--g-accent);
+  }
+  .mobile-link--signout:hover {
+    opacity: 0.8;
+  }
 
   .mobile-divider {
     height: 1px;
@@ -581,20 +802,40 @@
   /* ================================================================
      RESPONSIVE UTILS
      ================================================================ */
-  .desktop-only { display: none; }
-  .desktop-hidden { display: flex; }
+  .desktop-only {
+    display: none;
+  }
+  .desktop-hidden {
+    display: flex;
+  }
 
   @media (min-width: 768px) {
-    .desktop-only { display: flex; }
-    .desktop-hidden { display: none !important; }
+    .desktop-only {
+      display: flex;
+    }
+    .desktop-hidden {
+      display: none !important;
+    }
   }
 
   /* ── Mobile: smaller orbs, stacked topbar ── */
   @media (max-width: 767px) {
-    .orb-red    { width: 300px; height: 300px; }
-    .orb-blue   { width: 280px; height: 280px; }
-    .orb-gold   { width: 260px; height: 260px; }
-    .orb-purple { width: 240px; height: 240px; }
+    .orb-red {
+      width: 300px;
+      height: 300px;
+    }
+    .orb-blue {
+      width: 280px;
+      height: 280px;
+    }
+    .orb-gold {
+      width: 260px;
+      height: 260px;
+    }
+    .orb-purple {
+      width: 240px;
+      height: 240px;
+    }
 
     .topbar-inner {
       height: auto;
@@ -604,7 +845,12 @@
       gap: 8px;
     }
 
-    .topbar-left { flex: 1; min-width: 0; }
-    .topbar-right { flex-shrink: 0; }
+    .topbar-left {
+      flex: 1;
+      min-width: 0;
+    }
+    .topbar-right {
+      flex-shrink: 0;
+    }
   }
 </style>

@@ -7,6 +7,9 @@ import {
   analyseGoogleIdentity,
 } from '$lib/server/google';
 import { computeGoogleTwinForToken } from '$lib/server/signalProcessor/googleProcessor';
+import { PUBLIC_BASE_URL } from '$env/static/public';
+
+const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const code = url.searchParams.get('code');
@@ -37,7 +40,10 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     const gmail = gmailData.status === 'fulfilled' ? gmailData.value : { threads: [], senders: [] };
     const twin = twinData.status === 'fulfilled' ? twinData.value : null;
 
-    let email = '', name = '', picture = '', sub = '';
+    let email = '',
+      name = '',
+      picture = '',
+      sub = '';
     try {
       const uRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -49,14 +55,18 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
         name = u.name ?? '';
         picture = u.picture ?? '';
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     const identity = await analyseGoogleIdentity(
       yt.channels,
       yt.categories,
       gmail.threads,
       gmail.senders,
-      email, name, picture,
+      email,
+      name,
+      picture,
       twin?.lifestylePatterns,
     );
 
@@ -66,10 +76,18 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
     // Store identity + tokens in short-lived cookie for profile page to read
     cookies.set('google_identity', JSON.stringify(identity), {
-      path: '/', maxAge: 600, httpOnly: false, sameSite: 'lax',
+      path: '/',
+      maxAge: 600,
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: cookieSecure,
     });
     cookies.set('google_tokens', JSON.stringify({ accessToken, refreshToken }), {
-      path: '/', maxAge: 600, httpOnly: false, sameSite: 'lax',
+      path: '/',
+      maxAge: 600,
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: cookieSecure,
     });
 
     throw redirect(302, `${returnBase}?google_connected=1`);
