@@ -2259,11 +2259,49 @@
       </section>
     {/if}
 
+    <!-- ── Creator DNA ── -->
+    <section class="os-card os-card--dna">
+      <div class="os-card-head">
+        <span class="os-card-label">CREATOR DNA</span>
+      </div>
+      <div class="os-dna-grid">
+        <div class="os-dna-stat">
+          <span class="os-dna-val">{completeness}<span class="os-dna-unit">%</span></span>
+          <span class="os-dna-lbl">Profile Strength</span>
+          <div class="os-dna-bar"><div class="os-dna-fill" style="width:{completeness}%; background:#E8833A"></div></div>
+        </div>
+        <div class="os-dna-stat">
+          <span class="os-dna-val">{igFollowers > 0 ? (igFollowers / 1000).toFixed(1) : '—'}<span class="os-dna-unit">{igFollowers > 0 ? 'K' : ''}</span></span>
+          <span class="os-dna-lbl">Audience Size</span>
+          <div class="os-dna-bar"><div class="os-dna-fill" style="width:{Math.min(igFollowers / 500, 100)}%; background:#7FC8A9"></div></div>
+        </div>
+        <div class="os-dna-stat">
+          <span class="os-dna-val">{igEngagement}<span class="os-dna-unit">%</span></span>
+          <span class="os-dna-lbl">Engagement Rate</span>
+          <div class="os-dna-bar"><div class="os-dna-fill" style="width:{parseFloat(String(igEngagement)) > 0 ? Math.min(parseFloat(String(igEngagement)) * 10, 100) : 0}%; background:#E87FA8"></div></div>
+        </div>
+        <div class="os-dna-stat">
+          <span class="os-dna-val">{dashAcceptedBrands.length}<span class="os-dna-unit">/{dashAcceptedBrands.length + activeBriefs}</span></span>
+          <span class="os-dna-lbl">Conversion Rate</span>
+          <div class="os-dna-bar"><div class="os-dna-fill" style="width:{(dashAcceptedBrands.length + activeBriefs) > 0 ? (dashAcceptedBrands.length / (dashAcceptedBrands.length + activeBriefs)) * 100 : 0}%; background:#D9C26E"></div></div>
+        </div>
+      </div>
+      {#if heroArchetype}
+        <div class="os-dna-footer">
+          <span class="os-dna-archetype">{heroArchetype}</span>
+          {#if heroMode}<span class="os-dna-mode">· {heroMode}</span>{/if}
+        </div>
+      {/if}
+    </section>
+
   </div>
   <!-- end bento -->
 
   <!-- ── Chat column (right sidebar) ── -->
   <aside class="os-chat-aside">
+    <div class="os-chat-head">
+      <span class="os-card-label">ASK YOUR SYSTEM</span>
+    </div>
     <div class="os-chat-inner">
       <div bind:this={homeChatScrollEl} class="home-chat-scroll">
         <div class="home-chat-meta">
@@ -2519,7 +2557,8 @@
   }
 
   /* ── Card sizes ── */
-  .os-card--personality { grid-column: span 1; grid-row: span 2; }
+  .os-card--personality { grid-column: span 1; grid-row: span 2; overflow-y: auto; scrollbar-width: none; }
+  .os-card--personality::-webkit-scrollbar { display: none; }
   .os-card--brands { grid-column: span 1; grid-row: span 2; }
   .os-card--requests { grid-column: span 1; grid-row: span 2; }
   .os-card--metrics { grid-column: span 1; grid-row: span 1; }
@@ -2562,23 +2601,26 @@
   /* ── Personality & Social ── */
   .os-identity-liner {
     font-family: 'Bodoni Moda', Georgia, serif;
-    font-size: 15px; font-style: italic; font-weight: 400;
-    color: #8A8A90; line-height: 1.5; margin: 0 0 14px;
+    font-size: 13px; font-style: italic; font-weight: 400;
+    color: #6A6A72; line-height: 1.5; margin: 0 0 12px;
+    display: -webkit-box; -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical; overflow: hidden;
   }
-  .os-trait-list { display: flex; flex-direction: column; gap: 6px; }
+  .os-trait-list { display: flex; flex-direction: column; gap: 2px; }
   .os-trait {
     display: flex; align-items: baseline; gap: 8px;
-    padding: 4px 0;
+    padding: 5px 0;
     border-bottom: 1px solid rgba(255,255,255,0.02);
   }
   .os-trait-label {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
-    font-size: 9px; font-weight: 600; color: #3A3A40;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    width: 72px; flex-shrink: 0;
+    font-size: 8px; font-weight: 600; color: #3A3A40;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    width: 64px; flex-shrink: 0;
   }
   .os-trait-value {
-    font-size: 12px; color: #EDEDEF; font-weight: 500;
+    font-size: 11px; color: #EDEDEF; font-weight: 500;
+    line-height: 1.4;
   }
   .os-social-bar {
     display: flex; gap: 16px; margin-top: auto;
@@ -2767,21 +2809,83 @@
     letter-spacing: 0.1em; margin-top: 8px; display: inline-block;
   }
 
+  /* ── Creator DNA ── */
+  .os-card--dna { grid-column: span 3; }
+  .os-dna-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .os-dna-stat { display: flex; flex-direction: column; gap: 4px; }
+  .os-dna-val {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 24px; font-weight: 700; color: #EDEDEF;
+    letter-spacing: -0.02em; line-height: 1;
+  }
+  .os-dna-unit {
+    font-size: 13px; font-weight: 400; color: #4A4A50;
+  }
+  .os-dna-lbl {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; font-weight: 600; color: #3A3A40;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .os-dna-bar {
+    height: 3px; border-radius: 2px;
+    background: rgba(255,255,255,0.04);
+    margin-top: 4px;
+  }
+  .os-dna-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .os-dna-footer {
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.03);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .os-dna-archetype {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: 14px; font-style: italic; color: #E8833A;
+  }
+  .os-dna-mode {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; color: #4A4A50;
+  }
+
   /* ── Chat aside (right column) ── */
   .os-chat-aside {
     grid-row: 2;
     grid-column: 2;
     display: flex; flex-direction: column;
     border-left: 1px solid rgba(255,255,255,0.06);
-    background: rgba(255,255,255,0.015);
+    background: rgba(255,255,255,0.02);
     overflow: hidden;
+  }
+  .os-chat-head {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    flex-shrink: 0;
   }
   .os-chat-inner {
     flex: 1; display: flex; flex-direction: column;
     min-height: 0; overflow: hidden;
   }
-  .os-chat-inner .home-chat-scroll { flex: 1; overflow-y: auto; }
-  .os-chat-inner .home-composer { border-top: 1px solid rgba(255,255,255,0.06); }
+  .os-chat-inner .home-chat-scroll {
+    flex: 1; overflow-y: auto;
+    padding: 0 16px;
+  }
+  .os-chat-inner .home-chat-meta {
+    padding: 16px 4px 12px;
+  }
+  .os-chat-inner .home-composer {
+    border-top: 1px solid rgba(255,255,255,0.04);
+    padding: 12px 16px;
+  }
+  .os-chat-inner .home-composer-inner {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+  }
 
   /* ── Mobile responsive ── */
   @media (max-width: 1024px) {
@@ -2800,10 +2904,12 @@
     .os-card--requests { grid-column: span 2; grid-row: span 1; }
     .os-card--metrics { grid-column: span 2; }
     .os-card--watch { grid-column: span 2; }
+    .os-card--dna { grid-column: span 2; }
+    .os-dna-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   @media (max-width: 640px) {
-    .os-root { padding: 12px; gap: 12px; }
+    .os-root { grid-template-columns: 1fr; }
     .os-top {
       grid-template-columns: 1fr;
       gap: 12px; padding: 14px;
@@ -2823,7 +2929,9 @@
     .os-card--metrics,
     .os-card--watch,
     .os-card--books,
-    .os-card--activity { grid-column: span 1; grid-row: span 1; min-height: 200px; max-height: none; }
+    .os-card--activity,
+    .os-card--dna { grid-column: span 1; grid-row: span 1; min-height: 200px; max-height: none; }
+    .os-dna-grid { grid-template-columns: repeat(2, 1fr); }
     .os-metrics-grid { gap: 16px; }
     .os-metric-ring { width: 48px; height: 48px; }
   }
