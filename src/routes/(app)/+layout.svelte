@@ -8,6 +8,7 @@
   import DesktopSidebar from '$lib/components/DesktopSidebar.svelte';
   import { applyPaletteFromProfile } from '$lib/theme/identityColors';
   import { startTimeShiftLoop } from '$lib/theme/timeShift';
+  import { themeMode, syncThemeColor } from '$lib/stores/theme';
   import {
     isAppSessionValid,
     maybeRepairIgOnlyAccountKey,
@@ -98,9 +99,11 @@
   $: path = $page.url.pathname;
   $: pageWrapFill = path === '/home' || path === '/ai' || path.startsWith('/chat/');
   $: appContentScrolls = path !== '/home' && path !== '/ai' && !path.startsWith('/chat/');
+  $: isDark = $themeMode === 'dark';
+  $: syncThemeColor($themeMode);
 </script>
 
-<div class="app-shell ambient-bg app-shell--rail" data-app-chrome="dark">
+<div class="app-shell ambient-bg app-shell--rail" data-app-chrome={isDark ? 'dark' : 'light'}>
   <DesktopSidebar />
   <div
     class="app-content min-w-0 flex-1 lg:min-h-0"

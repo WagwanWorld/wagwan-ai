@@ -2,6 +2,7 @@
   import { onMount, onDestroy, afterUpdate, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { profile } from '$lib/stores/profile';
+  import { themeMode } from '$lib/stores/theme';
   import { reminders } from '$lib/stores/reminders';
   import type { ResultCard as Card } from '$lib/utils';
   import type { CalendarEvent } from '$lib/server/google';
@@ -2018,7 +2019,7 @@
   />
 {/if}
 
-<div class="os-root" data-home-surface="dark">
+<div class="os-root" data-home-surface={$themeMode === 'dark' ? 'dark' : 'light'}>
   <!-- ════════════════════════════════════════════════════════════
        BENTO GRID — Personal OS Dashboard
        ════════════════════════════════════════════════════════════ -->
@@ -3846,4 +3847,208 @@
     line-height: 1.4;
     margin: 0;
   }
+
+  /* ══════════════════════════════════════════════════════════
+     LIGHT MODE OVERRIDES
+     ══════════════════════════════════════════════════════════ */
+  .os-root[data-home-surface='light'] {
+    background: #FAFAFA;
+    color: #1A1A1E;
+  }
+  .os-root[data-home-surface='light'] .os-top {
+    background: rgba(0,0,0,0.015);
+    border-bottom-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .os-profile-card {
+    border-right-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .os-avatar {
+    border-color: rgba(0,0,0,0.08);
+  }
+  .os-root[data-home-surface='light'] .os-profile-name { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-profile-meta { color: #999; }
+  .os-root[data-home-surface='light'] .os-tag {
+    color: #888;
+    background: rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .os-greeting-overline { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-greeting { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-greeting em { color: #E8833A; }
+  .os-root[data-home-surface='light'] .os-greeting-date { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-clock { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-clock-label { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-earn-hero {
+    border-left-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .os-earn-big { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-earn-big-label { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-earn-sub { color: #999; }
+
+  /* Cards */
+  .os-root[data-home-surface='light'] .os-card {
+    background: #fff;
+    border-color: rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .os-card-label { color: #999; }
+  .os-root[data-home-surface='light'] .os-card-sublabel { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-card-count {
+    color: #888;
+    background: rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .os-card-empty { color: #BBB; }
+
+  /* Identity & personality */
+  .os-root[data-home-surface='light'] .os-identity-liner { color: #888; }
+  .os-root[data-home-surface='light'] .os-trait {
+    border-bottom-color: rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .os-trait-label { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-trait-value { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-social-bar {
+    border-top-color: rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .os-social-num { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-social-lbl { color: #BBB; }
+
+  /* Brands ecosystem */
+  .os-root[data-home-surface='light'] .os-brand-row:hover { background: rgba(0,0,0,0.02); }
+  .os-root[data-home-surface='light'] .os-brand-pic { border-color: rgba(0,0,0,0.06); }
+  .os-root[data-home-surface='light'] .os-brand-name { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-brand-cat { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-brand-followers { color: #999; }
+
+  /* Requests */
+  .os-root[data-home-surface='light'] .os-request {
+    background: rgba(0,0,0,0.015);
+    border-color: rgba(0,0,0,0.05);
+  }
+  .os-root[data-home-surface='light'] .os-request-brand { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-request-brief { color: #888; }
+  .os-root[data-home-surface='light'] .os-req-btn--accept {
+    background: rgba(74,222,128,0.08);
+    color: #059669;
+    border-color: rgba(74,222,128,0.15);
+  }
+  .os-root[data-home-surface='light'] .os-req-btn--decline {
+    background: rgba(0,0,0,0.02);
+    color: #999;
+    border-color: rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .os-req-btn--decline:hover {
+    color: #e11d48;
+    background: rgba(225,29,72,0.05);
+  }
+
+  /* Metrics */
+  .os-root[data-home-surface='light'] .os-metric-ring::before {
+    background: #fff;
+  }
+  .os-root[data-home-surface='light'] .os-metric-val { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-metric-label { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-portfolio-chip {
+    color: #666;
+    background: rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.06);
+  }
+
+  /* Watch / Books */
+  .os-root[data-home-surface='light'] .os-watch-poster,
+  .os-root[data-home-surface='light'] .os-book-cover {
+    border-color: rgba(0,0,0,0.06);
+    background: rgba(0,0,0,0.03);
+  }
+  .os-root[data-home-surface='light'] .os-watch-title,
+  .os-root[data-home-surface='light'] .os-book-title { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-watch-tag,
+  .os-root[data-home-surface='light'] .os-book-tag { color: #BBB; }
+
+  /* Activity */
+  .os-root[data-home-surface='light'] .os-activity-row:hover { background: rgba(0,0,0,0.02); }
+  .os-root[data-home-surface='light'] .os-activity-note { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-activity-date { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-activity-amt { color: #059669; }
+  .os-root[data-home-surface='light'] .os-activity-amt--pending { color: #ca8a04; }
+
+  /* Tagline */
+  .os-root[data-home-surface='light'] .os-tagline-text { color: #888; }
+  .os-root[data-home-surface='light'] .os-tagline-archetype { color: #BBB; }
+
+  /* DNA */
+  .os-root[data-home-surface='light'] .os-dna-val { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .os-dna-unit { color: #999; }
+  .os-root[data-home-surface='light'] .os-dna-lbl { color: #BBB; }
+  .os-root[data-home-surface='light'] .os-dna-bar { background: rgba(0,0,0,0.05); }
+  .os-root[data-home-surface='light'] .os-dna-footer {
+    border-top-color: rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .os-dna-mode { color: #999; }
+
+  /* Chat aside */
+  .os-root[data-home-surface='light'] .os-chat-aside {
+    border-left-color: rgba(0,0,0,0.06);
+    background: rgba(0,0,0,0.015);
+  }
+  .os-root[data-home-surface='light'] .os-chat-head {
+    border-bottom-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .os-chat-inner .home-composer {
+    border-top-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .os-chat-inner .home-composer-inner {
+    background: rgba(0,0,0,0.02);
+    border-color: rgba(0,0,0,0.06);
+  }
+
+  /* Dashboard styles light overrides */
+  .os-root[data-home-surface='light'] .dash-divider {
+    background: rgba(0,0,0,0.05);
+  }
+  .os-root[data-home-surface='light'] .dash-earn-card {
+    background: #fff;
+    border-color: rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .dash-brief {
+    background: #fff;
+    border-color: rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .dash-brief:hover {
+    border-color: rgba(0,0,0,0.12);
+  }
+  .os-root[data-home-surface='light'] .dash-brief-amount { color: #059669; }
+  .os-root[data-home-surface='light'] .dash-brief-btn--accept {
+    color: #059669;
+  }
+  .os-root[data-home-surface='light'] .dash-brief-btn--decline {
+    background: rgba(0,0,0,0.02);
+    color: #999;
+    border-color: rgba(0,0,0,0.04);
+  }
+  .os-root[data-home-surface='light'] .dash-portfolio-chip {
+    background: #fff;
+    border-color: rgba(0,0,0,0.06);
+    color: #1A1A1E;
+  }
+  .os-root[data-home-surface='light'] .dash-tx:hover {
+    background: rgba(0,0,0,0.02);
+  }
+  .os-root[data-home-surface='light'] .dash-tx-amount { color: #059669; }
+  .os-root[data-home-surface='light'] .dash-tx-amount--pending { color: #ca8a04; }
+  .os-root[data-home-surface='light'] .dash-eco-chip {
+    background: #fff;
+    border-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .dash-eco-chip:hover {
+    border-color: rgba(0,0,0,0.10);
+    background: rgba(0,0,0,0.01);
+  }
+  .os-root[data-home-surface='light'] .dash-eco-name { color: #1A1A1E; }
+  .os-root[data-home-surface='light'] .dash-empty {
+    background: #fff;
+    border-color: rgba(0,0,0,0.06);
+  }
+  .os-root[data-home-surface='light'] .os-earn-sub-val--pending { color: #ca8a04; }
+  .os-root[data-home-surface='light'] .os-earn-sub-val--green { color: #059669; }
 </style>
