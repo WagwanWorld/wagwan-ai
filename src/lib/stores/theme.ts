@@ -12,17 +12,23 @@ function getInitialMode(): 'dark' | 'light' {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') return stored;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'dark';
 }
 
 export const themeMode = writable<'dark' | 'light'>(getInitialMode());
 
 export function toggleThemeMode() {
-  themeMode.update(m => {
+  themeMode.update((m) => {
     const next = m === 'dark' ? 'light' : 'dark';
     if (browser) {
-      try { localStorage.setItem(STORAGE_KEY, next); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        /* ignore */
+      }
     }
     return next;
   });
@@ -31,13 +37,15 @@ export function toggleThemeMode() {
 /** Syncs `<html data-theme>` and PWA chrome color. */
 export function applyThemeToDocument() {
   if (!browser) return;
-  document.documentElement.dataset.theme = 'light';
+  const mode = getInitialMode();
+  document.documentElement.dataset.theme = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', THEME_COLOR_DARK);
+  if (meta) meta.setAttribute('content', mode === 'dark' ? THEME_COLOR_DARK : THEME_COLOR_LIGHT);
 }
 
 export function syncThemeColor(mode: 'dark' | 'light') {
   if (!browser) return;
+  document.documentElement.dataset.theme = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', mode === 'dark' ? THEME_COLOR_DARK : THEME_COLOR_LIGHT);
 }

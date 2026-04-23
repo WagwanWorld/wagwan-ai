@@ -2,20 +2,26 @@
 
 Use this file to find **where to change** fonts, colors, mesh mood, and marketing imagery.
 
+Canonical design system reference:
+
+- [BRAND_OS_DESIGN_SYSTEM.md](./design/BRAND_OS_DESIGN_SYSTEM.md)
+
+If this handbook conflicts with the Brand OS design system document, follow the Brand OS document.
+
 ## Quick map
 
-| What you want to change | Where to edit |
-|-------------------------|---------------|
-| Colors, panels, text (product surface) | [`src/styles/tokens-light.css`](../src/styles/tokens-light.css) |
-| Shared radii, blur, mesh strength, brand constants | [`src/styles/tokens-shared.css`](../src/styles/tokens-shared.css) |
-| Font family / imports | [`src/styles/typography.css`](../src/styles/typography.css) + Tailwind [`tailwind.config.js`](../tailwind.config.js) `fontFamily.sans` |
-| Buttons, panels, UI utilities | [`src/styles/components.css`](../src/styles/components.css) |
-| Page background wash (under mesh) | `.ambient-bg` in [`src/styles/utilities-extra.css`](../src/styles/utilities-extra.css) |
-| Animations, category card gradients | [`src/styles/utilities-extra.css`](../src/styles/utilities-extra.css) |
-| Accent from user profile (Instagram, etc.) | [`src/lib/theme/identityColors.ts`](../src/lib/theme/identityColors.ts) |
-| Feed / card fallback photos (Unsplash) | [`src/lib/suggestionImagery.ts`](../src/lib/suggestionImagery.ts) |
-| Onboarding / empty-state / hero imagery | [`src/lib/theme/visualAssets.ts`](../src/lib/theme/visualAssets.ts) + [`static/theme/README.md`](../static/theme/README.md) |
-| Document theme + PWA chrome color | [`src/lib/stores/theme.ts`](../src/lib/stores/theme.ts), [`src/app.html`](../src/app.html) |
+| What you want to change                            | Where to edit                                                                                                                          |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Colors, panels, text (product surface)             | [`src/styles/tokens-light.css`](../src/styles/tokens-light.css)                                                                        |
+| Shared radii, blur, mesh strength, brand constants | [`src/styles/tokens-shared.css`](../src/styles/tokens-shared.css)                                                                      |
+| Font family / imports                              | [`src/styles/typography.css`](../src/styles/typography.css) + Tailwind [`tailwind.config.js`](../tailwind.config.js) `fontFamily.sans` |
+| Buttons, panels, UI utilities                      | [`src/styles/components.css`](../src/styles/components.css)                                                                            |
+| Page background wash (under mesh)                  | `.ambient-bg` in [`src/styles/utilities-extra.css`](../src/styles/utilities-extra.css)                                                 |
+| Animations, category card gradients                | [`src/styles/utilities-extra.css`](../src/styles/utilities-extra.css)                                                                  |
+| Accent from user profile (Instagram, etc.)         | [`src/lib/theme/identityColors.ts`](../src/lib/theme/identityColors.ts)                                                                |
+| Feed / card fallback photos (Unsplash)             | [`src/lib/suggestionImagery.ts`](../src/lib/suggestionImagery.ts)                                                                      |
+| Onboarding / empty-state / hero imagery            | [`src/lib/theme/visualAssets.ts`](../src/lib/theme/visualAssets.ts) + [`static/theme/README.md`](../static/theme/README.md)            |
+| Document theme + PWA chrome color                  | [`src/lib/stores/theme.ts`](../src/lib/stores/theme.ts), [`src/app.html`](../src/app.html)                                             |
 
 ## Token naming (semantic)
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
+  import OsButton from '$lib/components/os/OsButton.svelte';
 
   const dispatch = createEventDispatcher<{
     submit: { brandName: string; website: string; instagram: string; description: string };
@@ -12,7 +13,11 @@
   let submitting = false;
   let visible = false;
 
-  onMount(() => { setTimeout(() => { visible = true; }, 100); });
+  onMount(() => {
+    setTimeout(() => {
+      visible = true;
+    }, 100);
+  });
 
   function handleSubmit() {
     if (!description.trim()) return;
@@ -45,13 +50,22 @@
     <div class="intake-header">
       <div class="intake-badge">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="2.5" fill="var(--accent-secondary)"/>
-          <circle cx="7" cy="7" r="6" stroke="var(--accent-secondary)" stroke-width="0.8" opacity="0.3"/>
+          <circle cx="7" cy="7" r="2.5" fill="var(--accent-secondary)" />
+          <circle
+            cx="7"
+            cy="7"
+            r="6"
+            stroke="var(--accent-secondary)"
+            stroke-width="0.8"
+            opacity="0.3"
+          />
         </svg>
         <span>Audience matching</span>
       </div>
-      <h1 class="intake-title">Who are you<br/>trying to reach?</h1>
-      <p class="intake-sub">Tell us a little about your brand. We'll find creators whose audiences actually match.</p>
+      <h1 class="intake-title">Who are you<br />trying to reach?</h1>
+      <p class="intake-sub">
+        Tell us a little about your brand. We'll find creators whose audiences actually match.
+      </p>
     </div>
 
     <!-- Form -->
@@ -88,7 +102,12 @@
           <div class="examples">
             <span class="examples-label">Try:</span>
             {#each EXAMPLES as ex, i}
-              <button type="button" class="example-chip" style="animation-delay:{0.4 + i * 0.08}s" on:click={() => useExample(ex)}>
+              <button
+                type="button"
+                class="example-chip"
+                style="animation-delay:{0.4 + i * 0.08}s"
+                on:click={() => useExample(ex)}
+              >
                 {ex}
               </button>
             {/each}
@@ -98,7 +117,12 @@
     </div>
 
     <!-- Submit -->
-    <button class="intake-btn" type="submit" disabled={!description.trim() || submitting}>
+    <OsButton
+      variant="primary"
+      className="intake-btn"
+      type="submit"
+      disabled={!description.trim() || submitting}
+    >
       {#if submitting}
         <span class="spinner"></span>
         <span>Matching...</span>
@@ -106,11 +130,17 @@
         <span>Find my audience</span>
         <span class="btn-icon">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path
+              d="M2 7h10M8 3l4 4-4 4"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </span>
       {/if}
-    </button>
+    </OsButton>
   </form>
 </div>
 
@@ -141,7 +171,7 @@
     left: 50%;
     transform: translateX(-50%);
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(77,124,255,0.06), transparent 70%);
+    background: radial-gradient(circle, rgba(77, 124, 255, 0.06), transparent 70%);
     pointer-events: none;
   }
 
@@ -160,7 +190,7 @@
     background: var(--glass-light);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   /* ── Header ── */
@@ -210,7 +240,9 @@
   }
 
   @media (max-width: 480px) {
-    .field-row { grid-template-columns: 1fr; }
+    .field-row {
+      grid-template-columns: 1fr;
+    }
   }
 
   .field {
@@ -226,8 +258,13 @@
     color: var(--text-secondary);
   }
 
-  .optional { color: var(--text-muted); font-weight: 400; }
-  .required { color: var(--accent-primary); }
+  .optional {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .required {
+    color: var(--accent-primary);
+  }
 
   .field input,
   .field textarea {
@@ -239,7 +276,9 @@
     color: var(--text-primary);
     font-family: inherit;
     outline: none;
-    transition: border-color 0.25s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    transition:
+      border-color 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .field input:focus,
@@ -265,7 +304,9 @@
     background: var(--bg-primary);
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    transition: border-color 0.25s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+    transition:
+      border-color 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .ig-wrap:focus-within {
@@ -316,7 +357,10 @@
     opacity: 0;
     transform: translateY(4px);
     animation: chip-in 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    transition:
+      border-color 0.2s,
+      background 0.2s,
+      color 0.2s;
   }
 
   .example-chip:hover {
@@ -326,7 +370,10 @@
   }
 
   @keyframes chip-in {
-    to { opacity: 1; transform: translateY(0); }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* ── Submit ── */
@@ -349,32 +396,43 @@
     transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  .intake-btn:hover:not(:disabled) { transform: translateY(-1px); }
-  .intake-btn:active:not(:disabled) { transform: scale(0.98); }
-  .intake-btn:disabled { opacity: 0.35; cursor: default; }
+  .intake-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .intake-btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .intake-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
 
   .btn-icon {
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
-  .intake-btn:hover:not(:disabled) .btn-icon { transform: translateX(2px); }
+  .intake-btn:hover:not(:disabled) .btn-icon {
+    transform: translateX(2px);
+  }
 
   .spinner {
     width: 16px;
     height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-top-color: white;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }
 
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

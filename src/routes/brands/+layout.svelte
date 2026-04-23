@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { browser } from '$app/environment';
+  import OsPageShell from '$lib/components/os/OsPageShell.svelte';
+  import { themeMode, toggleThemeMode, syncThemeColor } from '$lib/stores/theme';
 
   export let data: {
     brandAuthenticated: boolean;
@@ -43,17 +44,12 @@
 
   let mobileMenuOpen = false;
 
-  // Theme toggle: dim (default, softer) vs deep (brighter, higher contrast)
-  let deepMode = false;
-  if (browser) {
-    deepMode = localStorage.getItem('ed-theme') === 'deep';
-  }
+  // Theme toggle: use global app mode so creator + brand share one source.
+  $: deepMode = $themeMode === 'dark';
+  $: syncThemeColor($themeMode);
 
   function toggleTheme() {
-    deepMode = !deepMode;
-    if (browser) {
-      localStorage.setItem('ed-theme', deepMode ? 'deep' : 'dim');
-    }
+    toggleThemeMode();
   }
 
   async function handleSignOut() {
@@ -263,7 +259,9 @@
         <a href="/brands/login" class="resync-banner__btn">Reconnect</a>
       </div>
     {/if}
-    <slot />
+    <OsPageShell as="div" className={onPortal ? 'os-shell-bypass' : ''}>
+      <slot />
+    </OsPageShell>
   </main>
 </div>
 
@@ -732,6 +730,12 @@
     -webkit-overflow-scrolling: touch;
     position: relative;
     z-index: 1;
+  }
+
+  .os-shell-bypass {
+    width: 100%;
+    max-width: 100%;
+    padding-top: 0;
   }
 
   /* ================================================================

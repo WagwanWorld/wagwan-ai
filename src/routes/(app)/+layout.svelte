@@ -6,6 +6,7 @@
   import { profile, type UserProfile } from '$lib/stores/profile';
   import FloatingNav from '$lib/components/FloatingNav.svelte';
   import DesktopSidebar from '$lib/components/DesktopSidebar.svelte';
+  import OsPageShell from '$lib/components/os/OsPageShell.svelte';
   import { applyPaletteFromProfile } from '$lib/theme/identityColors';
   import { startTimeShiftLoop } from '$lib/theme/timeShift';
   import { themeMode, syncThemeColor } from '$lib/stores/theme';
@@ -71,14 +72,14 @@
     const sub = get(profile).googleSub;
     if (sub) {
       fetch(`/api/profile/load?sub=${encodeURIComponent(sub)}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
           if (!data?.ok || !data.profile) return;
           const remote = data.profile as Record<string, unknown>;
           const remoteTs = data.updatedAt as string;
           const localTs = $profile.profileUpdatedAt || '';
           if (remoteTs && remoteTs > localTs) {
-            profile.update(p => ({
+            profile.update((p) => ({
               ...p,
               ...(remote as Partial<typeof p>),
               profileUpdatedAt: remoteTs,
@@ -117,7 +118,9 @@
       class:page-wrap--in-app-scroll={appContentScrolls}
       class:overflow-hidden={path === '/home'}
     >
-      <slot />
+      <OsPageShell as="div" className={path === '/home' ? 'os-shell-bypass' : ''}>
+        <slot />
+      </OsPageShell>
     </div>
   </div>
   <FloatingNav />
@@ -180,5 +183,12 @@
   .page-wrap--in-app-scroll {
     flex: 0 0 auto;
     width: 100%;
+  }
+
+  .os-shell-bypass {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
   }
 </style>

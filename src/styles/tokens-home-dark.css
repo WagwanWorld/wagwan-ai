@@ -6,12 +6,13 @@
 @layer base {
   .home-page-root[data-home-surface='dark'],
   .os-root[data-home-surface='dark'],
+  html[data-theme='dark'],
   html:has([data-app-chrome='dark']) {
-    --home-accent: #FF4D4D;
+    --home-accent: #ff4d4d;
     --home-accent-soft: rgba(255, 77, 77, 0.14);
     --home-accent-glow: rgba(255, 77, 77, 0.32);
-    --home-blue: #4D7CFF;
-    --home-gold: #FFB84D;
+    --home-blue: #4d7cff;
+    --home-gold: #ffb84d;
 
     --home-font-title: clamp(1.45rem, 2.2vw, 1.75rem);
     --home-font-section: clamp(0.875rem, 1.1vw, 1rem);
@@ -21,12 +22,12 @@
     --home-section-gap-lg: 48px;
     --home-shell-pad-x: clamp(24px, 5vw, 80px);
     --home-layout-gutter: clamp(16px, 2.4vw, 28px);
-    --home-accent-gradient: linear-gradient(90deg, #FF4D4D 0%, #4D7CFF 50%, #FFB84D 100%);
+    --home-accent-gradient: linear-gradient(90deg, #ff4d4d 0%, #4d7cff 50%, #ffb84d 100%);
 
     /* Backgrounds — blue-tinted blacks for perceptual consistency with lime */
     --bg-primary: oklch(8% 0.008 260);
     --bg-secondary: oklch(10% 0.009 255);
-    --bg-elevated: oklch(13% 0.010 258);
+    --bg-elevated: oklch(13% 0.01 258);
 
     --text-primary: #e8ecf3;
     --text-secondary: #9aa3b2;
@@ -40,20 +41,20 @@
     --glass-strong: rgba(255, 255, 255, 0.11);
 
     /* Accent — red / blue / gold */
-    --accent-primary: #FF4D4D;
-    --accent-secondary: #4D7CFF;
-    --accent-tertiary: #FFB84D;
+    --accent-primary: #ff4d4d;
+    --accent-secondary: #4d7cff;
+    --accent-tertiary: #ffb84d;
     --accent-glow: rgba(255, 77, 77, 0.32);
     --accent-soft: rgba(255, 77, 77, 0.12);
     --brand-red-soft: rgba(248, 113, 113, 0.12);
 
     /* Ambient blobs — red / blue / gold */
-    --blob-tint-a: oklch(60% 0.22 25 / 0.18);     /* warm red */
-    --blob-tint-b: oklch(55% 0.20 260 / 0.16);    /* blue */
-    --blob-tint-c: oklch(72% 0.16 80 / 0.14);     /* amber gold */
-    --blob-glow: oklch(60% 0.22 25 / 0.20);
+    --blob-tint-a: oklch(60% 0.22 25 / 0.18); /* warm red */
+    --blob-tint-b: oklch(55% 0.2 260 / 0.16); /* blue */
+    --blob-tint-c: oklch(72% 0.16 80 / 0.14); /* amber gold */
+    --blob-glow: oklch(60% 0.22 25 / 0.2);
     --ambient-red: oklch(60% 0.22 25 / 0.15);
-    --ambient-blue: oklch(55% 0.20 260 / 0.15);
+    --ambient-blue: oklch(55% 0.2 260 / 0.15);
     --ambient-gold: oklch(72% 0.16 80 / 0.12);
 
     --bg: var(--bg-primary);
@@ -72,11 +73,11 @@
 
     --panel-surface: rgba(255, 255, 255, 0.04);
     --panel-surface-soft: rgba(255, 255, 255, 0.025);
-    --panel-border: rgba(255, 255, 255, 0.10);
+    --panel-border: rgba(255, 255, 255, 0.1);
     --panel-border-strong: rgba(255, 255, 255, 0.16);
     --panel-divider: rgba(255, 255, 255, 0.06);
     --panel-hover: rgba(255, 255, 255, 0.06);
-    --panel-hover-border: rgba(255, 255, 255, 0.20);
+    --panel-hover-border: rgba(255, 255, 255, 0.2);
 
     /* Shadows — tinted lime, not pure black */
     --shadow-tall-card: 0 12px 40px oklch(8% 0.008 260 / 0.6);
@@ -101,17 +102,33 @@
     --accent-gradient-wash: linear-gradient(
       120deg,
       rgba(255, 77, 77, 0.12) 0%,
-      rgba(77, 124, 255, 0.10) 45%,
+      rgba(77, 124, 255, 0.1) 45%,
       rgba(255, 184, 77, 0.08) 100%
     );
     --accent-border-mesh: linear-gradient(
       135deg,
       rgba(255, 77, 77, 0.42),
       rgba(77, 124, 255, 0.35),
-      rgba(255, 184, 77, 0.30)
+      rgba(255, 184, 77, 0.3)
     );
 
     --mesh-orb-base-opacity: 0.32;
+
+    /* Brand OS semantic aliases */
+    --surface-canvas: var(--bg-primary);
+    --surface-subtle: var(--bg-secondary);
+    --surface-raised: var(--bg-elevated);
+    --text-strong: var(--text-primary);
+    --text-body: var(--text-secondary);
+    --text-subtle: var(--text-muted);
+    --border-subtle-2: var(--border-subtle);
+    --border-strong-2: var(--border-strong);
+    --accent-main: var(--accent-primary);
+    --accent-support: var(--accent-secondary);
+    --accent-soft-2: var(--accent-soft);
+    --glass-surface: var(--glass-light);
+    --glass-raised: var(--glass-medium);
+    --glass-solid: var(--glass-strong);
   }
 
   /* Mobile dock */
@@ -121,7 +138,7 @@
       linear-gradient(rgba(18, 22, 30, 0.92), rgba(12, 14, 20, 0.88)) padding-box,
       linear-gradient(
           125deg,
-          rgba(255, 77, 77, 0.30),
+          rgba(255, 77, 77, 0.3),
           rgba(77, 124, 255, 0.22),
           rgba(255, 184, 77, 0.18)
         )

@@ -6,101 +6,103 @@
 /* ── DIM THEME (default — softer, daytime-friendly) ────────── */
 
 .glass-shell,
-.glass-shell[data-glass-theme="dim"] {
-
+.glass-shell[data-glass-theme='dim'] {
   /* ── Surfaces ── */
-  --g-bg:          #0F0F11;
-  --g-surface:     #17171A;
-  --g-elevated:    #1E1E22;
-  --g-bg-dot:      rgba(255,255,255,0.015);
-  --g-dot-size:    40px;
+  --g-bg: #0f0f11;
+  --g-surface: #17171a;
+  --g-elevated: #1e1e22;
+  --g-bg-dot: rgba(255, 255, 255, 0.015);
+  --g-dot-size: 40px;
 
   /* ── Text hierarchy — contrast discipline ── */
-  --g-text:        #EDEDEF;   /* ~93% — primary, headings, numbers */
-  --g-text-2:      #8A8A90;   /* ~55% — body, descriptions */
-  --g-text-3:      #4A4A50;   /* ~30% — tertiary, timestamps, footer */
-  --g-text-ghost:  rgba(255,255,255,0.08);  /* dividers, ghost labels */
+  --g-text: #ededef; /* ~93% — primary, headings, numbers */
+  --g-text-2: #8a8a90; /* ~55% — body, descriptions */
+  --g-text-3: #4a4a50; /* ~30% — tertiary, timestamps, footer */
+  --g-text-ghost: rgba(255, 255, 255, 0.08); /* dividers, ghost labels */
 
   /* ── Borders ── */
-  --g-border:        rgba(255,255,255,0.06);
-  --g-border-strong: rgba(255,255,255,0.12);
+  --g-border: rgba(255, 255, 255, 0.06);
+  --g-border-strong: rgba(255, 255, 255, 0.12);
+  --g-card-border: var(--g-border);
+  --g-card-border-hover: var(--g-border-strong);
+  --g-text-4: var(--g-text-3);
 
   /* ── Elevation system ── */
   /* flat: default card — sits on surface */
-  --g-flat-bg:           linear-gradient(175deg, rgba(255,255,255,0.025), rgba(255,255,255,0.006));
-  --g-flat-border:       rgba(255,255,255,0.04);
-  --g-flat-shadow:       0 2px 8px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06);
-  --g-flat-highlight:    rgba(255,255,255,0.02);
+  --g-flat-bg: linear-gradient(175deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.006));
+  --g-flat-border: rgba(255, 255, 255, 0.04);
+  --g-flat-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.06);
+  --g-flat-highlight: rgba(255, 255, 255, 0.02);
 
   /* raised: interactive cards on hover, important sections */
-  --g-raised-bg:         linear-gradient(175deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
-  --g-raised-border:     rgba(255,255,255,0.065);
-  --g-raised-shadow:     0 4px 16px rgba(0,0,0,0.12), 0 16px 48px rgba(0,0,0,0.1);
-  --g-raised-highlight:  rgba(255,255,255,0.035);
+  --g-raised-bg: linear-gradient(175deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+  --g-raised-border: rgba(255, 255, 255, 0.065);
+  --g-raised-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 16px 48px rgba(0, 0, 0, 0.1);
+  --g-raised-highlight: rgba(255, 255, 255, 0.035);
 
   /* emit: highlighted cards, active states, key metrics */
-  --g-emit-shadow:       0 4px 20px rgba(0,0,0,0.15), 0 0 1px rgba(255,255,255,0.06) inset;
+  --g-emit-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 1px rgba(255, 255, 255, 0.06) inset;
 
   /* ── Card defaults ── */
-  --g-card-radius:  20px;
-  --g-card-blur:    24px;
+  --g-card-radius: 20px;
+  --g-card-blur: 24px;
 
   /* ── Brand accent — reserved for primary CTA, active tab, critical alerts ── */
-  --g-accent:      #E8464A;
-  --g-accent-soft: rgba(232,70,74,0.08);
-  --g-accent-glow: rgba(232,70,74,0.12);
+  --g-accent: #e8464a;
+  --g-accent-soft: rgba(232, 70, 74, 0.08);
+  --g-accent-glow: rgba(232, 70, 74, 0.12);
 
   /* ── Semantic metric colors ── */
-  --g-metric-reach:       #E8833A;   /* warm orange — reach, impressions */
-  --g-metric-engagement:  #7FC8A9;   /* soft green — engagement rate, saves */
-  --g-metric-shares:      #7BA7D9;   /* cool blue — shares, virality */
-  --g-metric-cadence:     #D9C26E;   /* muted yellow — posts, frequency */
-  --g-metric-growth:      #E87FA8;   /* magenta-pink — followers, growth */
+  --g-metric-reach: #e8833a; /* warm orange — reach, impressions */
+  --g-metric-engagement: #7fc8a9; /* soft green — engagement rate, saves */
+  --g-metric-shares: #7ba7d9; /* cool blue — shares, virality */
+  --g-metric-cadence: #d9c26e; /* muted yellow — posts, frequency */
+  --g-metric-growth: #e87fa8; /* magenta-pink — followers, growth */
 
   /* Metric card background tints (very subtle) */
-  --g-metric-reach-bg:       rgba(232,131,58,0.04);
-  --g-metric-engagement-bg:  rgba(127,200,169,0.035);
-  --g-metric-shares-bg:      rgba(123,167,217,0.03);
-  --g-metric-cadence-bg:     rgba(217,194,110,0.03);
-  --g-metric-growth-bg:      rgba(232,127,168,0.03);
+  --g-metric-reach-bg: rgba(232, 131, 58, 0.04);
+  --g-metric-engagement-bg: rgba(127, 200, 169, 0.035);
+  --g-metric-shares-bg: rgba(123, 167, 217, 0.03);
+  --g-metric-cadence-bg: rgba(217, 194, 110, 0.03);
+  --g-metric-growth-bg: rgba(232, 127, 168, 0.03);
 
   /* Metric glow (for emit elevation) */
-  --g-metric-reach-glow:       rgba(232,131,58,0.06);
-  --g-metric-engagement-glow:  rgba(127,200,169,0.05);
-  --g-metric-shares-glow:      rgba(123,167,217,0.05);
-  --g-metric-cadence-glow:     rgba(217,194,110,0.05);
-  --g-metric-growth-glow:      rgba(232,127,168,0.05);
+  --g-metric-reach-glow: rgba(232, 131, 58, 0.06);
+  --g-metric-engagement-glow: rgba(127, 200, 169, 0.05);
+  --g-metric-shares-glow: rgba(123, 167, 217, 0.05);
+  --g-metric-cadence-glow: rgba(217, 194, 110, 0.05);
+  --g-metric-growth-glow: rgba(232, 127, 168, 0.05);
 
   /* ── Section palette (card background tints) ── */
-  --g-section-red:      rgba(232,70,74,0.025);
-  --g-section-blue:     rgba(59,130,246,0.02);
-  --g-section-teal:     rgba(20,184,166,0.02);
-  --g-section-purple:   rgba(168,85,247,0.02);
-  --g-section-emerald:  rgba(16,185,129,0.02);
-  --g-section-gold:     rgba(245,158,11,0.02);
-  --g-section-rose:     rgba(244,63,94,0.02);
+  --g-section-red: rgba(232, 70, 74, 0.025);
+  --g-section-blue: rgba(59, 130, 246, 0.02);
+  --g-section-teal: rgba(20, 184, 166, 0.02);
+  --g-section-purple: rgba(168, 85, 247, 0.02);
+  --g-section-emerald: rgba(16, 185, 129, 0.02);
+  --g-section-gold: rgba(245, 158, 11, 0.02);
+  --g-section-rose: rgba(244, 63, 94, 0.02);
 
   /* ── Typography scale ── */
-  --g-font:       'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --g-font-mono:  'Geist Mono Variable', 'Geist Mono', 'SF Mono', 'Courier New', monospace;
+  --g-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --g-font-mono: 'Geist Mono Variable', 'Geist Mono', 'SF Mono', 'Courier New', monospace;
 
-  --g-display-xl:  48px;  /* hero numbers */
-  --g-display-lg:  32px;  /* section titles, big stats */
-  --g-display-md:  24px;  /* card stat numbers */
-  --g-body:        14px;
-  --g-body-sm:     13px;
-  --g-label-size:  11px;
-  --g-mono-sm:     12px;
+  --g-display-xl: 48px; /* hero numbers */
+  --g-display-lg: 32px; /* section titles, big stats */
+  --g-display-md: 24px; /* card stat numbers */
+  --g-body: 14px;
+  --g-body-sm: 13px;
+  --g-label-size: 11px;
+  --g-mono-sm: 12px;
 
-  --g-label-weight:   500;
-  --g-label-spacing:  0.08em;
-  --g-label-color:    var(--g-text-3);
+  --g-label-weight: 500;
+  --g-label-spacing: 0.08em;
+  --g-label-color: var(--g-text-3);
 
   /* ── Easing ── */
-  --g-ease:      cubic-bezier(0.22, 1, 0.36, 1);
-  --g-dur:       0.7s;
-  --g-dur-fast:  0.4s;
-  --g-dur-theme: 0.2s;  /* theme crossfade */
+  --g-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --g-dur: 0.7s;
+  --g-dur-fast: 0.4s;
+  --g-dur-theme: 0.2s; /* theme crossfade */
 
   /* ── Layout ── */
   background: var(--g-bg);
@@ -124,74 +126,87 @@
   transition:
     background-color var(--g-dur-theme) ease,
     color var(--g-dur-theme) ease;
-}
 
+  /* Brand OS semantic aliases */
+  --surface-canvas: var(--g-bg);
+  --surface-subtle: var(--g-surface);
+  --surface-raised: var(--g-elevated);
+  --text-strong: var(--g-text);
+  --text-body: var(--g-text-2);
+  --text-subtle: var(--g-text-3);
+  --border-subtle-2: var(--g-border);
+  --border-strong-2: var(--g-border-strong);
+  --accent-main: var(--g-accent);
+  --accent-soft-2: var(--g-accent-soft);
+  --glass-surface: var(--g-flat-bg);
+  --glass-raised: var(--g-raised-bg);
+  --glass-solid: var(--g-elevated);
+}
 
 /* ── DEEP THEME (toggle — true black, higher contrast) ────── */
 
-.glass-shell[data-glass-theme="deep"] {
-
+.glass-shell[data-glass-theme='deep'] {
   /* Surfaces — true black */
-  --g-bg:          #000000;
-  --g-surface:     #0A0A0C;
-  --g-elevated:    #141417;
-  --g-bg-dot:      rgba(255,255,255,0.02);
+  --g-bg: #000000;
+  --g-surface: #0a0a0c;
+  --g-elevated: #141417;
+  --g-bg-dot: rgba(255, 255, 255, 0.02);
 
   /* Text — higher contrast */
-  --g-text:        #FFFFFF;
-  --g-text-2:      #9A9AA0;
-  --g-text-3:      #55555A;
-  --g-text-ghost:  rgba(255,255,255,0.1);
+  --g-text: #ffffff;
+  --g-text-2: #9a9aa0;
+  --g-text-3: #55555a;
+  --g-text-ghost: rgba(255, 255, 255, 0.1);
 
   /* Borders — slightly brighter against true black */
-  --g-border:        rgba(255,255,255,0.08);
-  --g-border-strong: rgba(255,255,255,0.16);
+  --g-border: rgba(255, 255, 255, 0.08);
+  --g-border-strong: rgba(255, 255, 255, 0.16);
 
   /* Elevation — deeper shadows against pure black */
-  --g-flat-bg:         linear-gradient(175deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008));
-  --g-flat-border:     rgba(255,255,255,0.05);
-  --g-flat-shadow:     0 2px 10px rgba(0,0,0,0.2), 0 10px 40px rgba(0,0,0,0.15);
-  --g-flat-highlight:  rgba(255,255,255,0.025);
+  --g-flat-bg: linear-gradient(175deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008));
+  --g-flat-border: rgba(255, 255, 255, 0.05);
+  --g-flat-shadow: 0 2px 10px rgba(0, 0, 0, 0.2), 0 10px 40px rgba(0, 0, 0, 0.15);
+  --g-flat-highlight: rgba(255, 255, 255, 0.025);
 
-  --g-raised-bg:       linear-gradient(175deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012));
-  --g-raised-border:   rgba(255,255,255,0.08);
-  --g-raised-shadow:   0 6px 20px rgba(0,0,0,0.2), 0 20px 60px rgba(0,0,0,0.18);
-  --g-raised-highlight: rgba(255,255,255,0.04);
+  --g-raised-bg: linear-gradient(175deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
+  --g-raised-border: rgba(255, 255, 255, 0.08);
+  --g-raised-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 20px 60px rgba(0, 0, 0, 0.18);
+  --g-raised-highlight: rgba(255, 255, 255, 0.04);
 
-  --g-emit-shadow:     0 4px 24px rgba(0,0,0,0.25), 0 0 1px rgba(255,255,255,0.08) inset;
+  --g-emit-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 1px rgba(255, 255, 255, 0.08) inset;
 
   /* Metric colors — bumped ~8% luminance for emission against true black */
-  --g-metric-reach:       #F29548;
-  --g-metric-engagement:  #8FD8B9;
-  --g-metric-shares:      #8BB7E9;
-  --g-metric-cadence:     #E3CC78;
-  --g-metric-growth:      #F28FB8;
+  --g-metric-reach: #f29548;
+  --g-metric-engagement: #8fd8b9;
+  --g-metric-shares: #8bb7e9;
+  --g-metric-cadence: #e3cc78;
+  --g-metric-growth: #f28fb8;
 
   /* Metric card backgrounds — slightly more visible on true black */
-  --g-metric-reach-bg:       rgba(242,149,72,0.05);
-  --g-metric-engagement-bg:  rgba(143,216,185,0.04);
-  --g-metric-shares-bg:      rgba(139,183,233,0.035);
-  --g-metric-cadence-bg:     rgba(227,204,120,0.035);
-  --g-metric-growth-bg:      rgba(242,143,184,0.035);
+  --g-metric-reach-bg: rgba(242, 149, 72, 0.05);
+  --g-metric-engagement-bg: rgba(143, 216, 185, 0.04);
+  --g-metric-shares-bg: rgba(139, 183, 233, 0.035);
+  --g-metric-cadence-bg: rgba(227, 204, 120, 0.035);
+  --g-metric-growth-bg: rgba(242, 143, 184, 0.035);
 
   /* Metric glow — brighter emission */
-  --g-metric-reach-glow:       rgba(242,149,72,0.08);
-  --g-metric-engagement-glow:  rgba(143,216,185,0.07);
-  --g-metric-shares-glow:      rgba(139,183,233,0.06);
-  --g-metric-cadence-glow:     rgba(227,204,120,0.06);
-  --g-metric-growth-glow:      rgba(242,143,184,0.06);
+  --g-metric-reach-glow: rgba(242, 149, 72, 0.08);
+  --g-metric-engagement-glow: rgba(143, 216, 185, 0.07);
+  --g-metric-shares-glow: rgba(139, 183, 233, 0.06);
+  --g-metric-cadence-glow: rgba(227, 204, 120, 0.06);
+  --g-metric-growth-glow: rgba(242, 143, 184, 0.06);
 
   /* Accent — slightly brighter */
-  --g-accent:      #F05050;
-  --g-accent-soft: rgba(240,80,80,0.1);
-  --g-accent-glow: rgba(240,80,80,0.15);
+  --g-accent: #f05050;
+  --g-accent-soft: rgba(240, 80, 80, 0.1);
+  --g-accent-glow: rgba(240, 80, 80, 0.15);
 
   /* Section palette — slightly brighter tints */
-  --g-section-red:      rgba(240,80,80,0.03);
-  --g-section-blue:     rgba(59,130,246,0.025);
-  --g-section-teal:     rgba(20,184,166,0.025);
-  --g-section-purple:   rgba(168,85,247,0.025);
-  --g-section-emerald:  rgba(16,185,129,0.025);
-  --g-section-gold:     rgba(245,158,11,0.025);
-  --g-section-rose:     rgba(244,63,94,0.025);
+  --g-section-red: rgba(240, 80, 80, 0.03);
+  --g-section-blue: rgba(59, 130, 246, 0.025);
+  --g-section-teal: rgba(20, 184, 166, 0.025);
+  --g-section-purple: rgba(168, 85, 247, 0.025);
+  --g-section-emerald: rgba(16, 185, 129, 0.025);
+  --g-section-gold: rgba(245, 158, 11, 0.025);
+  --g-section-rose: rgba(244, 63, 94, 0.025);
 }

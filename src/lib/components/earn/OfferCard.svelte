@@ -1,5 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import OsCard from '$lib/components/os/OsCard.svelte';
+  import OsPill from '$lib/components/os/OsPill.svelte';
+  import OsButton from '$lib/components/os/OsButton.svelte';
 
   export let campaignId: string = '';
   export let brandName = '';
@@ -28,12 +31,14 @@
   };
 </script>
 
-<div class="offer-card">
+<OsCard interactive={true} className="offer-card">
   <div class="offer-top">
     <span class="offer-brand">{brandName}</span>
     <span
       class="offer-score"
-      style="background:{scoreColor(matchScore)}20;color:{scoreColor(matchScore)};border-color:{scoreColor(matchScore)}40"
+      style="background:{scoreColor(matchScore)}20;color:{scoreColor(
+        matchScore,
+      )};border-color:{scoreColor(matchScore)}40"
     >
       {matchScore}% match
     </span>
@@ -45,28 +50,32 @@
     <p class="offer-reason">{matchReason}</p>
   {/if}
 
-  <div class="offer-state offer-state--{briefStatus}">
+  <OsPill className="offer-state offer-state--{briefStatus}">
     <span class="offer-state-dot"></span>
     <span>{statusLabel[briefStatus]}</span>
-  </div>
+  </OsPill>
 
   {#if briefStatus === 'sent'}
     <div class="offer-actions">
-      <button class="offer-accept" on:click={() => dispatch('accept', { campaignId })}
-        >Accept</button
+      <OsButton
+        className="offer-accept"
+        variant="primary"
+        on:click={() => dispatch('accept', { campaignId })}>Accept</OsButton
       >
-      <button class="offer-decline" on:click={() => dispatch('decline', { campaignId })}
-        >Decline</button
+      <OsButton
+        className="offer-decline"
+        variant="secondary"
+        on:click={() => dispatch('decline', { campaignId })}>Decline</OsButton
       >
     </div>
   {:else if briefStatus === 'accepted'}
-    <p class="offer-waiting">
-      Waiting for the brand to go live. We'll notify you once they do.
-    </p>
+    <p class="offer-waiting">Waiting for the brand to go live. We'll notify you once they do.</p>
   {:else if briefStatus === 'live'}
     <div class="offer-actions">
-      <button class="offer-complete" on:click={() => dispatch('complete', { campaignId })}
-        >Mark as posted</button
+      <OsButton
+        className="offer-complete"
+        variant="primary"
+        on:click={() => dispatch('complete', { campaignId })}>Mark as posted</OsButton
       >
     </div>
   {:else if briefStatus === 'completed'}
@@ -77,7 +86,7 @@
       {/if}
     </div>
   {/if}
-</div>
+</OsCard>
 
 <style>
   .offer-card {
@@ -157,11 +166,21 @@
     border-radius: 50%;
     background: currentColor;
   }
-  .offer-state--sent { color: #ffb84d; }
-  .offer-state--accepted { color: #4d7cff; }
-  .offer-state--live { color: #4dff99; }
-  .offer-state--completed { color: #c1a0e8; }
-  .offer-state--declined { color: var(--text-muted); }
+  .offer-state--sent {
+    color: #ffb84d;
+  }
+  .offer-state--accepted {
+    color: #4d7cff;
+  }
+  .offer-state--live {
+    color: #4dff99;
+  }
+  .offer-state--completed {
+    color: #c1a0e8;
+  }
+  .offer-state--declined {
+    color: var(--text-muted);
+  }
   .offer-actions {
     display: flex;
     gap: 10px;
@@ -209,7 +228,9 @@
     font-family: inherit;
     cursor: pointer;
   }
-  .offer-complete:hover { background: rgba(77, 255, 153, 0.14); }
+  .offer-complete:hover {
+    background: rgba(77, 255, 153, 0.14);
+  }
   .offer-waiting {
     font-size: 12px;
     color: var(--text-muted);
