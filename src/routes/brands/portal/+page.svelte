@@ -16,15 +16,19 @@
   import CreatorCard from '$lib/components/brands/CreatorCard.svelte';
   import StickyLaunchBar from '$lib/components/brands/StickyLaunchBar.svelte';
   import LaunchModal from '$lib/components/brands/LaunchModal.svelte';
-  import ContentStudio from '$lib/components/brands/ContentStudio.svelte';
   import BrandProfile from '$lib/components/brands/BrandProfile.svelte';
-  import BrandStrategist from '$lib/components/brands/BrandStrategist.svelte';
+  import BrandOsDashboard from '$lib/components/brands/BrandOsDashboard.svelte';
+  import type { BrandOsDashboard as BrandOsDashboardType } from '$lib/types/brand-os';
 
   export let data: { brandSessionValid: boolean; brandProfile: Record<string, unknown> | null };
 
   // Read tab from URL param (set by editorial shell nav)
   $: urlTab = $page.url.searchParams.get('tab') as 'content' | 'creators' | 'profile' | null;
   let portalTab: 'content' | 'creators' | 'profile' = data.brandProfile ? 'content' : 'creators';
+  let osDashboard: BrandOsDashboardType | null = null;
+  let osLoading = false;
+  let osError = '';
+  let osSyncing = false;
 
   // URL tab param handled by reactive block above
   $: if (urlTab && ['content', 'creators', 'profile'].includes(urlTab)) {
@@ -374,9 +378,59 @@
     const t = setInterval(() => {
       ghostIdx = (ghostIdx + 1) % ghostHints.length;
     }, 4200);
+    void loadOsDashboard();
     void loadRequests();
     return () => clearInterval(t);
   });
+
+  async function loadOsDashboard() {
+    if (!data.brandSessionValid) return;
+    osLoading = true;
+    osError = '';
+    try {
+      const res = await fetch('/api/brand/os-dashboard', fetchOpts);
+      const j = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        dashboard?: BrandOsDashboardType;
+        error?: string;
+      };
+      if (!res.ok || !j.ok || !j.dashboard) {
+        osError = j.error || 'Could not load dashboard';
+        osDashboard = null;
+        return;
+      }
+      osDashboard = j.dashboard;
+    } catch {
+      osError = 'Dashboard unavailable';
+      osDashboard = null;
+    } finally {
+      osLoading = false;
+    }
+  }
+
+  async function runOsSync(action: 'refresh_dashboard' | 'regenerate_synopsis' | 'regenerate_brand_kit') {
+    if (!data.brandSessionValid) return;
+    osSyncing = true;
+    osError = '';
+    try {
+      const res = await fetch('/api/brand/os-sync', {
+        method: 'POST',
+        headers: jsonHeaders(),
+        ...fetchOpts,
+        body: JSON.stringify({ action }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !j.ok) {
+        osError = j.error || 'Sync failed';
+        return;
+      }
+      await Promise.all([loadOsDashboard(), loadRequests()]);
+    } catch {
+      osError = 'Sync failed';
+    } finally {
+      osSyncing = false;
+    }
+  }
 
   function applyChip(text: string) {
     promptText = text;
@@ -767,6 +821,24 @@
     URL.revokeObjectURL(url);
   }
 
+  // ── Brand OS top bar derived state ──
+  const BOS_DATE = new Date().toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'short' });
+  $: bosName = data.brandProfile
+    ? String(data.brandProfile.ig_name || 'Brand')
+    : brandName || 'Brand';
+  $: bosHandle = data.brandProfile
+    ? '@' + String(data.brandProfile.ig_username || '')
+    : '';
+  $: bosAvatar = data.brandProfile
+    ? String(data.brandProfile.ig_profile_picture || '')
+    : '';
+  $: bosFollowers = data.brandProfile
+    ? Number(data.brandProfile.ig_followers_count || 0)
+    : 0;
+  $: bosActiveCampaigns = requestCampaigns.filter(c => c.status !== 'ended').length;
+  $: bosTotalSent = requestCampaigns.reduce((s, c) => s + (c.counts.sent ?? 0), 0);
+  $: bosTotalAccepted = requestCampaigns.reduce((s, c) => s + (c.counts.accepted ?? 0), 0);
+
   function readCreativeFile(f: File) {
     if (f.type.startsWith('text/') || f.name.endsWith('.txt') || f.name.endsWith('.md')) {
       const r = new FileReader();
@@ -795,48 +867,84 @@
   }
 </script>
 
-<div class="brand-studio">
-  <!-- Tabs handled by masthead layout switcher -->
-
-  {#if portalTab === 'content' && data.brandProfile}
-    <div class="portal-content-studio">
-      <!-- Brand Strategist Dashboard -->
-      <BrandStrategist
-        brandProfile={{
-          ig_user_id: String(data.brandProfile.ig_user_id || ''),
-          ig_username: String(data.brandProfile.ig_username || ''),
-          ig_name: String(data.brandProfile.ig_name || ''),
-          ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
-          ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
-        }}
-      />
-
-      <!-- Divider before Content Studio -->
-      <div class="studio-divider" id="create-publish-section">
-        <span class="divider-rule"></span>
-        <span class="divider-label">Create & Publish</span>
-        <span class="divider-rule"></span>
+<div class="bos-root">
+  <!-- ═══ Brand OS Top Bar ═══ -->
+  <header class="bos-top">
+    <div class="bos-brand-card">
+      {#if bosAvatar}
+        <img src={bosAvatar} alt="" class="bos-avatar" />
+      {:else}
+        <div class="bos-avatar bos-avatar--init">{bosName.charAt(0)}</div>
+      {/if}
+      <div class="bos-brand-info">
+        <span class="bos-brand-name">{bosName}</span>
+        {#if bosHandle}<span class="bos-brand-handle">{bosHandle}</span>{/if}
+        {#if bosFollowers > 0}
+          <span class="bos-brand-meta">{bosFollowers.toLocaleString()} followers</span>
+        {/if}
       </div>
-
-      <ContentStudio
-        brandProfile={{
-          ig_user_id: String(data.brandProfile.ig_user_id || ''),
-          ig_username: String(data.brandProfile.ig_username || ''),
-          ig_name: String(data.brandProfile.ig_name || ''),
-          ig_profile_picture: String(data.brandProfile.ig_profile_picture || ''),
-          ig_followers_count: Number(data.brandProfile.ig_followers_count || 0),
-        }}
-      />
     </div>
-  {:else if portalTab === 'profile' && data.brandProfile}
-    <div class="portal-content-studio">
-      <!-- Section header -->
-      <div class="section-intro">
-        <h2 class="section-headline">{data.brandProfile.ig_name || 'Your Brand'}</h2>
+
+    <div class="bos-greeting-block">
+      <span class="bos-os-label">BRAND OS</span>
+      <h1 class="bos-greeting">Welcome, <em>{bosName.split(' ')[0]}</em>.</h1>
+      <span class="bos-date">{BOS_DATE}</span>
+    </div>
+
+    <div class="bos-clock-block">
+      <div class="bos-clock">{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+      <span class="bos-clock-label">LOCAL TIME</span>
+    </div>
+
+    <div class="bos-stats-hero">
+      <div class="bos-stat-big">{requestCampaigns.length}</div>
+      <span class="bos-stat-label">CAMPAIGNS</span>
+      <div class="bos-stat-sub-row">
+        <span class="bos-stat-sub"><span class="bos-stat-val bos-stat-val--active">{bosActiveCampaigns}</span> active</span>
+        <span class="bos-stat-sub"><span class="bos-stat-val bos-stat-val--green">{bosTotalAccepted}</span> accepted</span>
       </div>
+    </div>
+  </header>
+
+  <!-- ═══ Bento Grid ═══ -->
+  <div class="bos-bento">
+
+    {#if portalTab === 'content' && data.brandProfile}
+      {#if osLoading}
+        <section class="bos-card bos-card--agent">
+          <div class="bos-card-head">
+            <span class="bos-card-label">BRAND OS</span>
+          </div>
+          <div class="bos-card-body">
+            <p class="bos-card-empty">Loading dashboard…</p>
+          </div>
+        </section>
+      {:else if osError}
+        <section class="bos-card bos-card--agent">
+          <div class="bos-card-head">
+            <span class="bos-card-label">BRAND OS</span>
+            <button class="bos-refresh-btn" on:click={() => loadOsDashboard()} disabled={osLoading}>
+              Retry
+            </button>
+          </div>
+          <div class="bos-card-body">
+            <p class="bos-card-empty" style="color:#E8464A">{osError}</p>
+          </div>
+        </section>
+      {:else if osDashboard}
+        <BrandOsDashboard
+          dashboard={osDashboard}
+          syncing={osSyncing}
+          onRefresh={() => runOsSync('refresh_dashboard')}
+          onRegenerateSynopsis={() => runOsSync('regenerate_synopsis')}
+          onRegenerateBrandKit={() => runOsSync('regenerate_brand_kit')}
+        />
+      {/if}
+
+    {:else if portalTab === 'profile' && data.brandProfile}
       <BrandProfile />
-    </div>
-  {:else if showManualSearch}
+
+    {:else if showManualSearch}
     <div class="manual-search-header">
       <button class="back-to-chat" on:click={() => (showManualSearch = false)}>
         Back to AI matching
@@ -1113,8 +1221,10 @@
                   brief={memberBriefBySub[u.user_google_sub] ?? null}
                   briefLoading={memberBriefLoading === u.user_google_sub}
                   on:toggle={(e) => toggleRow(e.detail)}
-                  on:loadBrief={(e) =>
-                    loadMemberBrief(users.find((x) => x.user_google_sub === e.detail))}
+                  on:loadBrief={(e) => {
+                    const selectedUser = users.find((x) => x.user_google_sub === e.detail);
+                    if (selectedUser) loadMemberBrief(selectedUser);
+                  }}
                 />
               {/each}
             </div>
@@ -1153,7 +1263,15 @@
       />
     {/if}
   {:else}
-    <div class="agent-full">
+    <!-- Creator Matching Flow -->
+    <section class="bos-card bos-card--agent">
+      <div class="bos-card-head">
+        <span class="bos-card-label">FIND CREATORS</span>
+        {#if currentStep !== 'intake'}
+          <span class="bos-card-count">{currentStep}</span>
+        {/if}
+      </div>
+      <div class="bos-card-body bos-agent-body">
       {#if currentStep === 'intake'}
         {#if enriching}
           <div class="enriching-state">
@@ -1178,7 +1296,7 @@
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                 ><path
                   d="M2 7.5l3.5 3.5L12 3"
-                  stroke="var(--g-accent, #E8464A)"
+                  stroke="#E8833A"
                   stroke-width="1.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -1278,26 +1396,32 @@
         />
       {/if}
 
-      {#if currentStep === 'intake' && data.brandSessionValid}
-        <section class="requests-panel" aria-label="Your campaign requests">
-          <div class="requests-panel__header">
-            <h3 class="requests-panel__title">Your campaigns</h3>
-            <button
-              type="button"
-              class="requests-panel__refresh"
-              on:click={() => loadRequests()}
-              disabled={requestsLoading}
-            >
-              {requestsLoading ? 'Refreshing…' : 'Refresh'}
-            </button>
-          </div>
+      </div>
+    </section>
+
+    <!-- Campaign Requests — separate bento card (intake view only) -->
+    {#if currentStep === 'intake' && data.brandSessionValid}
+      <section class="bos-card bos-card--requests">
+        <div class="bos-card-head">
+          <span class="bos-card-label">YOUR CAMPAIGNS</span>
+          {#if requestCampaigns.length > 0}
+            <span class="bos-card-count">{requestCampaigns.length}</span>
+          {/if}
+          <button
+            type="button"
+            class="bos-refresh-btn"
+            on:click={() => loadRequests()}
+            disabled={requestsLoading}
+          >
+            {requestsLoading ? '…' : 'Refresh'}
+          </button>
+        </div>
+        <div class="bos-card-body bos-campaign-scroll">
           {#if requestsErr}
-            <p class="requests-panel__error">{requestsErr}</p>
+            <p class="bos-card-empty" style="color:#E8464A">{requestsErr}</p>
           {/if}
           {#if !requestsLoading && requestCampaigns.length === 0}
-            <p class="requests-panel__empty">
-              No campaigns yet. Launch one above and you'll see sent / accepted / live counts here.
-            </p>
+            <p class="bos-card-empty">No campaigns yet. Launch one above.</p>
           {/if}
           {#each requestCampaigns as c (c.id)}
             <article class="requests-card">
@@ -1367,89 +1491,284 @@
               {/if}
             </article>
           {/each}
-        </section>
-      {/if}
-    </div>
+        </div>
+      </section>
+    {/if}
+
     {#if currentStep === 'intake' || currentStep === 'questions'}
-      <div class="manual-link">
+      <div class="bos-card bos-card--switch">
         <button class="switch-link" on:click={() => (showManualSearch = true)}>
           Switch to manual search
         </button>
       </div>
     {/if}
   {/if}
+
+  </div>
 </div>
 
 <style>
-  /* === Glass brand studio === */
-  .brand-studio {
-    display: flex;
-    flex-direction: column;
-    max-width: 80rem;
-    margin: 0 auto;
-    padding: 0 24px 4rem;
-    background: transparent;
-  }
-
-  .agent-full {
+  /* ══════════════════════════════════════════════════════════
+     BRAND OS — Bento Grid Dashboard
+     ══════════════════════════════════════════════════════════ */
+  .bos-root {
+    position: relative;
     flex: 1;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
+    overflow: visible;
+    background: #0A0A0C;
+    font-family: 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    color: #EDEDEF;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+  }
+  .bos-root::-webkit-scrollbar { display: none; }
+
+  /* ── Top bar ── */
+  .bos-top {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: clamp(12px, 2vw, 20px);
+    align-items: center;
+    padding: clamp(12px, 1.8vw, 16px) clamp(14px, 2.5vw, 24px);
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    min-width: 0;
   }
 
-  .requests-panel {
-    margin-top: 32px;
-    padding: 20px;
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.08));
-    border-radius: 16px;
-    background: var(--g-surface-1, rgba(255, 255, 255, 0.02));
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+  .bos-brand-card {
+    display: flex; align-items: center; gap: 12px;
+    padding-right: 20px;
+    border-right: 1px solid rgba(255,255,255,0.04);
   }
-  .requests-panel__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  .bos-avatar {
+    width: 44px; height: 44px; border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.06);
   }
-  .requests-panel__title {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-    color: var(--g-text-1, #e8e8ea);
+  .bos-avatar--init {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #E87FA8, #E8833A);
+    color: #fff; font-size: 18px; font-weight: 700;
   }
-  .requests-panel__refresh {
-    background: none;
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.12));
-    border-radius: 999px;
-    padding: 4px 12px;
-    font-size: 11px;
-    color: var(--g-text-2, #8a8a90);
-    cursor: pointer;
+  .bos-brand-info { display: flex; flex-direction: column; gap: 1px; }
+  .bos-brand-name { font-size: 14px; font-weight: 700; color: #EDEDEF; }
+  .bos-brand-handle {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; color: #4A4A50; letter-spacing: 0.02em;
   }
-  .requests-panel__refresh:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .bos-brand-meta {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; text-transform: uppercase; letter-spacing: 0.06em;
   }
-  .requests-panel__empty,
-  .requests-panel__error {
-    font-size: 13px;
-    color: var(--g-text-3, #4a4a50);
-    margin: 0;
+
+  .bos-greeting-block { display: flex; flex-direction: column; gap: 2px; }
+  .bos-os-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.12em;
+    color: #3A3A40; text-transform: uppercase;
   }
-  .requests-panel__error {
-    color: #e8464a;
+  .bos-greeting {
+    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-size: clamp(20px, 2.5vw, 28px); font-weight: 700;
+    color: #EDEDEF; margin: 0; letter-spacing: -0.03em;
   }
+  .bos-greeting em {
+    font-style: italic; font-family: 'Bodoni Moda', Georgia, serif;
+    color: #E8833A; font-weight: 400;
+  }
+  .bos-date {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; color: #3A3A40; letter-spacing: 0.04em;
+  }
+
+  .bos-clock-block { text-align: right; }
+  .bos-clock {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 26px; font-weight: 300; color: #EDEDEF;
+    letter-spacing: 0.06em;
+  }
+  .bos-clock-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  .bos-stats-hero {
+    padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.04);
+    text-align: right;
+  }
+  .bos-stat-big {
+    font-family: 'Bodoni Moda', Georgia, serif;
+    font-size: clamp(22px, 2.5vw, 32px); font-weight: 700;
+    color: #EDEDEF; letter-spacing: -0.02em; line-height: 1;
+  }
+  .bos-stat-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; letter-spacing: 0.1em; text-transform: uppercase;
+    display: block; margin-top: 2px;
+  }
+  .bos-stat-sub-row { display: flex; gap: 12px; margin-top: 6px; justify-content: flex-end; }
+  .bos-stat-sub {
+    font-size: 10px; color: #4A4A50;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+  }
+  .bos-stat-val { font-weight: 700; }
+  .bos-stat-val--active { color: #4d7cff; }
+  .bos-stat-val--green { color: #4ade80; }
+
+  /* ── Bento grid ── */
+  .bos-bento {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    gap: clamp(8px, 1.2vw, 12px);
+    padding: clamp(12px, 1.8vw, 16px) clamp(14px, 2vw, 20px);
+    min-width: 0;
+    overflow: visible;
+    align-content: start;
+  }
+
+  /* ── Card base ── */
+  .bos-card {
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 18px 16px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .bos-card-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px; flex-shrink: 0;
+  }
+  .bos-card-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    color: #4A4A50; text-transform: uppercase;
+  }
+  .bos-card-count {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    color: #8A8A90; background: rgba(255,255,255,0.04);
+    padding: 2px 7px; border-radius: 100px;
+  }
+  .bos-card-body {
+    flex: 1; min-height: 0;
+  }
+  .bos-card-empty {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 11px; color: #3A3A40;
+    padding: 16px 0;
+  }
+  .bos-refresh-btn {
+    margin-left: auto;
+    background: none; border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px; padding: 3px 10px;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #4A4A50; cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .bos-refresh-btn:hover { color: #EDEDEF; border-color: rgba(255,255,255,0.15); }
+  .bos-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Card sizes ── */
+  .bos-card--studio { grid-column: span 2; grid-row: span 1; }
+  .bos-card--campaigns { grid-column: span 1; grid-row: span 1; max-height: 360px; }
+  .bos-card--agent { grid-column: span 2; grid-row: span 2; min-height: 360px; }
+  .bos-card--requests { grid-column: span 1; grid-row: span 2; max-height: none; overflow-y: auto; }
+  .bos-card--switch { grid-column: span 1; padding: 12px 16px; display: flex; align-items: center; justify-content: center; }
+
+  .bos-agent-body {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .bos-agent-body::-webkit-scrollbar { display: none; }
+
+  .bos-campaign-scroll {
+    overflow-y: auto; scrollbar-width: none;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .bos-campaign-scroll::-webkit-scrollbar { display: none; }
+
+  .bos-campaign-row {
+    padding: 10px 8px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04);
+    display: flex; flex-direction: column; gap: 4px;
+    transition: border-color 0.15s;
+  }
+  .bos-campaign-row:hover { border-color: rgba(255,255,255,0.1); }
+  .bos-campaign-info { display: flex; align-items: center; gap: 8px; }
+  .bos-campaign-title { font-size: 12px; font-weight: 600; color: #EDEDEF; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bos-campaign-status {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 2px 6px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.06); color: #4A4A50;
+  }
+  .bos-campaign-status--active { color: #4d7cff; border-color: rgba(77,124,255,0.3); }
+  .bos-campaign-status--ended { color: #3A3A40; border-color: rgba(255,255,255,0.04); }
+  .bos-campaign-counts {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px; color: #3A3A40; display: flex; gap: 8px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1024px) {
+    .bos-top {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+    }
+    .bos-brand-card { border-right: none; padding-right: 0; }
+    .bos-stats-hero { border-left: none; padding-left: 0; text-align: left; }
+    .bos-stat-sub-row { justify-content: flex-start; }
+    .bos-bento { grid-template-columns: repeat(2, 1fr); }
+    .bos-card--studio { grid-column: span 2; }
+    .bos-card--agent { grid-column: span 2; grid-row: span 1; min-height: 300px; }
+    .bos-card--requests { grid-column: span 2; grid-row: span 1; max-height: 360px; }
+    .bos-card--switch { grid-column: span 2; }
+  }
+
+  @media (max-width: 640px) {
+    .bos-top {
+      grid-template-columns: 1fr;
+      gap: 12px; padding: 14px;
+    }
+    .bos-greeting { font-size: 20px; }
+    .bos-clock { font-size: 20px; }
+    .bos-bento {
+      grid-template-columns: 1fr;
+      padding: 12px;
+    }
+    .bos-card--studio,
+    .bos-card--campaigns,
+    .bos-card--agent,
+    .bos-card--requests,
+    .bos-card--switch {
+      grid-column: span 1; grid-row: span 1;
+      min-height: auto; max-height: none;
+    }
+    .bos-card--agent { min-height: 280px; }
+  }
+
+  /* (requests-panel removed — now uses bos-card--requests) */
+  /* (requests-panel refresh/empty/error removed — now uses bos-card styles) */
   .requests-card {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
     padding: 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: var(--g-surface-2, rgba(255, 255, 255, 0.01));
+    background: rgba(255, 255, 255, 0.02);
+    transition: border-color 0.15s;
+  }
+  .requests-card:hover {
+    border-color: rgba(255, 255, 255, 0.1);
   }
   .requests-card__head {
     display: flex;
@@ -1466,28 +1785,31 @@
   }
   .requests-card__title {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--g-text-1, #e8e8ea);
+    color: #EDEDEF;
   }
   .requests-card__counts {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    font-size: 11px;
-    color: var(--g-text-3, #4a4a50);
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    color: #4A4A50;
   }
   .requests-card__declined {
     color: #b88;
   }
   .requests-card__status {
-    font-size: 10px;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.1));
-    color: var(--g-text-2, #8a8a90);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #4A4A50;
   }
   .requests-card__status--active,
   .requests-card__status--accepted {
@@ -1516,13 +1838,20 @@
     flex-wrap: wrap;
   }
   .requests-card__action {
-    font-size: 12px;
-    padding: 6px 12px;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 6px 14px;
     border-radius: 8px;
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.12));
-    background: var(--g-accent, #e8464a);
-    color: white;
+    border: 1px solid rgba(232, 131, 58, 0.3);
+    background: rgba(232, 131, 58, 0.12);
+    color: #E8833A;
     cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .requests-card__action:hover {
+    background: rgba(232, 131, 58, 0.2);
+    border-color: rgba(232, 131, 58, 0.5);
   }
   .requests-card__action:disabled {
     opacity: 0.5;
@@ -1530,7 +1859,13 @@
   }
   .requests-card__action--ghost {
     background: transparent;
-    color: var(--g-text-2, #8a8a90);
+    border-color: rgba(255, 255, 255, 0.07);
+    color: #4A4A50;
+  }
+  .requests-card__action--ghost:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #6A6A72;
   }
   .requests-card__members {
     list-style: none;
@@ -1545,15 +1880,15 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    font-size: 11px;
-    color: var(--g-text-2, #8a8a90);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 10px;
+    color: #4A4A50;
   }
   .requests-card__sub {
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-size: 11px;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
   }
   .requests-card__link {
     color: #7ba7d9;
@@ -1561,26 +1896,24 @@
   }
   .requests-card__more {
     font-size: 11px;
-    color: var(--g-text-3, #4a4a50);
-  }
-
-  .manual-link {
-    text-align: center;
-    padding: 8px 0 16px;
+    color: #3A3A40;
   }
 
   .switch-link {
     background: none;
-    border: none;
-    color: var(--g-text-3, #4a4a50);
-    font-size: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    color: #3A3A40;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.04em;
     cursor: pointer;
-    font-family: inherit;
-    padding: 4px 8px;
-    transition: color 0.2s;
+    padding: 6px 14px;
+    transition: color 0.15s, border-color 0.15s;
   }
   .switch-link:hover {
-    color: var(--g-text-2, #8a8a90);
+    color: #EDEDEF;
+    border-color: rgba(255,255,255,0.15);
   }
 
   .enriching-state {
@@ -1594,8 +1927,8 @@
   .enriching-spinner {
     width: 24px;
     height: 24px;
-    border: 2px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    border-top-color: var(--g-metric-shares, #7ba7d9);
+    border: 2px solid rgba(255, 255, 255, 0.07);
+    border-top-color: #E8833A;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
   }
@@ -1606,19 +1939,19 @@
   }
   .enriching-text {
     font-size: 14px;
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
     margin: 0;
   }
 
   .manual-search-header {
     padding: 12px 24px;
-    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .back-to-chat {
     background: none;
     border: none;
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
     font-size: 13px;
     cursor: pointer;
     font-family: inherit;
@@ -1626,7 +1959,7 @@
     transition: color 0.2s;
   }
   .back-to-chat:hover {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
 
   .brand-user-rates {
@@ -1634,108 +1967,104 @@
     gap: 8px;
     margin-top: 6px;
     font-size: 11px;
-    font-family: var(--font-mono);
-    color: var(--g-text-2, #8a8a90);
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    color: #6A6A72;
   }
 
   /* === Token-based utility classes === */
   .text-primary {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .text-secondary {
-    color: var(--g-text-2, #8a8a90);
+    color: #6A6A72;
   }
   .text-muted {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .section-label {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .accent-secondary {
-    color: var(--g-metric-shares, #7ba7d9);
+    color: #4d7cff;
   }
   .accent-tertiary {
-    color: var(--g-accent-tertiary, #e8833a);
+    color: #E87FA8;
   }
 
   /* === Hero section === */
   .hero-label {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .hero-title {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .hero-title-accent {
-    color: var(--g-text-2, #8a8a90);
+    color: #6A6A72;
   }
   .hero-footer {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .hero-sign-out {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .hero-sign-out:hover {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .hero-sign-in {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .hero-sign-in:hover {
-    color: var(--g-metric-shares, #7ba7d9);
+    color: #4d7cff;
   }
 
   .studio-textarea-hero {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    background: var(--g-surface, #17171a);
-    color: var(--g-text, #ededef);
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-      0 24px 80px -24px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.035);
+    color: #EDEDEF;
   }
   .studio-textarea-hero::placeholder {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
 
   .preset-chip {
-    border: 1px solid var(--g-surface, #17171a);
+    border: 1px solid #111114;
     background: rgba(255, 255, 255, 0.025);
-    color: var(--g-text-2, #8a8a90);
+    color: #6A6A72;
   }
 
   .discover-btn {
-    background: white;
-    color: var(--g-bg, #111113);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    background: #E8833A;
+    color: #0A0A0C;
+    box-shadow: 0 4px 16px rgba(232, 131, 58, 0.2);
+    font-weight: 700;
   }
   .discover-btn:hover {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 24px rgba(232, 131, 58, 0.3);
   }
 
   /* === Docked prompt / Results toolbar === */
   .docked-prompt {
-    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    background: rgba(11, 11, 13, 0.85);
-  }
-  @supports (backdrop-filter: blur(1px)) {
-    .docked-prompt {
-      background: rgba(11, 11, 13, 0.7);
-    }
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(10, 10, 12, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .studio-textarea-dock {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    background: var(--g-surface, #17171a);
-    color: var(--g-text, #ededef);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: #111114;
+    color: #EDEDEF;
   }
 
   .rerun-btn {
-    background: white;
-    color: var(--g-bg, #111113);
+    background: #E8833A;
+    color: #0A0A0C;
+    font-weight: 700;
   }
 
   .new-scene-btn {
-    border: 1px solid var(--g-border-strong, rgba(255, 255, 255, 0.14));
-    color: var(--g-text-3, #4a4a50);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #3A3A40;
   }
   .new-scene-btn:hover {
     border-color: rgba(239, 68, 68, 0.3);
@@ -1744,24 +2073,24 @@
 
   /* === Results header === */
   .results-heading {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .results-heading-muted {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
 
   .toolbar-btn {
-    border: 1px solid var(--g-border-strong, rgba(255, 255, 255, 0.14));
-    color: var(--g-text-2, #8a8a90);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #6A6A72;
   }
   .toolbar-btn:hover {
     border-color: rgba(255, 255, 255, 0.2);
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
 
   /* === Overview panel === */
   .overview-panel {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border: 1px solid rgba(255, 255, 255, 0.07);
     background: rgba(255, 255, 255, 0.025);
     box-shadow: 0 0 60px rgba(0, 0, 0, 0.35);
   }
@@ -1770,20 +2099,20 @@
   }
 
   .overview-row {
-    color: var(--g-text-2, #8a8a90);
-    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    color: #6A6A72;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   }
   .overview-row-last {
     border-bottom: none;
   }
   .overview-value {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
 
   .interest-tag {
-    border: 1px solid var(--g-border-strong, rgba(255, 255, 255, 0.14));
+    border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.025);
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .behavior-tag {
     border: 1px solid rgba(77, 124, 255, 0.2);
@@ -1793,7 +2122,7 @@
 
   /* === Mosaic === */
   .mosaic-tile {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border: 1px solid rgba(255, 255, 255, 0.07);
   }
   .mosaic-initials {
     color: rgba(255, 255, 255, 0.9);
@@ -1801,32 +2130,32 @@
 
   /* === Insight cards === */
   .insight-card {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border: 1px solid rgba(255, 255, 255, 0.07);
     background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.025), transparent);
   }
   .insight-stat {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .insight-title {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .insight-caption {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
 
   /* === Intel cards === */
   .intel-label {
-    color: var(--g-accent-tertiary, #e8833a);
+    color: #E87FA8;
   }
   .intel-card {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border: 1px solid rgba(255, 255, 255, 0.07);
     background: rgba(0, 0, 0, 0.2);
   }
   .intel-card-label {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .intel-card-body {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
 
   /* === Member cards === */
@@ -1836,45 +2165,44 @@
     box-shadow: 0 0 24px rgba(77, 124, 255, 0.15);
   }
   .member-card-default {
-    border-color: var(--g-border, rgba(255, 255, 255, 0.06));
+    border-color: rgba(255, 255, 255, 0.07);
     background: rgba(255, 255, 255, 0.025);
   }
   .member-card-default:hover {
     border-color: rgba(255, 255, 255, 0.15);
-    background: var(--g-surface, #17171a);
+    background: #111114;
   }
   .member-avatar {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .member-card-footer {
-    border-top: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
     background: rgba(0, 0, 0, 0.2);
   }
   .brief-body {
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .brief-label {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
 
   /* === Campaign slide-over === */
   .campaign-aside {
-    border-left: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    background: var(--g-surface, #17171a);
-    box-shadow: -16px 0 64px rgba(0, 0, 0, 0.5);
+    border-left: 1px solid rgba(255, 255, 255, 0.07);
+    background: #0A0A0C;
   }
   .campaign-header {
-    border-bottom: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   }
   .campaign-close-btn {
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
   .campaign-close-btn:hover {
     background: rgba(255, 255, 255, 0.025);
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
   }
   .campaign-option {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border: 1px solid rgba(255, 255, 255, 0.07);
     background: rgba(255, 255, 255, 0.025);
   }
   .campaign-option:hover {
@@ -1884,15 +2212,15 @@
     border-color: rgba(255, 255, 255, 0.04);
   }
   .campaign-input {
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    background: var(--g-bg, #111113);
-    color: var(--g-text, #ededef);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(0, 0, 0, 0.3);
+    color: #EDEDEF;
   }
   .campaign-input:focus {
-    border-color: rgba(77, 124, 255, 0.4);
+    border-color: rgba(232, 131, 58, 0.4);
   }
   .creative-drop {
-    border: 1px dashed var(--g-border-strong, rgba(255, 255, 255, 0.14));
+    border: 1px dashed rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.025);
   }
   .creative-drop-active {
@@ -1900,34 +2228,30 @@
     background: rgba(77, 124, 255, 0.1);
   }
   .campaign-footer {
-    border-top: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   /* Textarea focus states */
   .studio-textarea:focus {
-    border-color: rgba(77, 124, 255, 0.4);
-    box-shadow: 0 0 0 1px rgba(77, 124, 255, 0.35) inset;
+    border-color: rgba(232, 131, 58, 0.4);
   }
 
   /* Preset chip hover */
   .preset-chip:hover {
-    border-color: rgba(77, 124, 255, 0.35);
-    background: rgba(77, 124, 255, 0.1);
-    color: #fff;
+    border-color: rgba(232, 131, 58, 0.3);
+    background: rgba(232, 131, 58, 0.08);
+    color: #E8833A;
   }
 
   /* Launch campaign buttons */
   .launch-btn {
-    background: linear-gradient(
-      135deg,
-      var(--g-accent, #e8464a),
-      var(--g-accent-tertiary, #e8833a)
-    );
-    color: var(--g-text, #ededef);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    background: #E8833A;
+    color: #0A0A0C;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(232, 131, 58, 0.2);
   }
   .launch-btn:hover {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 20px rgba(232, 131, 58, 0.3);
   }
 
   /* Mosaic tile hover */
@@ -1942,18 +2266,19 @@
 
   /* Audience intelligence panel */
   .audience-intel-panel {
-    border: 1px solid rgba(77, 124, 255, 0.2);
-    background: linear-gradient(to bottom right, rgba(77, 124, 255, 0.08), transparent);
+    border: 1px solid rgba(232, 131, 58, 0.15);
+    background: rgba(232, 131, 58, 0.04);
   }
 
   /* Generate intelligence button */
   .generate-intel-btn {
-    background: var(--g-metric-shares, #7ba7d9);
-    color: var(--g-text, #ededef);
-    box-shadow: 0 4px 14px rgba(77, 124, 255, 0.3);
+    background: rgba(232, 131, 58, 0.12);
+    border: 1px solid rgba(232, 131, 58, 0.3);
+    color: #E8833A;
+    font-weight: 700;
   }
   .generate-intel-btn:hover {
-    background: #5d8aff;
+    background: rgba(232, 131, 58, 0.2);
   }
 
   /* Slider thumb */
@@ -1962,11 +2287,7 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: linear-gradient(
-      145deg,
-      var(--g-accent, #e8464a),
-      var(--g-accent-tertiary, #e8833a)
-    );
+    background: #E8833A;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     cursor: pointer;
   }
@@ -1975,11 +2296,7 @@
     height: 18px;
     border: none;
     border-radius: 50%;
-    background: linear-gradient(
-      145deg,
-      var(--g-accent, #e8464a),
-      var(--g-accent-tertiary, #e8833a)
-    );
+    background: #E8833A;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     cursor: pointer;
   }
@@ -1997,14 +2314,9 @@
     max-width: 500px;
     width: 100%;
     padding: 32px;
-    border-radius: 1.25rem;
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    background: rgba(255, 255, 255, 0.025);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow:
-      inset 0 1px 1px rgba(255, 255, 255, 0.04),
-      0 16px 48px rgba(0, 0, 0, 0.3);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.035);
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -2027,21 +2339,22 @@
     align-items: center;
     gap: 6px;
     align-self: center;
-    font-size: 0.6875rem;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--g-accent, #e8464a);
-    background: rgba(255, 77, 77, 0.08);
-    border: 1px solid rgba(255, 77, 77, 0.15);
-    border-radius: 9999px;
+    color: #E8833A;
+    background: rgba(232, 131, 58, 0.08);
+    border: 1px solid rgba(232, 131, 58, 0.2);
+    border-radius: 4px;
     padding: 5px 12px;
   }
 
   .confirm-title {
     font-size: 20px;
     font-weight: 600;
-    color: var(--g-text, #ededef);
+    color: #EDEDEF;
     text-align: center;
     margin: 0;
     letter-spacing: -0.02em;
@@ -2049,7 +2362,7 @@
 
   .confirm-sub {
     font-size: 13px;
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
     text-align: center;
     margin: -12px 0 0;
   }
@@ -2083,17 +2396,17 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
   }
 
   .confirm-input,
   .confirm-select {
-    background: var(--g-bg, #111113);
-    border: 1px solid var(--g-border, rgba(255, 255, 255, 0.06));
-    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
     padding: 10px 14px;
-    font-size: 14px;
-    color: var(--g-text, #ededef);
+    font-size: 13px;
+    color: #EDEDEF;
     font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
@@ -2101,7 +2414,7 @@
 
   .confirm-input:focus,
   .confirm-select:focus {
-    border-color: rgba(77, 124, 255, 0.4);
+    border-color: rgba(232, 131, 58, 0.4);
   }
 
   .confirm-select {
@@ -2122,19 +2435,20 @@
   }
 
   .confirm-tag {
-    font-size: 0.6875rem;
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px;
     font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 9999px;
-    background: rgba(255, 77, 77, 0.08);
-    color: #ff6b6b;
-    border: 1px solid rgba(255, 77, 77, 0.15);
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(232, 131, 58, 0.08);
+    color: #E8833A;
+    border: 1px solid rgba(232, 131, 58, 0.15);
   }
 
   .confirm-tag--blue {
-    background: rgba(77, 124, 255, 0.08);
-    color: #6b9aff;
-    border-color: rgba(77, 124, 255, 0.15);
+    background: rgba(77, 124, 255, 0.06);
+    color: #4d7cff;
+    border-color: rgba(77, 124, 255, 0.12);
   }
 
   .confirm-actions {
@@ -2147,22 +2461,18 @@
     width: 100%;
     padding: 14px 20px;
     border: none;
-    border-radius: 14px;
-    background: linear-gradient(
-      135deg,
-      var(--g-accent, #e8464a),
-      var(--g-accent-tertiary, #e8833a)
-    );
-    color: white;
-    font-size: 15px;
-    font-weight: 600;
+    border-radius: 10px;
+    background: #E8833A;
+    color: #0A0A0C;
+    font-size: 13px;
+    font-weight: 700;
     font-family: inherit;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: all 0.2s ease;
   }
 
   .confirm-btn:hover {
@@ -2185,7 +2495,7 @@
   .confirm-back {
     background: none;
     border: none;
-    color: var(--g-text-3, #4a4a50);
+    color: #3A3A40;
     font-size: 13px;
     font-family: inherit;
     cursor: pointer;
@@ -2194,53 +2504,8 @@
     transition: color 0.2s;
   }
   .confirm-back:hover {
-    color: var(--g-text-2, #8a8a90);
+    color: #6A6A72;
   }
 
-  /* ── Content studio / profile wrapper ── */
-  .portal-content-studio {
-    max-width: 56rem;
-    margin: 0 auto;
-    padding: 0 0 80px;
-  }
-
-  /* ── Studio divider ── */
-  .studio-divider {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin: 64px 0 40px;
-  }
-  .divider-rule {
-    flex: 1;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.08);
-  }
-  .divider-label {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--g-text-ghost, rgba(255, 255, 255, 0.1));
-    white-space: nowrap;
-  }
-
-  /* ── Section intro (for profile tab) ── */
-  .section-intro {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 40px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    margin-bottom: 40px;
-  }
-  .section-headline {
-    font-family: var(--g-font, 'Inter', sans-serif);
-    font-size: clamp(1.5rem, 4vw, 2.5rem);
-    font-weight: 600;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    color: var(--g-text, rgba(255, 255, 255, 0.92));
-    margin: 0;
-  }
+  /* (portal-content-studio, studio-divider, section-intro removed — now bento cards) */
 </style>
