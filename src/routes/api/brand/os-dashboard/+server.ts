@@ -106,18 +106,26 @@ export const GET: RequestHandler = async ({ request }) => {
 
   const latestIntel = (latest?.intelligence as Record<string, any>) || {};
 
-  const recentPosts = (Array.isArray(latestIntel.recentPosts) ? latestIntel.recentPosts : []).slice(0, 8).map((p: any) => ({
+  const rawPosts = Array.isArray(latestIntel.recentPosts)
+    ? latestIntel.recentPosts
+    : Array.isArray(latestIntel.identity?.recentMedia)
+      ? latestIntel.identity.recentMedia
+      : [];
+  const recentPosts = rawPosts.slice(0, 8).map((p: any) => ({
     id: String(p.id || ''),
-    thumbnail: String(p.thumbnail || ''),
-    type: String(p.type || 'IMAGE'),
-    likes: Number(p.likes ?? 0),
-    comments: Number(p.comments ?? 0),
+    thumbnail: String(p.thumbnail || p.media_url || ''),
+    type: String(p.type || p.media_type || 'IMAGE'),
+    likes: Number(p.likes ?? p.like_count ?? 0),
+    comments: Number(p.comments ?? p.comments_count ?? 0),
     permalink: String(p.permalink || ''),
   }));
 
-  const brandVibes: string[] = Array.isArray(latestIntel.identity?.brandVibes)
-    ? latestIntel.identity.brandVibes.slice(0, 6)
-    : [];
+  const brandVibes: string[] = (
+    Array.isArray(latestIntel.identity?.brandVibes) ? latestIntel.identity.brandVibes :
+    Array.isArray(latestIntel.identity?.interests) ? latestIntel.identity.interests :
+    Array.isArray(latestIntel.identity?.vibes) ? latestIntel.identity.vibes :
+    []
+  ).slice(0, 6);
 
   const audiencePortrait = latestIntel.audiencePortrait || {};
   const strategic = latestIntel.strategicPositioning || {};
@@ -183,12 +191,19 @@ export const GET: RequestHandler = async ({ request }) => {
           value: String((campaignStatusCounts.active ?? 0) + (campaignStatusCounts.live ?? 0)),
           note: `${campaigns.length} total campaigns`,
         },
+        {
+          label: 'Posts/Week',
+          value: (Number(latest?.posts_per_week ?? 0)).toFixed(1),
+          note: Number(latest?.posts_per_week ?? 0) < 2 ? 'Increase recommended' : 'Current pace',
+        },
       ],
     },
     audienceInsights: {
       summary:
         audiencePortrait.narrative ||
-        'Audience signals are still building. Trigger a refresh to generate fresh audience diagnostics.',
+        audiencePortrait.summary ||
+        (latestIntel.demographics as any)?.narrative ||
+        'We\'re still getting to know your audience. Run an analysis to unlock insights.',
       personas: Array.isArray(audiencePortrait.personas) ? audiencePortrait.personas.slice(0, 4) : [],
       keyInsights: [
         {
@@ -219,12 +234,12 @@ export const GET: RequestHandler = async ({ request }) => {
       whatHappened:
         dailyBrief?.synopsis ||
         brief?.sections?.whats_working ||
-        'Performance snapshot available, but narrative synthesis has not run yet.',
+        'Your numbers are here — run an analysis to turn them into a story.',
       whyItHappened:
         findings[0]?.summary ||
         brief?.sections?.whats_not ||
         strategic.competitiveGaps ||
-        'Run analysis to generate causal diagnostics.',
+        'We need a deeper look to figure out the why. Hit Run Analysis above.',
       whatNext: (() => {
         const dailyActions = Array.isArray(dailyBrief?.actions)
           ? dailyBrief.actions.map((a: any) => String(a?.action || a?.title || '')).filter(Boolean)
@@ -246,6 +261,9 @@ export const GET: RequestHandler = async ({ request }) => {
         palette:
           (brand.brand_identity as any)?.visual?.colorPalette?.slice?.(0, 4)?.join(', ') ||
           (brand.brand_identity as any)?.visual?.palette ||
+          (latestIntel.identity as any)?.aesthetic?.palette ||
+          (latestIntel.identity as any)?.colorPalette ||
+          (latestIntel.identity as any)?.aesthetic?.colorPalette ||
           'Need refreshed identity extraction',
         mood:
           (brand.brand_identity as any)?.visual?.aesthetic?.tone ||
@@ -269,11 +287,23 @@ export const GET: RequestHandler = async ({ request }) => {
       audiencePersonas: Array.isArray(audiencePortrait.personas)
         ? audiencePortrait.personas.slice(0, 4)
         : [],
-      contentCalendar: inferCalendar(
-        Array.isArray(strategic.contentPillars) ? strategic.contentPillars : [],
-        bestDays,
-        bestHours,
-      ),
+      contentCalendar: (() => {
+        const quickWins: string[] = Array.isArray(strategic.quickWins) ? strategic.quickWins : [];
+        const safePillars = pillars.length
+          ? pillars.map((p) => p.label)
+          : Array.isArray(strategic.contentPillars)
+            ? strategic.contentPillars
+            : ['Education', 'Proof', 'Community'];
+        if (quickWins.length >= 3) {
+          return quickWins.slice(0, 7).map((win, i) => ({
+            day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i % 7],
+            slot: bestHours.length ? `${String(bestHours[i % bestHours.length]?.hour ?? 10).padStart(2, '0')}:00` : '10:00',
+            pillar: safePillars[i % safePillars.length],
+            concept: win,
+          }));
+        }
+        return inferCalendar(safePillars, bestDays, bestHours);
+      })(),
     },
     campaignOps: {
       activeCount: (campaignStatusCounts.active ?? 0) + (campaignStatusCounts.live ?? 0),
