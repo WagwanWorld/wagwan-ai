@@ -27,7 +27,7 @@
 
   /* ── Format large numbers ── */
   function fmt(v: string): string {
-    return v || '—';
+    return v?.replace(/%$/, '') || '—';
   }
 
   /* ── Compute brand health score 0-100 ── */
@@ -72,6 +72,8 @@
   $: saves = findMetric('save');
   $: shares = findMetric('share');
   $: postsWeek = findMetric('post');
+  $: postsWeekVal = postsWeek.value !== '—' ? postsWeek.value :
+    (aud.keyInsights.find(k => k.title.toLowerCase().includes('posts per'))?.value || '—');
 
   $: health = computeHealth();
   $: healthColor = health >= 70 ? '#4ade80' : health >= 40 ? '#E8833A' : '#f87171';
@@ -189,8 +191,8 @@
 
 <div class="bs-card bs-metric bs-metric-sm">
   <span class="bs-label">POSTS/WEEK</span>
-  <span class="bs-metric-num bs-num-sm">{fmt(postsWeek.value)}</span>
-  {#if parseNum(postsWeek.value) < 2}
+  <span class="bs-metric-num bs-num-sm">{fmt(postsWeekVal)}</span>
+  {#if parseNum(postsWeekVal) < 2}
     <span class="bs-metric-note-amber">increase recommended</span>
   {/if}
 </div>
@@ -243,7 +245,7 @@
         </a>
       {/each}
     {:else}
-      <span class="bs-empty">No posts synced yet</span>
+      <span class="bs-empty">No Instagram posts yet — they'll appear after your first analysis.</span>
     {/if}
   </div>
 </div>
@@ -345,7 +347,7 @@
       {/each}
     </ul>
   {:else}
-    <span class="bs-empty">No personas identified</span>
+    <span class="bs-empty">No audience personas yet — run an analysis to discover them.</span>
   {/if}
 </div>
 
@@ -355,7 +357,7 @@
   {#if ops.activeCount > 0}
     <span class="bs-campops-active">{ops.activeCount} active</span>
   {:else}
-    <span class="bs-campops-none">No active campaigns</span>
+    <span class="bs-campops-none">No active campaigns yet</span>
   {/if}
 
   <div class="bs-pipeline">
@@ -460,7 +462,7 @@
     line-height: 1.3;
   }
   .bs-brief-body {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 12px;
     line-height: 1.6;
     color: #6A6A72;
@@ -597,7 +599,7 @@
     background: rgba(232,131,58,0.06);
   }
   .bs-insight-body {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     line-height: 1.6;
     color: #6A6A72;
@@ -605,7 +607,7 @@
     margin: 0;
   }
   .bs-insight-list {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     line-height: 1.7;
     color: #EDEDEF;
@@ -697,7 +699,7 @@
     gap: 10px;
   }
   .bs-direction-desc {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     line-height: 1.6;
     color: #6A6A72;
@@ -738,7 +740,7 @@
     gap: 4px;
   }
   .bs-mood-val {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     color: #6A6A72;
   }
@@ -774,7 +776,7 @@
     gap: 8px;
   }
   .bs-audience-summary {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     line-height: 1.6;
     color: #6A6A72;
@@ -805,7 +807,7 @@
     color: #4A4A50;
   }
   .bs-demo-val {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     color: #EDEDEF;
   }
@@ -849,7 +851,7 @@
     gap: 8px;
   }
   .bs-idea-text {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     line-height: 1.5;
     color: #6A6A72;
@@ -919,13 +921,13 @@
     min-width: 0;
   }
   .bs-creator-name {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     font-weight: 600;
     color: #EDEDEF;
   }
   .bs-creator-desc {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 9px;
     color: #4A4A50;
     line-height: 1.4;
@@ -953,7 +955,7 @@
     color: #4ade80;
   }
   .bs-campops-none {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     color: #4A4A50;
     font-style: italic;
@@ -994,7 +996,7 @@
     margin-top: 6px;
   }
   .bs-best-time-val {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     color: #6A6A72;
   }
@@ -1025,7 +1027,7 @@
 
   /* ── Shared ── */
   .bs-empty {
-    font-family: 'Geist Variable', 'Inter', sans-serif;
+    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
     font-size: 11px;
     color: #3A3A40;
     font-style: italic;
