@@ -19,7 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   if (action === 'accept' || action === 'decline') {
     const brief = await respondToBrief(sub, campaignId, action);
-    if (!brief) return json({ ok: false, error: 'response_failed' }, { status: 500 });
+    if (!brief) return json({ ok: false, error: 'transition_not_allowed' }, { status: 409 });
 
     let whatsappLink = '';
     if (action === 'accept' && body.phone) {

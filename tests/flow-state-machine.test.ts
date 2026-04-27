@@ -26,6 +26,15 @@ describe('brief-response state machine', () => {
     expect(canTransitionBrief('accepted', 'completed')).toBe(false);
   });
 
+  it('does not allow stale creator actions to rewrite in-flight or terminal states', () => {
+    expect(canTransitionBrief('accepted', 'declined')).toBe(false);
+    expect(canTransitionBrief('live', 'accepted')).toBe(false);
+    expect(canTransitionBrief('live', 'declined')).toBe(false);
+    expect(canTransitionBrief('completed', 'accepted')).toBe(false);
+    expect(canTransitionBrief('completed', 'declined')).toBe(false);
+    expect(canTransitionBrief('declined', 'accepted')).toBe(false);
+  });
+
   it('never allows a terminal state to move', () => {
     const terminals: BriefStatus[] = ['declined', 'completed'];
     const everyStatus: BriefStatus[] = ['sent', 'accepted', 'declined', 'live', 'completed'];
