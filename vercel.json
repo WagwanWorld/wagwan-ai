@@ -3,11 +3,43 @@
   "crons": [
     {
       "path": "/api/cron/publish-scheduled",
-      "schedule": "0 9 * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/brand-intelligence",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/brand-metric-snapshots?bucket=1h",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/brand-metric-snapshots?bucket=6h",
+      "schedule": "15 1 * * *"
+    },
+    {
+      "path": "/api/cron/brand-metric-snapshots?bucket=24h",
+      "schedule": "30 1 * * *"
+    },
+    {
+      "path": "/api/cron/brand-metric-snapshots?bucket=3d",
+      "schedule": "45 1 * * *"
+    },
+    {
+      "path": "/api/cron/brand-metric-snapshots?bucket=7d",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/brand-metric-snapshots?bucket=14d",
+      "schedule": "15 2 * * *"
+    },
+    {
+      "path": "/api/cron/brand-metric-snapshots?bucket=30d",
+      "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/brand-os-daily",
+      "schedule": "0 6 * * *"
     }
   ]
 }
