@@ -25,13 +25,14 @@ function getStorage(): Storage {
 const BUCKET_NAME = 'wagwan-ai';
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;   // 8MB
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024;  // 100MB
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
+const ALLOWED_FONT_TYPES = ['font/woff2', 'font/ttf', 'font/otf', 'application/font-woff2', 'application/x-font-ttf', 'application/vnd.ms-opentype'];
 
 export interface UploadResult {
   url: string;
   gcsPath: string;
-  mediaType: 'IMAGE' | 'VIDEO';
+  mediaType: 'IMAGE' | 'VIDEO' | 'FONT' | 'SVG';
   size: number;
 }
 
@@ -39,13 +40,15 @@ export async function uploadCreativeToGCS(
   file: File,
   brandIgId: string,
 ): Promise<UploadResult> {
+  const isSvg = file.type === 'image/svg+xml';
   const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
   const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
-  if (!isImage && !isVideo) {
-    throw new Error(`Unsupported file type: ${file.type}. Use JPEG for images or MP4 for video.`);
+  const isFont = ALLOWED_FONT_TYPES.includes(file.type);
+  if (!isImage && !isVideo && !isFont) {
+    throw new Error(`Unsupported file type: ${file.type}. Supported: JPEG, PNG, WebP, SVG, MP4, or font files (WOFF2, TTF, OTF).`);
   }
 
-  const maxSize = isImage ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
+  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
   if (file.size > maxSize) {
     throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max: ${maxSize / 1024 / 1024}MB.`);
   }
@@ -81,7 +84,7 @@ export async function uploadCreativeToGCS(
   return {
     url,
     gcsPath,
-    mediaType: isImage ? 'IMAGE' : 'VIDEO',
+    mediaType: isFont ? 'FONT' : isSvg ? 'SVG' : isVideo ? 'VIDEO' : 'IMAGE',
     size: file.size,
   };
 }
