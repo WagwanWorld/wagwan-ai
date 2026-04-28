@@ -4,8 +4,10 @@
   import ScheduleCalendar from './ScheduleCalendar.svelte';
   import BulkCadenceWizard from './BulkCadenceWizard.svelte';
   import ActivityFeed from './ActivityFeed.svelte';
+  import CreativeStudio from './CreativeStudio.svelte';
+  import BrandKitManager from './BrandKitManager.svelte';
 
-  type PipelineStep = 'home' | 'upload' | 'generate' | 'review' | 'schedule' | 'post';
+  type PipelineStep = 'home' | 'upload' | 'generate' | 'review' | 'schedule' | 'post' | 'creative-studio' | 'brand-kit';
   let currentStep: PipelineStep = 'home';
 
   interface UploadedAsset {
@@ -271,14 +273,24 @@
           </button>
 
           <!-- AI Creative Studio -->
-          <div class="ca-action-card ca-action-card--coming">
+          <button class="ca-action-card" on:click={() => (currentStep = 'creative-studio')}>
             <div class="ca-action-icon">✦</div>
             <div class="ca-action-content">
               <h3 class="ca-action-title">AI Creative Studio</h3>
-              <p class="ca-action-desc">Generate on-brand visuals from prompts, briefs, or existing assets</p>
+              <p class="ca-action-desc">Generate on-brand visuals from your copy — Claude directs, AI creates</p>
             </div>
-            <span class="ca-action-badge">Coming Soon</span>
-          </div>
+            <span class="ca-action-arrow">→</span>
+          </button>
+
+          <!-- Brand Kit Manager -->
+          <button class="ca-action-card" on:click={() => (currentStep = 'brand-kit')}>
+            <div class="ca-action-icon">◆</div>
+            <div class="ca-action-content">
+              <h3 class="ca-action-title">Brand Kit Manager</h3>
+              <p class="ca-action-desc">Upload logos, fonts, and manage your brand assets</p>
+            </div>
+            <span class="ca-action-arrow">→</span>
+          </button>
         </div>
 
         <!-- Calendar overview below -->
@@ -299,7 +311,7 @@
         <button class="ca-back-btn" on:click={() => { currentStep = 'home'; uploadedAssets = []; generatedPosts = []; uploadError = ''; }}>
           ← Back
         </button>
-        <ContentPipelineStepper currentStep={currentStep === 'home' ? 'upload' : currentStep} />
+        <ContentPipelineStepper currentStep={(currentStep as 'upload' | 'generate' | 'review' | 'schedule' | 'post') || 'upload'} />
       </div>
 
       {#if currentStep === 'upload'}
@@ -391,6 +403,12 @@
         />
       {/if}
     {/if}
+
+    {#if currentStep === 'creative-studio'}
+      <CreativeStudio on:back={() => (currentStep = 'home')} />
+    {:else if currentStep === 'brand-kit'}
+      <BrandKitManager on:back={() => (currentStep = 'home')} />
+    {/if}
   </div>
 
   {#if currentStep === 'home'}
@@ -404,7 +422,7 @@
 
   /* ── Home landing ── */
   .ca-home { display: flex; flex-direction: column; gap: 16px; }
-  .ca-home-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ca-home-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .ca-home-calendar { margin-top: 4px; }
 
   .ca-action-card {
@@ -425,14 +443,6 @@
   .ca-action-card:hover {
     border-color: rgba(232,70,74,0.3);
     background: rgba(232,70,74,0.03);
-  }
-  .ca-action-card--coming {
-    cursor: default;
-    opacity: 0.5;
-  }
-  .ca-action-card--coming:hover {
-    border-color: rgba(255,255,255,0.07);
-    background: rgba(255,255,255,0.035);
   }
   .ca-action-icon {
     font-size: 24px;
@@ -470,19 +480,6 @@
     opacity: 1;
     transform: translateX(0);
   }
-  .ca-action-badge {
-    font-family: 'Geist Mono Variable','SF Mono','Courier New',monospace;
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 3px 8px;
-    border-radius: 4px;
-    background: rgba(255,255,255,0.04);
-    color: #4a4a50;
-    flex-shrink: 0;
-  }
-
   /* ── Pipeline header with back button ── */
   .ca-pipeline-header {
     display: flex;
@@ -505,7 +502,10 @@
   }
   .ca-back-btn:hover { color: #ededef; border-color: rgba(255,255,255,0.15); }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
+    .ca-home-actions { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 600px) {
     .ca-home-actions { grid-template-columns: 1fr; }
   }
 

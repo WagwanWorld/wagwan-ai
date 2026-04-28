@@ -1,142 +1,143 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
 
+  export let currentImageUrl: string = '';
   export let previousImageUrl: string = '';
-  export let previousVersion: number = 1;
+  export let currentVersion: number = 1;
   export let maxRevisions: number = 2;
+  export let revisionCount: number = 0;
 
   const dispatch = createEventDispatcher<{
     submitRevision: { feedback: string; toggles: Record<string, string> };
+    cancel: void;
   }>();
 
-  // Derive current revision number from previousVersion
-  $: currentRevision = previousVersion; // submitting = revision #previousVersion
-  $: revisionsLeft = maxRevisions - previousVersion + 1;
-
   let feedback = '';
+  let submitting = false;
 
-  // Toggle groups — each group has a key and one or zero active value
-  type ToggleGroup = {
-    key: string;
-    label: string;
-    options: string[];
-  };
+  // Toggle groups
+  let layoutToggle = '';
+  let moodToggle = '';
+  let textSizeToggle = '';
+  let densityToggle = '';
 
-  const toggleGroups: ToggleGroup[] = [
-    { key: 'layout', label: 'Layout', options: ['Centered', 'Left-aligned', 'Asymmetric'] },
-    { key: 'mood', label: 'Mood', options: ['Warmer', 'Cooler', 'Bolder', 'Softer'] },
-    { key: 'textSize', label: 'Text size', options: ['Larger', 'Smaller'] },
-    { key: 'density', label: 'Density', options: ['More whitespace', 'More content'] },
+  const toggleGroups = [
+    {
+      label: 'LAYOUT',
+      key: 'layout',
+      options: ['Centered', 'Left-aligned', 'Asymmetric'],
+      bind: () => layoutToggle,
+      set: (v: string) => { layoutToggle = layoutToggle === v ? '' : v; },
+    },
+    {
+      label: 'MOOD',
+      key: 'mood',
+      options: ['Warmer', 'Cooler', 'Bolder', 'Softer'],
+      bind: () => moodToggle,
+      set: (v: string) => { moodToggle = moodToggle === v ? '' : v; },
+    },
+    {
+      label: 'TEXT SIZE',
+      key: 'textSize',
+      options: ['Larger', 'Smaller'],
+      bind: () => textSizeToggle,
+      set: (v: string) => { textSizeToggle = textSizeToggle === v ? '' : v; },
+    },
+    {
+      label: 'DENSITY',
+      key: 'density',
+      options: ['More whitespace', 'More content'],
+      bind: () => densityToggle,
+      set: (v: string) => { densityToggle = densityToggle === v ? '' : v; },
+    },
   ];
 
-  // Active toggle per group key — empty string = none selected
-  let activeToggles: Record<string, string> = {};
-  toggleGroups.forEach(g => { activeToggles[g.key] = ''; });
-
-  function toggleOption(groupKey: string, option: string) {
-    // clicking active option deselects it
-    if (activeToggles[groupKey] === option) {
-      activeToggles[groupKey] = '';
-    } else {
-      activeToggles[groupKey] = option;
-    }
-    // trigger reactivity
-    activeToggles = { ...activeToggles };
+  function getActiveToggles(): Record<string, string> {
+    const map: Record<string, string> = {
+      layout: layoutToggle,
+      mood: moodToggle,
+      textSize: textSizeToggle,
+      density: densityToggle,
+    };
+    return Object.fromEntries(Object.entries(map).filter(([, v]) => v !== ''));
   }
 
-  $: selectedToggles = Object.fromEntries(
-    Object.entries(activeToggles).filter(([, v]) => v !== '')
-  );
+  $: activeToggles = getActiveToggles();
+  $: {
+    // trigger reactive recalc when toggles change
+    layoutToggle; moodToggle; textSizeToggle; densityToggle;
+    activeToggles = getActiveToggles();
+  }
 
-  $: canSubmit = feedback.trim().length > 0 || Object.values(selectedToggles).length > 0;
+  $: canSubmit = feedback.trim().length > 0 || Object.keys(activeToggles).length > 0;
+  $: revisionsLeft = maxRevisions - revisionCount;
 
-  function handleSubmit() {
-    if (!canSubmit) return;
-    dispatch('submitRevision', {
-      feedback: feedback.trim(),
-      toggles: selectedToggles,
-    });
+  async function handleSubmit() {
+    if (!canSubmit || submitting) return;
+    submitting = true;
+    dispatch('submitRevision', { feedback: feedback.trim(), toggles: getActiveToggles() });
+    submitting = false;
   }
 </script>
 
 <div class="rp">
-  <!-- Header -->
   <div class="rp-header">
-    <div>
-      <span class="rp-label">REVISION REQUEST</span>
-      <div class="rp-title">What would you like changed?</div>
-    </div>
-    <div class="rp-counter">
-      Revision {currentRevision} of {maxRevisions}
-    </div>
+    <span class="rp-label">REVISION PANEL</span>
+    <span class="rp-counter">{revisionsLeft} revision{revisionsLeft !== 1 ? 's' : ''} remaining</span>
+    <div class="rp-spacer"></div>
+    <button class="rp-cancel" on:click={() => dispatch('cancel')}>Cancel</button>
   </div>
 
-  <!-- Side-by-side image comparison -->
+  <!-- Side by side image comparison -->
   <div class="rp-compare">
-    <!-- Previous version (left, dimmed) -->
-    <div class="rp-compare-side rp-compare-side--prev">
-      <div class="rp-compare-label">
-        <span class="rp-tag">V{previousVersion}</span>
-        <span class="rp-compare-tag-label">Current</span>
-      </div>
-      <div class="rp-image-wrap rp-image-wrap--dimmed">
-        {#if previousImageUrl}
-          <img class="rp-image" src={previousImageUrl} alt="Version {previousVersion}" />
+    <div class="rp-compare-col">
+      <span class="rp-compare-label">CURRENT — V{currentVersion}</span>
+      <div class="rp-image-wrap">
+        {#if currentImageUrl}
+          <img class="rp-image" src={currentImageUrl} alt="Current V{currentVersion}" />
         {:else}
-          <div class="rp-image-empty">
-            <span class="rp-empty-icon">✦</span>
-          </div>
+          <div class="rp-image-empty">No image</div>
         {/if}
       </div>
     </div>
 
-    <!-- Arrow divider -->
-    <div class="rp-arrow" aria-hidden="true">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-
-    <!-- New version slot (right, empty) -->
-    <div class="rp-compare-side rp-compare-side--next">
-      <div class="rp-compare-label">
-        <span class="rp-tag rp-tag--next">V{previousVersion + 1}</span>
-        <span class="rp-compare-tag-label">Revised</span>
-      </div>
-      <div class="rp-image-wrap rp-image-wrap--empty">
-        <div class="rp-image-empty">
-          <span class="rp-empty-icon rp-empty-icon--dim">✦</span>
-          <span class="rp-empty-text">After revision</span>
+    {#if previousImageUrl && previousImageUrl !== currentImageUrl}
+      <div class="rp-compare-col rp-compare-col--prev">
+        <span class="rp-compare-label">PREVIOUS — V{currentVersion - 1}</span>
+        <div class="rp-image-wrap rp-image-wrap--dim">
+          <img class="rp-image" src={previousImageUrl} alt="Previous V{currentVersion - 1}" />
         </div>
       </div>
-    </div>
+    {/if}
   </div>
 
   <!-- Feedback textarea -->
-  <div class="rp-card">
-    <span class="rp-label">DESCRIBE THE CHANGE</span>
+  <div class="rp-section">
+    <span class="rp-label">FEEDBACK</span>
     <textarea
       class="rp-textarea"
-      placeholder="Describe what to change..."
-      rows="4"
       bind:value={feedback}
+      placeholder="Describe what to change — e.g. 'Make the background darker, move the headline to the top, use a landscape image instead'"
+      rows="4"
     ></textarea>
   </div>
 
-  <!-- Toggle pills -->
-  <div class="rp-card">
+  <!-- Toggles -->
+  <div class="rp-section">
     <span class="rp-label">QUICK ADJUSTMENTS</span>
     <div class="rp-toggles">
       {#each toggleGroups as group}
         <div class="rp-toggle-group">
-          <span class="rp-toggle-label">{group.label}</span>
-          <div class="rp-pills">
+          <span class="rp-toggle-group-label">{group.label}</span>
+          <div class="rp-toggle-pills">
             {#each group.options as option}
               <button
                 class="rp-pill"
-                class:rp-pill--active={activeToggles[group.key] === option}
-                on:click={() => toggleOption(group.key, option)}
-              >{option}</button>
+                class:rp-pill--active={group.bind() === option}
+                on:click={() => group.set(option)}
+              >
+                {option}
+              </button>
             {/each}
           </div>
         </div>
@@ -144,18 +145,35 @@
     </div>
   </div>
 
+  <!-- Active toggles summary -->
+  {#if Object.keys(activeToggles).length > 0}
+    <div class="rp-active-summary">
+      <span class="rp-label">APPLYING</span>
+      <div class="rp-active-pills">
+        {#each Object.entries(activeToggles) as [key, value]}
+          <span class="rp-active-pill">{key}: {value}</span>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <!-- Submit -->
-  <div class="rp-actions">
-    {#if revisionsLeft <= 1}
-      <span class="rp-warning">This is your final revision</span>
+  <div class="rp-footer">
+    {#if revisionsLeft <= 0}
+      <div class="rp-limit-warn">Revision limit reached — approve or regenerate</div>
+    {:else}
+      <button
+        class="rp-submit"
+        on:click={handleSubmit}
+        disabled={!canSubmit || submitting}
+      >
+        {#if submitting}
+          Revising...
+        {:else}
+          Apply Revision
+        {/if}
+      </button>
     {/if}
-    <button
-      class="rp-btn rp-btn--primary"
-      disabled={!canSubmit}
-      on:click={handleSubmit}
-    >
-      Submit Revision
-    </button>
   </div>
 </div>
 
@@ -163,192 +181,126 @@
   .rp {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     width: 100%;
   }
 
-  /* Header */
   .rp-header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
+    align-items: center;
+    gap: 10px;
   }
+  .rp-spacer { flex: 1; }
 
-  .rp-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #ededef;
-    margin-top: 4px;
+  .rp-label {
+    font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #4a4a50;
   }
 
   .rp-counter {
     font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
     font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.08em;
-    color: #4a4a50;
-    white-space: nowrap;
-    padding: 5px 10px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    align-self: flex-start;
-    margin-top: 2px;
+    color: #e8464a;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(232, 70, 74, 0.08);
+    border: 1px solid rgba(232, 70, 74, 0.15);
   }
+
+  .rp-cancel {
+    font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #4a4a50;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .rp-cancel:hover { color: #ededef; border-color: rgba(255, 255, 255, 0.15); }
 
   /* Side-by-side compare */
   .rp-compare {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
     gap: 10px;
-    align-items: center;
   }
-
-  .rp-compare-side {
+  .rp-compare-col {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 7px;
-  }
-
-  .rp-compare-label {
-    display: flex;
-    align-items: center;
     gap: 6px;
+    min-width: 0;
   }
-
-  .rp-tag {
+  .rp-compare-col--prev { opacity: 0.5; }
+  .rp-compare-label {
     font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
     font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 3px 7px;
-    border-radius: 4px;
-    background: rgba(232, 70, 74, 0.1);
-    color: #e8464a;
-    border: 1px solid rgba(232, 70, 74, 0.18);
-  }
-
-  .rp-tag--next {
-    background: rgba(127, 200, 169, 0.08);
-    color: #7fc8a9;
-    border-color: rgba(127, 200, 169, 0.18);
-  }
-
-  .rp-compare-tag-label {
-    font-size: 10px;
-    color: #4a4a50;
-    font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
     font-weight: 600;
-    letter-spacing: 0.08em;
     text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #4a4a50;
   }
 
   .rp-image-wrap {
-    width: 100%;
     aspect-ratio: 4 / 5;
     border-radius: 10px;
     overflow: hidden;
+    background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.07);
   }
-
-  .rp-image-wrap--dimmed {
-    opacity: 0.6;
-  }
-
-  .rp-image-wrap--empty {
-    background: rgba(255, 255, 255, 0.015);
-    border-style: dashed;
-    border-color: rgba(255, 255, 255, 0.06);
-  }
-
+  .rp-image-wrap--dim { filter: brightness(0.7); }
   .rp-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
   }
-
   .rp-image-empty {
     width: 100%;
     height: 100%;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-  }
-
-  .rp-empty-icon {
-    font-size: 22px;
-    opacity: 0.25;
-  }
-
-  .rp-empty-icon--dim {
-    opacity: 0.1;
-  }
-
-  .rp-empty-text {
-    font-size: 10px;
+    font-size: 11px;
     color: #4a4a50;
-    font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
   }
 
-  /* Arrow */
-  .rp-arrow {
-    color: #4a4a50;
+  /* Sections */
+  .rp-section {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  /* Card */
-  .rp-card {
+    flex-direction: column;
+    gap: 8px;
     background: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
   }
 
-  .rp-label {
-    font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #4a4a50;
-  }
-
-  /* Textarea */
   .rp-textarea {
     width: 100%;
-    padding: 11px 13px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
     color: #ededef;
-    font-family: 'Inter', sans-serif;
     font-size: 13px;
+    font-family: 'Inter', sans-serif;
     line-height: 1.55;
+    padding: 10px 12px;
     resize: vertical;
-    min-height: 90px;
+    min-height: 80px;
     box-sizing: border-box;
-    transition: border-color 0.15s;
   }
-  .rp-textarea::placeholder {
-    color: #4a4a50;
-  }
-  .rp-textarea:focus {
-    outline: none;
-    border-color: rgba(232, 70, 74, 0.3);
-  }
+  .rp-textarea:focus { outline: none; border-color: rgba(232, 70, 74, 0.25); }
+  .rp-textarea::placeholder { color: #4a4a50; font-style: italic; }
 
   /* Toggles */
   .rp-toggles {
@@ -356,122 +308,112 @@
     flex-direction: column;
     gap: 10px;
   }
-
   .rp-toggle-group {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 5px;
   }
-
-  .rp-toggle-label {
+  .rp-toggle-group-label {
     font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
     font-size: 9px;
     font-weight: 600;
-    letter-spacing: 0.1em;
     text-transform: uppercase;
+    letter-spacing: 0.1em;
     color: #4a4a50;
-    min-width: 68px;
-    flex-shrink: 0;
   }
-
-  .rp-pills {
+  .rp-toggle-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    padding: 2px;
+    gap: 6px;
   }
 
   .rp-pill {
-    padding: 5px 11px;
-    border-radius: 6px;
-    border: none;
-    font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    color: #8a8a90;
     cursor: pointer;
-    color: #4a4a50;
-    background: transparent;
     transition: all 0.15s;
     white-space: nowrap;
   }
-
   .rp-pill:hover {
-    color: #8a8a90;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.07);
+    color: #ededef;
+    border-color: rgba(255, 255, 255, 0.12);
   }
-
   .rp-pill--active {
     background: rgba(232, 70, 74, 0.12);
+    border-color: rgba(232, 70, 74, 0.3);
     color: #e8464a;
   }
-
   .rp-pill--active:hover {
     background: rgba(232, 70, 74, 0.18);
-    color: #e8464a;
   }
 
-  /* Actions */
-  .rp-actions {
+  /* Active summary */
+  .rp-active-summary {
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-    padding-top: 4px;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(232, 70, 74, 0.04);
+    border: 1px solid rgba(232, 70, 74, 0.1);
   }
-
-  .rp-warning {
+  .rp-active-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .rp-active-pill {
     font-size: 11px;
-    color: #f59e0b;
+    color: #e8464a;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(232, 70, 74, 0.08);
+    border: 1px solid rgba(232, 70, 74, 0.15);
     font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
     font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    text-transform: capitalize;
   }
 
-  .rp-btn {
-    padding: 9px 20px;
+  /* Footer */
+  .rp-footer { display: flex; justify-content: flex-end; padding-top: 2px; }
+
+  .rp-submit {
+    padding: 10px 24px;
     border-radius: 8px;
+    background: rgba(232, 70, 74, 0.15);
+    border: 1px solid rgba(232, 70, 74, 0.3);
+    color: #e8464a;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
-    white-space: nowrap;
   }
-
-  .rp-btn--primary {
-    background: rgba(232, 70, 74, 0.15);
-    border: 1px solid rgba(232, 70, 74, 0.3);
-    color: #e8464a;
-  }
-  .rp-btn--primary:hover:not(:disabled) {
+  .rp-submit:hover:not(:disabled) {
     background: rgba(232, 70, 74, 0.22);
     border-color: rgba(232, 70, 74, 0.45);
   }
-  .rp-btn--primary:disabled {
-    opacity: 0.35;
+  .rp-submit:disabled {
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
+  .rp-limit-warn {
+    font-size: 12px;
+    color: #f59e0b;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.15);
+  }
+
   @media (max-width: 540px) {
-    .rp-compare {
-      grid-template-columns: 1fr;
-    }
-    .rp-arrow {
-      display: none;
-    }
-    .rp-compare-side--next {
-      display: none;
-    }
-    .rp-toggle-group {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .rp-toggle-label {
-      min-width: unset;
-    }
+    .rp-compare { flex-direction: column; }
+    .rp-compare-col--prev { display: none; }
   }
 </style>
