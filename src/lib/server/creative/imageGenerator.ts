@@ -8,22 +8,20 @@ export interface ImageGenResult {
 }
 
 /**
- * Generate an image using Gemini 2.5 Flash Image (Nano Banana).
+ * Generate a BACKGROUND IMAGE using Gemini 2.5 Flash Image.
  *
- * Cost optimization:
- * - IMAGE-only response modality (skip TEXT output — saves output tokens)
- * - Narrative prompt structure (Gemini performs better with scene descriptions vs keyword lists)
- * - Single style reference max (more refs = more input tokens with diminishing returns)
- * - 4:5 aspect ratio at native 1024px (upscaled to 1080x1350 by compositor)
+ * CRITICAL: This generates a text-free background only.
+ * All text, logos, and brand elements are composited by Satori afterwards.
  *
- * Pricing: ~$0.039/image (1,290 output tokens × $30/M) + input tokens at $0.30/M
+ * The prompt must describe the SCENE, not the final post.
  */
 export async function generateImage(
-  prompt: string,
+  scenePrompt: string,
   options?: {
     styleReferenceBase64?: string;
     styleReferenceMimeType?: string;
     aspectRatio?: string;
+    brandPalette?: string[]; // hex colors to enforce
   },
 ): Promise<ImageGenResult> {
   const apiKey = env.GEMINI_API_KEY;
@@ -33,10 +31,10 @@ export async function generateImage(
 
   const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
-  // Single style reference only — more refs increase cost without proportional quality gain
+  // Style reference for brand consistency
   if (options?.styleReferenceBase64) {
     contents.push({
-      text: 'Match the visual style, color palette, and composition of this reference image:',
+      text: 'STYLE REFERENCE — match this image\'s visual tone, color grading, composition style, and mood:',
     });
     contents.push({
       inlineData: {
@@ -46,26 +44,31 @@ export async function generateImage(
     });
   }
 
-  // Narrative prompt with explicit quality anchors — Gemini responds better to
-  // scene descriptions than keyword lists
+  // Build the final prompt — scene-only, no text
+  const paletteInstruction = options?.brandPalette?.length
+    ? `\nCOLOR PALETTE: Use these brand colors prominently: ${options.brandPalette.join(', ')}`
+    : '';
+
   contents.push({
-    text: `Create a high-quality Instagram post image (4:5 portrait format).
+    text: `Generate a professional background image for a social media post.
 
-${prompt}
+SCENE DESCRIPTION:
+${scenePrompt}
+${paletteInstruction}
 
-IMPORTANT RULES:
-- Do NOT render any text, words, letters, or numbers in the image — all text will be added separately
-- Focus on creating a clean, professional background composition
-- Leave clear negative space where text can be overlaid (top third or center)
-- Use high contrast between foreground and background elements
-- Ensure the image works as a social media post at mobile resolution`,
+ABSOLUTE RULES — VIOLATION MEANS FAILURE:
+1. ZERO TEXT in the image. No words, no letters, no numbers, no symbols, no watermarks, no captions.
+2. This is a BACKGROUND ONLY. Text and logos will be added in post-production.
+3. Leave generous negative space (at least 30% of the image) for text overlay — preferably in the top third and bottom quarter.
+4. The image must be clean, professional, and suitable for a brand's Instagram feed.
+5. Use the color palette specified above as the dominant tones.
+6. High resolution, sharp details, no artifacts, no blur unless intentionally artistic.`,
   });
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents,
     config: {
-      // IMAGE-only modality saves output tokens (no text generation cost)
       responseModalities: ['IMAGE'],
       imageConfig: {
         aspectRatio: (options?.aspectRatio || '4:5') as '1:1' | '3:4' | '4:3' | '9:16' | '16:9',
@@ -73,7 +76,6 @@ IMPORTANT RULES:
     },
   });
 
-  // Extract image from response
   const parts = response.candidates?.[0]?.content?.parts || [];
   for (const part of parts) {
     if (part.inlineData?.data) {

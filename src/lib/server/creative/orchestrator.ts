@@ -155,7 +155,21 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
   totalCost += dirCost;
   await logCost(brandIgId, generationId, 'direction', directionModel, inputTokens, outputTokens, dirCost);
 
-  // 4. Generate image via Gemini (no-text prompt for reliability)
+  // 4. Generate BACKGROUND image via Gemini — text-free, brand-colored
+  // Strip any text/copy instructions that may have leaked into imageModelPrompt
+  const cleanedImagePrompt = direction.imageModelPrompt
+    .replace(/text|copy|headline|caption|cta|call.to.action|"[^"]{10,}"/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  // Use the SCENE description from designDirection.imagery if imageModelPrompt is weak
+  const scenePrompt = cleanedImagePrompt.length > 30
+    ? cleanedImagePrompt
+    : direction.designDirection.imagery || 'Professional, modern, clean brand background';
+
+  // Extract brand palette hex codes for color enforcement
+  const brandPaletteHexes = direction.designDirection.palette.map((c) => c.hex);
+
   let styleRefBase64: string | undefined;
   if (thumbnails.length > 0) {
     try {
@@ -167,9 +181,10 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
     } catch { /* no style ref */ }
   }
 
-  const imageResult = await generateImage(direction.imageModelPrompt, {
+  const imageResult = await generateImage(scenePrompt, {
     styleReferenceBase64: styleRefBase64,
     aspectRatio: '4:5',
+    brandPalette: brandPaletteHexes,
   });
 
   // Accurate cost: $0.039/image (1,290 tokens × $30/M) + input tokens at $0.30/M

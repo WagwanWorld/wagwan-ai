@@ -1,6 +1,5 @@
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
-import { env } from '$env/dynamic/private';
 import type { CreativeDirection } from './directionPrompt';
 
 export interface CompositeOptions {
@@ -19,39 +18,162 @@ export interface CompositeResult {
   height: number;
 }
 
+// Font cache to avoid re-fetching on every composite
+let fontCache: { regular: ArrayBuffer; bold: ArrayBuffer } | null = null;
+
+async function loadFonts() {
+  if (fontCache) return fontCache;
+  const [regular, bold] = await Promise.all([
+    fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff').then(r => r.arrayBuffer()),
+    fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff').then(r => r.arrayBuffer()),
+  ]);
+  fontCache = { regular, bold };
+  return fontCache;
+}
+
 /**
- * Overlay brand elements (logo, locked text, CTA) onto the AI-generated background.
- * Uses Satori to render an HTML/CSS layout to SVG, then resvg to rasterize to PNG.
+ * Composite ALL text + logo onto the AI-generated background.
+ *
+ * This is the layer that ensures brand correctness:
+ * - ALL on-image text is rendered here with real fonts (not AI-generated)
+ * - Logo is always composited (never AI-generated)
+ * - Brand colors are used for text and overlays
+ * - Semi-transparent background panels behind text for legibility
  */
 export async function compositeImage(options: CompositeOptions): Promise<CompositeResult> {
   const { backgroundBase64, backgroundMimeType, direction, logoUrl, brandColors } = options;
   const width = options.width || 1080;
   const height = options.height || 1350; // 4:5
 
-  // Load a fallback font (Inter) for Satori — must have at least one font
-  const fontRes = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff');
-  const fontBuffer = await fontRes.arrayBuffer();
+  const fonts = await loadFonts();
 
-  const fontBoldRes = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff');
-  const fontBoldBuffer = await fontBoldRes.arrayBuffer();
-
-  // Build overlay elements from direction
+  // Extract brand colors
   const bgColor = brandColors.find((c) => c.role === 'background')?.hex || '#000000';
   const textColor = brandColors.find((c) => c.role === 'text')?.hex || '#FFFFFF';
-  const accentColor = brandColors.find((c) => c.role === 'accent')?.hex || brandColors[0]?.hex || '#FFFFFF';
+  const accentColor = brandColors.find((c) => c.role === 'accent' || c.role === 'primary')?.hex || brandColors[0]?.hex || '#FFFFFF';
 
-  // Determine logo position
-  const logoPos = direction.assets.logo.position || 'bottom-right';
-  const logoStyle: Record<string, string> = { position: 'absolute', width: '80px', height: 'auto' };
-  if (logoPos.includes('bottom')) logoStyle.bottom = '40px';
-  else logoStyle.top = '40px';
-  if (logoPos.includes('right')) logoStyle.right = '40px';
-  else logoStyle.left = '40px';
+  // ALL onImage text gets composited — not just locked ones
+  const allTextBlocks = [
+    ...(direction.copy.onImage || []),
+    ...(direction.assets.locked || []),
+  ];
 
-  // Build locked text elements
-  const lockedTexts = [...(direction.assets.locked || []), ...direction.copy.onImage.filter((t) => t.lock)];
+  // Deduplicate by text content
+  const seen = new Set<string>();
+  const textBlocks = allTextBlocks.filter((t) => {
+    if (seen.has(t.text)) return false;
+    seen.add(t.text);
+    return true;
+  });
 
-  // Build the overlay JSX for Satori (using React-like object syntax)
+  // Build positioned text elements with legibility panels
+  const textElements = textBlocks.map((block, i) => {
+    const isSmall = block.style === 'legal' || block.style === 'small';
+    const isHeadline = i === 0 && !isSmall;
+    const fontSize = isSmall ? '18px' : isHeadline ? '42px' : '28px';
+    const fontWeight = isSmall ? '400' : '700';
+
+    // Position mapping
+    const positionStyle: Record<string, string | number> = { position: 'absolute', left: '48px', right: '48px' };
+    const pos = block.position || 'center';
+    if (pos.includes('top')) { positionStyle.top = '80px'; }
+    else if (pos.includes('bottom')) { positionStyle.bottom = '120px'; }
+    else { positionStyle.top = '45%'; }
+
+    return {
+      type: 'div',
+      key: `text-${i}`,
+      props: {
+        style: {
+          ...positionStyle,
+          display: 'flex',
+          flexDirection: 'column' as const,
+        },
+        children: [{
+          type: 'div',
+          props: {
+            style: {
+              backgroundColor: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(8px)',
+              borderRadius: '12px',
+              padding: isSmall ? '8px 16px' : '16px 24px',
+              display: 'inline-flex',
+              alignSelf: pos.includes('left') ? 'flex-start' : pos.includes('right') ? 'flex-end' : 'flex-start',
+            },
+            children: [{
+              type: 'span',
+              props: {
+                style: {
+                  color: isHeadline ? accentColor : textColor,
+                  fontSize,
+                  fontWeight,
+                  lineHeight: '1.35',
+                  letterSpacing: isHeadline ? '-0.02em' : '0',
+                },
+                children: block.text,
+              },
+            }],
+          },
+        }],
+      },
+    };
+  });
+
+  // CTA element if present
+  const ctaElement = direction.copy.cta ? {
+    type: 'div',
+    key: 'cta',
+    props: {
+      style: {
+        position: 'absolute' as const,
+        bottom: '48px',
+        left: '48px',
+        right: '48px',
+        display: 'flex',
+        justifyContent: 'center' as const,
+      },
+      children: [{
+        type: 'div',
+        props: {
+          style: {
+            backgroundColor: accentColor,
+            color: '#FFFFFF',
+            padding: '12px 32px',
+            borderRadius: '8px',
+            fontSize: '18px',
+            fontWeight: '700',
+            letterSpacing: '0.02em',
+          },
+          children: direction.copy.cta,
+        },
+      }],
+    },
+  } : null;
+
+  // Logo element
+  const logoElement = logoUrl ? {
+    type: 'img',
+    key: 'logo',
+    props: {
+      src: logoUrl,
+      style: {
+        position: 'absolute' as const,
+        width: '64px',
+        height: '64px',
+        objectFit: 'contain' as const,
+        ...(direction.assets.logo.position?.includes('bottom') ? { bottom: '48px' } : { top: '48px' }),
+        ...(direction.assets.logo.position?.includes('left') ? { left: '48px' } : { right: '48px' }),
+      },
+    },
+  } : null;
+
+  // Assemble the full element tree
+  const children = [
+    ...textElements,
+    ...(ctaElement ? [ctaElement] : []),
+    ...(logoElement ? [logoElement] : []),
+  ];
+
   const element = {
     type: 'div',
     props: {
@@ -65,38 +187,7 @@ export async function compositeImage(options: CompositeOptions): Promise<Composi
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       },
-      children: [
-        // Locked text overlays
-        ...lockedTexts.map((lt, i) => ({
-          type: 'div',
-          key: `locked-${i}`,
-          props: {
-            style: {
-              position: 'absolute' as const,
-              ...(lt.position === 'bottom' ? { bottom: '100px', left: '40px', right: '40px' } :
-                lt.position === 'top' ? { top: '60px', left: '40px', right: '40px' } :
-                lt.position === 'center' ? { top: '50%', left: '40px', right: '40px', transform: 'translateY(-50%)' } :
-                { bottom: '100px', left: '40px', right: '40px' }),
-              color: textColor,
-              fontSize: lt.style === 'legal' || lt.style === 'small' ? '16px' : '36px',
-              fontWeight: lt.style === 'legal' || lt.style === 'small' ? '400' : '700',
-              textAlign: 'left' as const,
-              textShadow: '0 2px 8px rgba(0,0,0,0.5)',
-              lineHeight: '1.3',
-            },
-            children: lt.text,
-          },
-        })),
-        // Logo
-        ...(logoUrl ? [{
-          type: 'img',
-          key: 'logo',
-          props: {
-            src: logoUrl,
-            style: { ...logoStyle, objectFit: 'contain' as const },
-          },
-        }] : []),
-      ],
+      children,
     },
   };
 
@@ -105,8 +196,8 @@ export async function compositeImage(options: CompositeOptions): Promise<Composi
     width,
     height,
     fonts: [
-      { name: 'Inter', data: fontBuffer, weight: 400, style: 'normal' as const },
-      { name: 'Inter', data: fontBoldBuffer, weight: 700, style: 'normal' as const },
+      { name: 'Inter', data: fonts.regular, weight: 400, style: 'normal' as const },
+      { name: 'Inter', data: fonts.bold, weight: 700, style: 'normal' as const },
     ],
   });
 

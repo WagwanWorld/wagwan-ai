@@ -32,7 +32,7 @@ export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no ma
     "locked": [{ "text": "exact text that MUST be composited", "position": "bottom|top", "style": "small|legal" }]
   },
   "whyThisWorks": ["bullet 1 connecting choice to brand reference", "bullet 2"],
-  "imageModelPrompt": "synthesized prompt for the image model: describe the visual scene, style, colors, composition. Do NOT include text/copy in this prompt — text is handled by the compositor."
+  "imageModelPrompt": "BACKGROUND SCENE ONLY — describe the visual scene, style, colors, lighting, composition, mood. NEVER mention any text, words, headlines, captions, or copy in this field. Example: 'Minimalist workspace with warm oak desk, soft golden hour light, dark charcoal wall, subtle plant shadow'. The image model will ONLY create the background — all text is added separately by a compositor."
 }`;
 
 export interface CreativeDirection {
