@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import VisualReview from './VisualReview.svelte';
   import RevisionPanel from './RevisionPanel.svelte';
+  import CreativeHistoryGallery from './CreativeHistoryGallery.svelte';
 
   const dispatch = createEventDispatcher<{ back: void }>();
 
@@ -322,6 +323,8 @@
           ✦ Generate Creative
         </button>
       </div>
+
+      <CreativeHistoryGallery />
     </div>
 
   <!-- ══ DIRECTING (Claude working) ══════════════════════ -->
