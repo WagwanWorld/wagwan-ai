@@ -7,6 +7,41 @@ import { compositeLogoOnly } from './compositor';
 import { runQC } from './qc';
 import { uploadCreativeToGCS } from '$lib/server/marketplace/gcsUpload';
 
+// ─── JSON extraction helper ───
+
+/** Extract a JSON object from text that may contain markdown fences, preamble, or trailing text */
+function extractJSON<T>(text: string): T {
+  // Strategy 1: Try parsing the whole text directly
+  try { return JSON.parse(text.trim()); } catch { /* continue */ }
+
+  // Strategy 2: Strip markdown fences
+  const fenceStripped = text
+    .replace(/^[\s\S]*?```(?:json)?\s*\n/i, '')
+    .replace(/\n\s*```[\s\S]*$/i, '')
+    .trim();
+  try { return JSON.parse(fenceStripped); } catch { /* continue */ }
+
+  // Strategy 3: Find the outermost { ... } by counting braces
+  const firstBrace = text.indexOf('{');
+  if (firstBrace !== -1) {
+    let depth = 0;
+    let lastBrace = -1;
+    for (let i = firstBrace; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') {
+        depth--;
+        if (depth === 0) { lastBrace = i; break; }
+      }
+    }
+    if (lastBrace !== -1) {
+      const candidate = text.slice(firstBrace, lastBrace + 1);
+      try { return JSON.parse(candidate); } catch { /* continue */ }
+    }
+  }
+
+  throw new Error(text.slice(0, 200));
+}
+
 // ─── Types ───
 
 export interface DirectInput {
@@ -168,19 +203,12 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
 
   let direction: CreativeDirection;
   try {
-    let cleaned = directionText
-      .replace(/^[\s\S]*?```json?\s*\n?/i, '')
-      .replace(/\n?```[\s\S]*$/i, '')
-      .trim();
-    if (!cleaned || cleaned === directionText.trim()) cleaned = directionText.trim();
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) cleaned = jsonMatch[0];
-    direction = JSON.parse(cleaned);
-  } catch {
+    direction = extractJSON(directionText);
+  } catch (parseErr) {
     if (directionResponse.stop_reason === 'max_tokens') {
       throw new Error('Direction response was truncated — try a shorter copy input');
     }
-    throw new Error(`Claude returned invalid direction JSON: ${directionText.slice(0, 300)}`);
+    throw new Error(`Claude returned invalid direction JSON: ${(parseErr as Error).message}`);
   }
 
   const inputTokens = directionResponse.usage?.input_tokens || 0;
