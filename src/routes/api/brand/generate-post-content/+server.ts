@@ -131,7 +131,7 @@ JSON only, no markdown fences.`,
   try {
     const client = new Anthropic({ apiKey });
     response = await client.messages.create({
-      model: 'claude-sonnet-4-6-20250514',
+      model: 'claude-sonnet-4-5-20241022',
       max_tokens: 4096,
       messages: [{ role: 'user', content: contentParts }],
     });
