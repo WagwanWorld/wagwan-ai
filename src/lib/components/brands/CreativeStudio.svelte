@@ -6,7 +6,7 @@
   const dispatch = createEventDispatcher<{ back: void }>();
 
   // ── State machine ──────────────────────────────────────
-  type StudioState = 'input' | 'generating' | 'review' | 'revising' | 'approved';
+  type StudioState = 'input' | 'directing' | 'prompt-edit' | 'rendering' | 'review' | 'revising' | 'approved';
   let state: StudioState = 'input';
 
   // ── Input state ────────────────────────────────────────
@@ -39,6 +39,21 @@
 
   let result: GenerationResult | null = null;
   let previousImageUrl = '';
+
+  // ── Direction result (from Step 1) ─────────────────────
+  interface DirectionResult {
+    generationId: string;
+    concept: string;
+    designDirection: string;
+    whyThisWorks: string[];
+    caption: string;
+    hashtags: string[];
+    imagePrompt: string;
+    direction: Record<string, unknown>;
+    cost: { direction_usd: number };
+  }
+  let directionResult: DirectionResult | null = null;
+  let editableImagePrompt = '';
 
   // ── Revision tracking ──────────────────────────────────
   let revisionCount = 0;
@@ -73,68 +88,90 @@
   }
 
   // ── API calls ──────────────────────────────────────────
+
+  // Step 1: Get Claude's creative direction + curated image prompt
   async function handleGenerate() {
     if (!copy.trim()) return;
     errorMsg = '';
-    state = 'generating';
+    state = 'directing';
     startProgressAnimation();
 
     try {
-      const res = await fetch('/api/brand/creative-studio/generate-visual', {
+      const res = await fetch('/api/brand/creative-studio/direct', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           copy: copy.trim(),
-          format,
           lockedPhrases: lockedWording ? [copy.trim()] : [],
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || `Generation failed (${res.status})`);
+      if (!res.ok) throw new Error(data.message || `Direction failed (${res.status})`);
 
-      result = data as GenerationResult;
-      state = 'review';
+      directionResult = data as DirectionResult;
+      editableImagePrompt = data.imagePrompt;
+      state = 'prompt-edit';
     } catch (e) {
-      errorMsg = e instanceof Error ? e.message : 'Generation failed — please try again';
+      errorMsg = e instanceof Error ? e.message : 'Direction failed — please try again';
       state = 'input';
     } finally {
       stopProgressAnimation();
     }
   }
 
-  async function handleRegenerate() {
-    if (!result) return;
+  // Step 2: Send the (possibly edited) prompt to Gemini for rendering
+  async function handleRender() {
+    if (!directionResult || !editableImagePrompt.trim()) return;
     errorMsg = '';
-    state = 'generating';
+    state = 'rendering';
+    progressIndex = 1; // skip to "Generating visual..."
     startProgressAnimation();
 
     try {
-      const res = await fetch('/api/brand/creative-studio/generate-visual', {
+      const res = await fetch('/api/brand/creative-studio/render', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          copy: copy.trim(),
-          format,
-          lockedPhrases: lockedWording ? [copy.trim()] : [],
+          generationId: directionResult.generationId,
+          imagePrompt: editableImagePrompt.trim(),
+          direction: directionResult.direction,
+          version: 1,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || `Regeneration failed (${res.status})`);
+      if (!res.ok) throw new Error(data.message || `Render failed (${res.status})`);
 
-      previousImageUrl = result?.imageUrl || '';
-      result = data as GenerationResult;
-      revisionCount = 0;
+      result = {
+        generationId: directionResult.generationId,
+        version: data.version || 1,
+        concept: directionResult.concept,
+        designDirection: directionResult.designDirection,
+        whyThisWorks: directionResult.whyThisWorks,
+        imageUrl: data.imageUrl,
+        caption: directionResult.caption,
+        hashtags: directionResult.hashtags,
+        format: 'static_4x5',
+        dimensions: '1080x1350',
+        qcReport: data.qcReport,
+        cost: { total_usd: (directionResult.cost.direction_usd || 0) + (data.cost?.render_usd || 0) },
+      };
       state = 'review';
     } catch (e) {
-      errorMsg = e instanceof Error ? e.message : 'Regeneration failed';
-      state = 'review';
+      errorMsg = e instanceof Error ? e.message : 'Render failed';
+      state = 'prompt-edit';
     } finally {
       stopProgressAnimation();
     }
+  }
+
+  // Re-render with same direction but edited prompt
+  async function handleRegenerate() {
+    if (!directionResult) return;
+    state = 'prompt-edit'; // go back to prompt editing
   }
 
   async function handleSubmitRevision(e: CustomEvent<{ feedback: string; toggles: Record<string, string> }>) {
@@ -272,22 +309,81 @@
       </div>
     </div>
 
-  <!-- ══ GENERATING ═════════════════════════════════════ -->
-  {:else if state === 'generating'}
+  <!-- ══ DIRECTING (Claude working) ══════════════════════ -->
+  {:else if state === 'directing'}
     <div class="cs-card cs-generating">
       <div class="cs-gen-icon">✦</div>
-      <div class="cs-gen-step">{progressSteps[progressIndex]}<span class="cs-dots"></span></div>
+      <div class="cs-gen-step">Claude is analyzing your brand and crafting the creative direction<span class="cs-dots"></span></div>
+    </div>
+
+  <!-- ══ PROMPT EDIT (user reviews/edits the image prompt) ══ -->
+  {:else if state === 'prompt-edit' && directionResult}
+    <div class="cs-section">
+      <div class="cs-header">
+        <button class="cs-back" on:click={() => { state = 'input'; }}>← Back</button>
+        <div>
+          <h2 class="cs-title">Creative Direction</h2>
+          <p class="cs-subtitle">Claude crafted a visual brief — review and edit the image prompt before rendering</p>
+        </div>
+      </div>
+
+      {#if errorMsg}
+        <div class="cs-error">{errorMsg}</div>
+      {/if}
+
+      <!-- Direction summary -->
+      <div class="cs-card">
+        <span class="cs-label">CONCEPT</span>
+        <p class="cs-concept-text">{directionResult.concept}</p>
+      </div>
+
+      {#if directionResult.whyThisWorks?.length}
+        <div class="cs-card">
+          <span class="cs-label">WHY THIS WORKS</span>
+          <ul class="cs-why-list">
+            {#each directionResult.whyThisWorks as bullet}
+              <li>{bullet}</li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
+
+      <!-- THE EDITABLE IMAGE PROMPT -->
+      <div class="cs-card cs-prompt-card">
+        <div class="cs-prompt-header">
+          <span class="cs-label">IMAGE PROMPT</span>
+          <span class="cs-prompt-hint">Edit this to change what the AI generates — describe the scene, colors, mood</span>
+        </div>
+        <textarea
+          class="cs-textarea cs-prompt-textarea"
+          bind:value={editableImagePrompt}
+          rows="5"
+        ></textarea>
+      </div>
+
+      <div class="cs-actions">
+        <button class="cs-btn cs-btn--ghost" on:click={() => { editableImagePrompt = directionResult?.imagePrompt || ''; }}>
+          Reset Prompt
+        </button>
+        <button
+          class="cs-btn cs-btn--primary"
+          on:click={handleRender}
+          disabled={!editableImagePrompt.trim()}
+        >
+          ✦ Generate Image
+        </button>
+      </div>
+    </div>
+
+  <!-- ══ RENDERING (Gemini working) ════════════════════ -->
+  {:else if state === 'rendering'}
+    <div class="cs-card cs-generating">
+      <div class="cs-gen-icon">✦</div>
+      <div class="cs-gen-step">Generating visual<span class="cs-dots"></span></div>
       <div class="cs-gen-steps">
-        {#each progressSteps as step, i}
-          <div
-            class="cs-gen-step-item"
-            class:cs-gen-step-item--done={i < progressIndex}
-            class:cs-gen-step-item--active={i === progressIndex}
-          >
-            <span class="cs-gen-step-num">{i + 1}</span>
-            <span>{step}</span>
-          </div>
-        {/each}
+        <div class="cs-gen-step-item cs-gen-step-item--done"><span class="cs-gen-step-num">1</span><span>Creative direction</span></div>
+        <div class="cs-gen-step-item cs-gen-step-item--active"><span class="cs-gen-step-num">2</span><span>Generating image...</span></div>
+        <div class="cs-gen-step-item"><span class="cs-gen-step-num">3</span><span>Brand overlay + QC</span></div>
       </div>
     </div>
 
@@ -544,6 +640,57 @@
     background: rgba(255, 255, 255, 0.07);
     color: #ededef;
     border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  /* Concept + prompt edit */
+  .cs-concept-text {
+    font-size: 14px;
+    color: #9a9aa0;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .cs-why-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cs-why-list li {
+    font-size: 12px;
+    color: #8a8a90;
+    padding-left: 12px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .cs-why-list li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: #4a4a50;
+  }
+
+  .cs-prompt-card {
+    border-color: rgba(232, 70, 74, 0.15);
+    background: rgba(232, 70, 74, 0.02);
+  }
+  .cs-prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .cs-prompt-hint {
+    font-size: 11px;
+    color: #4a4a50;
+    font-style: italic;
+  }
+  .cs-prompt-textarea {
+    min-height: 100px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #ededef;
   }
 
   /* Generating state */
