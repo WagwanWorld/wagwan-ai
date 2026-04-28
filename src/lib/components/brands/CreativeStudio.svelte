@@ -13,6 +13,7 @@
   let copy = '';
   let lockedWording = false;
   let format = '4:5 Static';
+  let brandVoice = 'Bold';
 
   // ── Generation result ──────────────────────────────────
   interface GenerationResult {
@@ -104,6 +105,7 @@
         body: JSON.stringify({
           copy: copy.trim(),
           lockedPhrases: lockedWording ? [copy.trim()] : [],
+          brandVoice,
         }),
       });
 
@@ -275,6 +277,19 @@
             <input type="checkbox" bind:checked={lockedWording} />
             <span>Lock exact wording — composited verbatim, not AI-rewritten</span>
           </label>
+        </div>
+      </div>
+
+      <div class="cs-card">
+        <span class="cs-label">BRAND VOICE</span>
+        <div class="cs-voice-pills">
+          {#each ['Bold', 'Playful', 'Premium', 'Minimal', 'Hype'] as voice}
+            <button
+              class="cs-voice-pill"
+              class:cs-voice-pill--active={brandVoice === voice}
+              on:click={() => brandVoice = voice}
+            >{voice}</button>
+          {/each}
         </div>
       </div>
 
@@ -774,6 +789,36 @@
   }
   .cs-gen-step-item--active .cs-gen-step-num { background: rgba(232, 70, 74, 0.15); color: #e8464a; }
   .cs-gen-step-item--done .cs-gen-step-num { background: rgba(127, 200, 169, 0.1); color: #7fc8a9; }
+
+  /* Brand voice pills */
+  .cs-voice-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cs-voice-pill {
+    padding: 7px 16px;
+    border-radius: 9px;
+    border: 1.5px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.02);
+    color: #8a8a90;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .cs-voice-pill:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ededef;
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .cs-voice-pill--active {
+    border-color: rgba(232, 70, 74, 0.35);
+    background: rgba(232, 70, 74, 0.06);
+    color: #e8464a;
+  }
 
   /* Approved state */
   .cs-approved {

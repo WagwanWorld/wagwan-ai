@@ -14,11 +14,12 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!igUserId) throw error(401, 'Brand IG session required');
 
   const body = await request.json();
-  const { copy, caption, lockedPhrases, brief } = body as {
+  const { copy, caption, lockedPhrases, brief, brandVoice } = body as {
     copy: string;
     caption?: string;
     lockedPhrases?: string[];
     brief?: string;
+    brandVoice?: string;
   };
   if (!copy?.trim()) throw error(400, 'Copy text is required');
 
@@ -50,6 +51,7 @@ export const POST: RequestHandler = async ({ request }) => {
       caption,
       lockedPhrases,
       brief,
+      brandVoice,
       generationId: generation.id,
     });
 

@@ -28,9 +28,23 @@
 
   let qcExpanded = false;
 
-  function handleDownload() {
+  async function handleDownload() {
     if (imageUrl) {
-      window.open(imageUrl, '_blank');
+      try {
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = `creative-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(objectUrl);
+      } catch {
+        // fallback: open in new tab
+        window.open(imageUrl, '_blank');
+      }
     }
     dispatch('download');
   }

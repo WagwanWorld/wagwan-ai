@@ -15,6 +15,7 @@ export interface DirectInput {
   caption?: string;
   lockedPhrases?: string[];
   brief?: string;
+  brandVoice?: string;
   generationId: string;
 }
 
@@ -89,7 +90,7 @@ ${vp.hooks_reused.length ? `Best hooks: "${vp.hooks_reused.slice(0, 3).join('", 
 // ─── Step 1: Claude Direction (returns curated image prompt for user to edit) ───
 
 export async function getDirection(input: DirectInput): Promise<DirectResult> {
-  const { brandIgId, copy, caption, lockedPhrases, brief, generationId } = input;
+  const { brandIgId, copy, caption, lockedPhrases, brief, brandVoice, generationId } = input;
 
   const brandBrief = await assembleBrandBrief(brandIgId);
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY! });
@@ -122,7 +123,7 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
   directionParts.push({
     type: 'text',
     text: `${buildBrandContextPrompt(brandBrief)}
-
+${brandVoice ? `\nBRAND VOICE OVERRIDE: ${brandVoice} — Apply this tone throughout the creative direction, copy, and caption.` : ''}
 ---
 
 COPY TO DESIGN FOR:
