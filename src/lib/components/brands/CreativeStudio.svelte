@@ -3,18 +3,26 @@
   import VisualReview from './VisualReview.svelte';
   import RevisionPanel from './RevisionPanel.svelte';
   import CreativeHistoryGallery from './CreativeHistoryGallery.svelte';
+  import CopyIdeaPicker from './CopyIdeaPicker.svelte';
 
   const dispatch = createEventDispatcher<{ back: void }>();
 
   // ── State machine ──────────────────────────────────────
-  type StudioState = 'input' | 'directing' | 'prompt-edit' | 'rendering' | 'review' | 'revising' | 'approved';
+  type StudioState = 'input' | 'directing' | 'prompt-edit' | 'rendering' | 'review' | 'revising' | 'approved' | 'brief-input' | 'generating-copy' | 'pick-copy';
   let state: StudioState = 'input';
+
+  // ── Mode selector ──────────────────────────────────────
+  let mode: 'copy-first' | 'from-scratch' = 'copy-first';
 
   // ── Input state ────────────────────────────────────────
   let copy = '';
   let lockedWording = false;
   let format = '4:5 Static';
   let brandVoice = 'Bold';
+
+  // ── Mode 2: Start from Scratch ─────────────────────────
+  let brief = '';
+  let copyIdeas: Array<{ id: string; copy: string; caption: string; format: string; rationale: string }> = [];
 
   // ── Generation result ──────────────────────────────────
   interface GenerationResult {
@@ -122,6 +130,59 @@
     } finally {
       stopProgressAnimation();
     }
+  }
+
+  // Mode 2: Generate copy ideas from a brief
+  async function handleGenerateCopy() {
+    if (!brief.trim()) return;
+    errorMsg = '';
+    state = 'generating-copy';
+
+    try {
+      const res = await fetch('/api/brand/creative-studio/generate-copy', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brief: brief.trim(), count: 3, brandVoice }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `Copy generation failed (${res.status})`);
+      copyIdeas = data.ideas;
+      state = 'pick-copy';
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : 'Copy generation failed — please try again';
+      state = 'brief-input';
+    }
+  }
+
+  // Mode 2: Generate more ideas and append to existing
+  async function handleGenerateMoreCopy() {
+    try {
+      const res = await fetch('/api/brand/creative-studio/generate-copy', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brief: brief.trim(), count: 3, brandVoice }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Append with fresh IDs to avoid collisions
+        const offset = copyIdeas.length;
+        const newIdeas = data.ideas.map(
+          (idea: typeof copyIdeas[0], i: number) => ({ ...idea, id: `idea_${offset + i + 1}` }),
+        );
+        copyIdeas = [...copyIdeas, ...newIdeas];
+      }
+    } catch {
+      // Silently ignore — user stays on pick-copy with existing ideas
+    }
+  }
+
+  // Mode 2: User picked a copy idea — set copy and go to direction
+  function handlePickCopy(e: CustomEvent<typeof copyIdeas[0]>) {
+    copy = e.detail.copy;
+    // Proceed to creative direction
+    handleGenerate();
   }
 
   // Step 2: Send the (possibly edited) prompt to Gemini for rendering
@@ -239,7 +300,10 @@
 
   function resetStudio() {
     state = 'input';
+    mode = 'copy-first';
     copy = '';
+    brief = '';
+    copyIdeas = [];
     lockedWording = false;
     result = null;
     previousImageUrl = '';
@@ -250,15 +314,37 @@
 </script>
 
 <div class="cs">
-  <!-- ══ INPUT ══════════════════════════════════════════ -->
+  <!-- ══ INPUT (mode selector + copy-first form) ══════════ -->
   {#if state === 'input'}
     <div class="cs-section">
       <div class="cs-header">
         <button class="cs-back" on:click={() => dispatch('back')}>← Back</button>
         <div>
           <h2 class="cs-title">AI Creative Studio</h2>
-          <p class="cs-subtitle">Paste your copy — Claude directs the visual, AI generates it</p>
+          <p class="cs-subtitle">Claude directs the visual, AI generates it</p>
         </div>
+      </div>
+
+      <!-- Mode selector -->
+      <div class="cs-mode-row">
+        <button
+          class="cs-mode-card"
+          class:cs-mode-card--active={mode === 'copy-first'}
+          on:click={() => mode = 'copy-first'}
+        >
+          <span class="cs-mode-icon">✎</span>
+          <span class="cs-mode-label">I have the copy</span>
+          <span class="cs-mode-desc">Paste your headline or caption</span>
+        </button>
+        <button
+          class="cs-mode-card"
+          class:cs-mode-card--active={mode === 'from-scratch'}
+          on:click={() => { mode = 'from-scratch'; state = 'brief-input'; }}
+        >
+          <span class="cs-mode-icon">✦</span>
+          <span class="cs-mode-label">Start from scratch</span>
+          <span class="cs-mode-desc">Describe the post — Claude writes 3 ideas</span>
+        </button>
       </div>
 
       {#if errorMsg}
@@ -327,7 +413,73 @@
       <CreativeHistoryGallery />
     </div>
 
-  <!-- ══ DIRECTING (Claude working) ══════════════════════ -->
+  <!-- ══ BRIEF INPUT (Mode 2) ══════════════════════════════ -->
+  {:else if state === 'brief-input'}
+    <div class="cs-section">
+      <div class="cs-header">
+        <button class="cs-back" on:click={() => { state = 'input'; mode = 'copy-first'; }}>← Back</button>
+        <div>
+          <h2 class="cs-title">Start from Scratch</h2>
+          <p class="cs-subtitle">Describe what you want to post — Claude will generate 3 copy ideas</p>
+        </div>
+      </div>
+
+      {#if errorMsg}
+        <div class="cs-error">{errorMsg}</div>
+      {/if}
+
+      <div class="cs-card">
+        <span class="cs-label">YOUR BRIEF</span>
+        <textarea
+          class="cs-textarea"
+          bind:value={brief}
+          placeholder="e.g. Announce our new summer collection drop — playful tone, urgency, drive DMs..."
+          rows="5"
+        ></textarea>
+      </div>
+
+      <div class="cs-card">
+        <span class="cs-label">BRAND VOICE</span>
+        <div class="cs-voice-pills">
+          {#each ['Bold', 'Playful', 'Premium', 'Minimal', 'Hype'] as voice}
+            <button
+              class="cs-voice-pill"
+              class:cs-voice-pill--active={brandVoice === voice}
+              on:click={() => brandVoice = voice}
+            >{voice}</button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="cs-actions">
+        <button
+          class="cs-btn cs-btn--primary"
+          on:click={handleGenerateCopy}
+          disabled={!brief.trim()}
+        >
+          ✦ Generate Ideas
+        </button>
+      </div>
+    </div>
+
+  <!-- ══ GENERATING COPY (Claude working) ══════════════════ -->
+  {:else if state === 'generating-copy'}
+    <div class="cs-card cs-generating">
+      <div class="cs-gen-icon">✦</div>
+      <div class="cs-gen-step">Generating copy ideas<span class="cs-dots"></span></div>
+      <p class="cs-gen-sub">Claude is crafting 3 distinct angles for your brief</p>
+    </div>
+
+  <!-- ══ PICK COPY (Mode 2 idea picker) ════════════════════ -->
+  {:else if state === 'pick-copy'}
+    <CopyIdeaPicker
+      ideas={copyIdeas}
+      on:pick={handlePickCopy}
+      on:generateMore={handleGenerateMoreCopy}
+      on:back={() => state = 'brief-input'}
+    />
+
+  <!-- ══ DIRECTING (Claude working on visual direction) ════ -->
   {:else if state === 'directing'}
     <div class="cs-card cs-generating">
       <div class="cs-gen-icon">✦</div>
@@ -338,7 +490,7 @@
   {:else if state === 'prompt-edit' && directionResult}
     <div class="cs-section">
       <div class="cs-header">
-        <button class="cs-back" on:click={() => { state = 'input'; }}>← Back</button>
+        <button class="cs-back" on:click={() => { state = mode === 'from-scratch' ? 'pick-copy' : 'input'; }}>← Back</button>
         <div>
           <h2 class="cs-title">Creative Direction</h2>
           <p class="cs-subtitle">Claude crafted a visual brief — review and edit the image prompt before rendering</p>
@@ -517,6 +669,50 @@
     border: 1px solid rgba(239, 68, 68, 0.15);
     font-size: 12px;
     color: #f87171;
+  }
+
+  /* Mode selector */
+  .cs-mode-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .cs-mode-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.025);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .cs-mode-card:hover {
+    border-color: rgba(255, 255, 255, 0.13);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .cs-mode-card--active {
+    border-color: rgba(232, 70, 74, 0.35);
+    background: rgba(232, 70, 74, 0.05);
+  }
+  .cs-mode-icon {
+    font-size: 16px;
+    color: #e8464a;
+    margin-bottom: 2px;
+  }
+  .cs-mode-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ededef;
+    line-height: 1.2;
+  }
+  .cs-mode-desc {
+    font-size: 11px;
+    color: #5a5a62;
+    line-height: 1.4;
   }
 
   /* Glass card */
@@ -733,6 +929,11 @@
     font-weight: 600;
     color: #ededef;
     min-height: 22px;
+  }
+  .cs-gen-sub {
+    font-size: 12px;
+    color: #5a5a62;
+    margin: 0;
   }
   .cs-dots::after {
     content: '...';
