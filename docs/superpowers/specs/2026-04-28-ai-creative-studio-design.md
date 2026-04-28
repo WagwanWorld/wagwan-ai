@@ -558,10 +558,18 @@ After slide 1 approval, generates slides 2–N with style lock.
 | `BrandAssetUploader.svelte` | First-run modal if no logo on file (blocks generation otherwise) |
 | `CostMeter.svelte` | Persistent footer pill: "$X.XX of $50 this month" |
 | `QCBadge.svelte` | Small badge on review screen showing QC results, expandable on click |
+| `BrandKitManager.svelte` | Upload/manage logos (SVG/PNG), fonts (WOFF2/TTF), brand colors. CRUD against `brand_assets` table. |
 
 ### Integration
 
-"AI Creative Studio" card on Content Automation home → `CreativeStudio.svelte`. On approve, contract in §12 fires; user lands on Module 1 schedule confirmation.
+Content Automation home shows **three cards:**
+1. **Drop & Schedule** → Module 1 upload pipeline (live)
+2. **AI Creative Studio** → `CreativeStudio.svelte`
+3. **Brand Kit Manager** → `BrandKitManager.svelte` (upload logos, fonts, manage brand colors)
+
+On Creative Studio approve, contract in §12 fires; user lands on Module 1 schedule confirmation.
+
+If no logo exists in `brand_assets` when user enters Creative Studio, show a soft nudge banner: "Upload your logo in Brand Kit Manager for pixel-perfect creatives" with a link. Don't block.
 
 ---
 
@@ -688,17 +696,17 @@ Structured per generation: brand_id, generation_id, mode, format, every API call
 
 ---
 
-## 18. Open Questions / Decisions Needed Before Build
+## 18. Decisions (Resolved)
 
-1. 🟡 Lock in image model: Nano Banana primary, Ideogram v3 fallback? Need pricing confirmation and rate-limit headroom.
-2. 🟡 Compositor implementation: Satori (lightweight, JSX-based) vs Puppeteer (heavier, full HTML/CSS)? Recommendation: Satori for speed, fall back to Puppeteer only if needed.
-3. 🟡 Monthly cost cap default ($50)? Per plan tier?
-4. 🟡 What happens when scheduler is down on approve — save & retry (current proposal) or block approve until scheduler is back?
-5. 🟡 Carousel: should style-lock from slide 1 be user-overridable on later slides, or strictly enforced?
-6. 🔴 Brand asset onboarding: blocking flow on first studio use (must upload logo) vs. soft (warn but allow)?
-7. ⚙️ Module 1 contract: confirm the `approve` payload matches Module 1's expected ingestion schema.
-8. 🟡 QC threshold: how strict? E.g., palette match — exact hex or within ΔE of 5?
-9. 🟡 Font licensing: how do we verify a font they upload? Manual review on first upload, or self-attest with audit trail?
+1. **Image model:** Nano Banana (Gemini 2.5 Flash Image) primary, Ideogram v3 fallback. Confirm pricing before Phase 1 launch.
+2. **Compositor:** Satori (lightweight, JSX-based). Puppeteer fallback only if a brand needs CSS features Satori doesn't support.
+3. **Monthly cost cap:** $50/mo default. Configurable per plan tier later.
+4. **Scheduler down on approve:** Save creative to GCS, queue for scheduler retry. Surface "saved, will schedule when scheduler is back."
+5. **Carousel style-lock:** Strictly enforced for palette/type/grid. User can override layout per slide (e.g., centered vs left-aligned) but not colors or fonts.
+6. **Brand asset onboarding:** Soft gate. No logo → warn + text-mark fallback. Nudge banner pointing to Brand Kit Manager. Don't block generation.
+7. **Module 1 contract:** `approve` endpoint sends `{ gcsUrl, caption, hashtags, mediaType, scheduledAt }` — matches Module 1's `/api/brand/schedule` ingestion schema.
+8. **QC threshold:** Palette match within ΔE of 10 (perceptible but not jarring). Text legibility and logo presence are hard pass/fail.
+9. **Font licensing:** Self-attest with audit trail. User checks a box "I have a license for this font." Logged in `brand_assets.metadata.license_attested`.
 
 ---
 
