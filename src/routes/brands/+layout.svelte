@@ -23,7 +23,8 @@
     { num: '04', label: 'Profile & Insights', href: '/brands/portal?tab=profile' },
   ] as const;
 
-  $: activeSection = onCreators ? '02' : onPortal ? '01' : null;
+  $: portalTabParam = $page.url.searchParams.get('tab');
+  $: activeSection = onCreators ? '02' : onPortal ? (portalTabParam === 'automation' ? '03' : portalTabParam === 'profile' ? '04' : '01') : null;
 
   const now = new Date();
   const monthNames = [

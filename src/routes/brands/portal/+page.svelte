@@ -870,6 +870,7 @@
 
 <div class="bos-root">
   <!-- ═══ Brand OS Top Bar ═══ -->
+  {#if portalTab !== 'automation'}
   <header class="bos-top">
     <div class="bos-brand-card">
       {#if bosAvatar}
@@ -906,6 +907,7 @@
       </div>
     </div>
   </header>
+  {/if}
 
   <!-- ═══ Bento Grid ═══ -->
   <div class="bos-bento">
