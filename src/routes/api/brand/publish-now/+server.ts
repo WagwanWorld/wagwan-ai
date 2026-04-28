@@ -25,6 +25,10 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!posts.length) throw error(404, 'Post not found');
   const post = posts[0];
 
+  if (post.status !== 'scheduled' && post.status !== 'failed') {
+    throw error(400, `Post cannot be published — current status: ${post.status}`);
+  }
+
   // Get brand token
   const brandRes = await fetch(
     `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${encodeURIComponent(igUserId)}&select=ig_access_token&limit=1`,
@@ -74,6 +78,16 @@ export const POST: RequestHandler = async ({ request }) => {
         published_at: new Date().toISOString(),
         ig_media_id: result.igMediaId,
         ig_permalink: result.permalink,
+        error_message: null,
+      }),
+    });
+    await fetch(`${supabaseUrl}/rest/v1/content_activity_log`, {
+      method: 'POST',
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brand_ig_id: igUserId,
+        event_type: post.status === 'failed' ? 'retried' : 'published',
+        event_data: { postId, igMediaId: result.igMediaId, permalink: result.permalink },
       }),
     });
     return json({ ok: true, igMediaId: result.igMediaId, permalink: result.permalink });
@@ -82,6 +96,15 @@ export const POST: RequestHandler = async ({ request }) => {
       method: 'PATCH',
       headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'failed', error_message: result.error }),
+    });
+    await fetch(`${supabaseUrl}/rest/v1/content_activity_log`, {
+      method: 'POST',
+      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brand_ig_id: igUserId,
+        event_type: 'failed',
+        event_data: { postId, error: result.error },
+      }),
     });
     return json({ ok: false, error: result.error }, { status: 500 });
   }
