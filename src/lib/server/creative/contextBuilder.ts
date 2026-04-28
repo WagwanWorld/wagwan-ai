@@ -1,5 +1,4 @@
 import { env } from '$env/dynamic/private';
-import Anthropic from '@anthropic-ai/sdk';
 
 export interface CreativeContext {
   visual_identity: {
@@ -25,110 +24,158 @@ export interface CreativeContext {
   context_version: number;
 }
 
+/** Full brand brief assembled for creative generation */
+export interface BrandBrief {
+  context: CreativeContext;
+  identity: Record<string, unknown>;
+  brandVoice: string;
+  visualAnalysis: {
+    colorPalette: string[];
+    aesthetic: Record<string, string>;
+    sceneCategories: Record<string, number>;
+  };
+  topPillars: Array<{ label: string; avgEngagement: number; description: string }>;
+  topHookArchetypes: Array<{ archetype: string; count: number; avgEngagement: number }>;
+  audiencePersonas: Array<{ name: string; description: string }>;
+  recentTopPosts: Array<{
+    caption: string;
+    hookArchetype: string;
+    engagement: number;
+    mediaType: string;
+    compositionType: string;
+  }>;
+  commentInsights: Array<{ topic: string; intent: string; sentiment: string; count: number }>;
+  findings: Array<{ type: string; title: string; suggestedAction: string }>;
+  thumbnailUrls: string[];
+}
+
 const supaHeaders = () => ({
   apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
   Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
   'Content-Type': 'application/json',
 });
 
-/** Read creative_context from brand_accounts. If empty, build it. */
-export async function getOrBuildCreativeContext(brandIgId: string): Promise<CreativeContext> {
+/**
+ * Assemble the FULL brand brief for creative generation.
+ * Pulls from ALL available brand intelligence: identity, snapshots,
+ * fingerprints, pillars, comments, findings.
+ */
+export async function assembleBrandBrief(brandIgId: string): Promise<BrandBrief> {
   const supabaseUrl = env.SUPABASE_URL!;
+  const headers = supaHeaders();
 
-  // Read existing context
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${brandIgId}&select=creative_context,brand_identity,brand_voice&limit=1`,
-    { headers: supaHeaders() },
-  );
-  const rows = await res.json();
-  const brand = rows[0];
-  if (!brand) throw new Error('Brand not found');
+  // Parallel fetch ALL brand data
+  const [brandRes, snapRes, fingerprintRes, pillarRes, commentRes, findingRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${brandIgId}&select=brand_identity,brand_voice,creative_context&limit=1`, { headers }),
+    fetch(`${supabaseUrl}/rest/v1/brand_snapshots?brand_ig_id=eq.${brandIgId}&select=intelligence&order=created_at.desc&limit=1`, { headers }),
+    fetch(`${supabaseUrl}/rest/v1/brand_fingerprints?brand_ig_id=eq.${brandIgId}&order=quality_weighted_engagement.desc&limit=15&select=caption_text,first_line_text,hook_archetype,cta_type,media_type,composition_type,quality_weighted_engagement,likes,comments,saves,dominant_hue,saturation`, { headers }),
+    fetch(`${supabaseUrl}/rest/v1/content_pillars?brand_ig_id=eq.${brandIgId}&order=avg_quality_engagement.desc&limit=5&select=label,description,avg_quality_engagement,avg_save_rate`, { headers }),
+    fetch(`${supabaseUrl}/rest/v1/comment_clusters?brand_ig_id=eq.${brandIgId}&order=mention_count.desc&limit=8&select=topic_key,intent,sentiment,mention_count`, { headers }),
+    fetch(`${supabaseUrl}/rest/v1/insight_findings?brand_ig_id=eq.${brandIgId}&order=created_at.desc&limit=5&select=finding_type,title,suggested_action`, { headers }),
+  ]);
 
-  const existing = brand.creative_context as CreativeContext | null;
-  if (existing && existing.context_version) return existing;
+  const brand = (await brandRes.json())?.[0] || {};
+  const snap = (snapRes.ok ? await snapRes.json() : [])?.[0]?.intelligence || {};
+  const fingerprints = fingerprintRes.ok ? await fingerprintRes.json() : [];
+  const pillars = pillarRes.ok ? await pillarRes.json() : [];
+  const comments = commentRes.ok ? await commentRes.json() : [];
+  const findings = findingRes.ok ? await findingRes.json() : [];
 
-  // Build from scratch
-  return buildCreativeContext(brandIgId, brand);
+  const identity = (brand.brand_identity || {}) as Record<string, unknown>;
+  const existingContext = brand.creative_context as CreativeContext | null;
+
+  // Extract visual analysis from identity (populated by extract-identity)
+  const visual = (identity.visual || {}) as Record<string, unknown>;
+  const visualAnalysis = {
+    colorPalette: (visual.colorPalette as string[]) || [],
+    aesthetic: (visual.aesthetic as Record<string, string>) || {},
+    sceneCategories: (visual.sceneCategories as Record<string, number>) || {},
+  };
+
+  // Aggregate hook archetypes with engagement scores
+  const hookMap = new Map<string, { count: number; totalEng: number }>();
+  for (const fp of fingerprints) {
+    const arch = (fp.hook_archetype as string) || 'generic';
+    const existing = hookMap.get(arch) || { count: 0, totalEng: 0 };
+    hookMap.set(arch, { count: existing.count + 1, totalEng: existing.totalEng + ((fp.quality_weighted_engagement as number) || 0) });
+  }
+  const topHookArchetypes = Array.from(hookMap.entries())
+    .map(([archetype, data]) => ({ archetype, count: data.count, avgEngagement: Math.round(data.totalEng / data.count) }))
+    .sort((a, b) => b.avgEngagement - a.avgEngagement);
+
+  // Get thumbnail URLs from recent posts
+  const recentPosts = (snap.recentPosts || []) as Array<{ thumbnail?: string }>;
+  const thumbnailUrls = recentPosts.map((p) => p.thumbnail).filter(Boolean) as string[];
+
+  // Audience personas
+  const audiencePortrait = (snap.audiencePortrait || {}) as Record<string, unknown>;
+  const personas = (audiencePortrait.personas || []) as Array<{ name: string; description: string }>;
+
+  // Build or reuse creative context
+  const context = existingContext?.context_version
+    ? existingContext
+    : buildCreativeContextFromData(brandIgId, brand, visual, fingerprints);
+
+  return {
+    context,
+    identity,
+    brandVoice: (brand.brand_voice as string) || 'Bold',
+    visualAnalysis,
+    topPillars: pillars.map((p: Record<string, unknown>) => ({
+      label: p.label as string,
+      avgEngagement: p.avg_quality_engagement as number,
+      description: (p.description as string) || '',
+    })),
+    topHookArchetypes,
+    audiencePersonas: personas,
+    recentTopPosts: fingerprints.slice(0, 5).map((fp: Record<string, unknown>) => ({
+      caption: ((fp.caption_text as string) || '').slice(0, 150),
+      hookArchetype: (fp.hook_archetype as string) || 'unknown',
+      engagement: (fp.quality_weighted_engagement as number) || 0,
+      mediaType: (fp.media_type as string) || 'IMAGE',
+      compositionType: (fp.composition_type as string) || 'unknown',
+    })),
+    commentInsights: comments.map((c: Record<string, unknown>) => ({
+      topic: c.topic_key as string,
+      intent: c.intent as string,
+      sentiment: c.sentiment as string,
+      count: (c.mention_count as number) || 0,
+    })),
+    findings: findings.map((f: Record<string, unknown>) => ({
+      type: f.finding_type as string,
+      title: f.title as string,
+      suggestedAction: (f.suggested_action as string) || '',
+    })),
+    thumbnailUrls,
+  };
 }
 
-async function buildCreativeContext(
+function buildCreativeContextFromData(
   brandIgId: string,
   brand: Record<string, unknown>,
-): Promise<CreativeContext> {
-  const supabaseUrl = env.SUPABASE_URL!;
-
-  // Fetch brand kit from snapshot
-  const snapRes = await fetch(
-    `${supabaseUrl}/rest/v1/brand_snapshots?brand_ig_id=eq.${brandIgId}&select=intelligence&order=created_at.desc&limit=1`,
-    { headers: supaHeaders() },
-  );
-  const snapRows = snapRes.ok ? await snapRes.json() : [];
-  const intelligence = snapRows[0]?.intelligence || {};
-
-  // Fetch fingerprints for style analysis
-  const fpRes = await fetch(
-    `${supabaseUrl}/rest/v1/brand_fingerprints?brand_ig_id=eq.${brandIgId}&order=posted_at.desc&limit=10&select=caption,hashtags,hook_archetype,engagement_score`,
-    { headers: supaHeaders() },
-  );
-  const fingerprints = fpRes.ok ? await fpRes.json() : [];
-
-  const identity = (brand.brand_identity || {}) as Record<string, string>;
+  visual: Record<string, unknown>,
+  fingerprints: Array<Record<string, unknown>>,
+): CreativeContext {
   const brandVoice = (brand.brand_voice || 'Bold') as string;
-
-  // Use Haiku to summarize into creative context
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY! });
-  const summary = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1500,
-    messages: [{
-      role: 'user',
-      content: `Analyze this brand's creative identity and return a JSON object.
-
-Brand voice: ${brandVoice}
-Identity: ${JSON.stringify(identity).slice(0, 500)}
-Content pillars: ${JSON.stringify(intelligence.contentPillars || []).slice(0, 300)}
-Audience: ${JSON.stringify(intelligence.audiencePersonas || []).slice(0, 300)}
-Recent posts: ${JSON.stringify(fingerprints.slice(0, 5).map((f: Record<string, unknown>) => ({
-  hook: f.hook_archetype,
-  caption: (f.caption as string)?.slice(0, 100),
-  engagement: f.engagement_score,
-}))).slice(0, 800)}
-
-Return JSON (no markdown):
-{
-  "visual_identity": { "dominant_colors": [{"hex":"#xxx","role":"primary"}], "type_style": "", "composition_patterns": "", "image_treatment": "", "whitespace_density": "", "recurring_motifs": [] },
-  "voice_profile": { "sentence_length": "", "formality": "", "hooks_reused": [], "words_avoided": [] }
-}`,
-    }],
-  });
-
-  const text = summary.content
-    .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
-
-  let parsed;
-  try {
-    const cleaned = text.replace(/^```json?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-    parsed = JSON.parse(cleaned);
-  } catch {
-    parsed = { visual_identity: {}, voice_profile: {} };
-  }
+  const colorPalette = (visual.colorPalette as string[]) || [];
+  const aesthetic = (visual.aesthetic as Record<string, string>) || {};
 
   const context: CreativeContext = {
     visual_identity: {
-      dominant_colors: parsed.visual_identity?.dominant_colors || [{ hex: '#000000', role: 'primary' }],
-      type_style: parsed.visual_identity?.type_style || 'sans-serif',
-      composition_patterns: parsed.visual_identity?.composition_patterns || 'centered layout',
-      image_treatment: parsed.visual_identity?.image_treatment || 'clean, modern',
-      whitespace_density: parsed.visual_identity?.whitespace_density || 'moderate',
-      recurring_motifs: parsed.visual_identity?.recurring_motifs || [],
+      dominant_colors: colorPalette.length > 0
+        ? colorPalette.map((hex, i) => ({ hex, role: i === 0 ? 'primary' : i === 1 ? 'secondary' : 'accent' }))
+        : [{ hex: '#000000', role: 'primary' }],
+      type_style: aesthetic.composition === 'minimal' ? 'clean sans-serif, generous whitespace' : 'bold sans-serif headlines',
+      composition_patterns: aesthetic.composition || 'balanced',
+      image_treatment: `${aesthetic.brightness || 'medium'} brightness, ${aesthetic.tone || 'neutral'} tone`,
+      whitespace_density: aesthetic.composition === 'minimal' ? 'high' : aesthetic.composition === 'busy' ? 'low' : 'moderate',
+      recurring_motifs: [],
     },
     voice_profile: {
-      sentence_length: parsed.voice_profile?.sentence_length || 'short',
-      formality: parsed.voice_profile?.formality || 'casual-professional',
-      hooks_reused: parsed.voice_profile?.hooks_reused || [],
-      words_avoided: parsed.voice_profile?.words_avoided || [],
+      sentence_length: brandVoice === 'Bold' || brandVoice === 'Hype' ? 'short, punchy' : 'moderate',
+      formality: brandVoice === 'Premium' ? 'formal' : brandVoice === 'Playful' ? 'casual' : 'casual-professional',
+      hooks_reused: fingerprints.slice(0, 5).map((fp) => (fp.first_line_text as string) || '').filter(Boolean),
+      words_avoided: [],
     },
     learned_preferences: {
       revision_patterns_summary: '',
@@ -139,76 +186,37 @@ Return JSON (no markdown):
     context_version: 1,
   };
 
-  // Store in DB
-  await fetch(
-    `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${brandIgId}`,
-    {
-      method: 'PATCH',
-      headers: supaHeaders(),
-      body: JSON.stringify({ creative_context: context }),
-    },
-  );
+  // Store async (fire and forget)
+  const supabaseUrl = env.SUPABASE_URL!;
+  fetch(`${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${brandIgId}`, {
+    method: 'PATCH',
+    headers: supaHeaders(),
+    body: JSON.stringify({ creative_context: context }),
+  }).catch(() => {});
 
   return context;
 }
 
 /** Log a cost entry */
 export async function logCost(
-  brandIgId: string,
-  generationId: string,
-  callType: string,
-  modelUsed: string,
-  inputTokens: number,
-  outputTokens: number,
-  costUsd: number,
-  imageCount = 0,
+  brandIgId: string, generationId: string, callType: string,
+  modelUsed: string, inputTokens: number, outputTokens: number,
+  costUsd: number, imageCount = 0,
 ) {
   const supabaseUrl = env.SUPABASE_URL!;
   await fetch(`${supabaseUrl}/rest/v1/creative_cost_log`, {
-    method: 'POST',
-    headers: supaHeaders(),
-    body: JSON.stringify({
-      brand_account_id: brandIgId,
-      generation_id: generationId,
-      call_type: callType,
-      model_used: modelUsed,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      image_count: imageCount,
-      cost_usd: costUsd,
-    }),
+    method: 'POST', headers: supaHeaders(),
+    body: JSON.stringify({ brand_account_id: brandIgId, generation_id: generationId, call_type: callType, model_used: modelUsed, input_tokens: inputTokens, output_tokens: outputTokens, image_count: imageCount, cost_usd: costUsd }),
   }).catch(() => {});
 }
 
 /** Log a taste entry */
 export async function logTaste(
-  brandIgId: string,
-  generationId: string,
-  type: string,
-  payload: Record<string, unknown>,
+  brandIgId: string, generationId: string, type: string, payload: Record<string, unknown>,
 ) {
   const supabaseUrl = env.SUPABASE_URL!;
   await fetch(`${supabaseUrl}/rest/v1/creative_taste_log`, {
-    method: 'POST',
-    headers: supaHeaders(),
-    body: JSON.stringify({
-      brand_account_id: brandIgId,
-      generation_id: generationId,
-      type,
-      payload,
-    }),
+    method: 'POST', headers: supaHeaders(),
+    body: JSON.stringify({ brand_account_id: brandIgId, generation_id: generationId, type, payload }),
   }).catch(() => {});
-}
-
-/** Fetch the last N post thumbnails for visual reference */
-export async function getRecentThumbnails(brandIgId: string, count = 5): Promise<string[]> {
-  const supabaseUrl = env.SUPABASE_URL!;
-  const res = await fetch(
-    `${supabaseUrl}/rest/v1/brand_snapshots?brand_ig_id=eq.${brandIgId}&select=intelligence&order=created_at.desc&limit=1`,
-    { headers: supaHeaders() },
-  );
-  const rows = res.ok ? await res.json() : [];
-  const intel = rows[0]?.intelligence || {};
-  const posts = (intel.recentPosts || []) as Array<{ thumbnail?: string }>;
-  return posts.slice(0, count).map((p) => p.thumbnail).filter(Boolean) as string[];
 }
