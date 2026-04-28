@@ -27,13 +27,16 @@
     "@fontsource/bodoni-moda": "^5.2.7",
     "@fontsource/inter": "^5.2.8",
     "@google-cloud/storage": "^7.19.0",
+    "@google/genai": "^1.50.1",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@lucide/svelte": "^1.7.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.101.1",
     "jsonwebtoken": "^9.0.3",
     "phosphor-svelte": "^3.1.0",
-    "redis": "^4.7.1"
+    "redis": "^4.7.1",
+    "satori": "^0.26.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
