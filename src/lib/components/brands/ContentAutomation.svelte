@@ -5,8 +5,8 @@
   import BulkCadenceWizard from './BulkCadenceWizard.svelte';
   import ActivityFeed from './ActivityFeed.svelte';
 
-  type PipelineStep = 'upload' | 'generate' | 'review' | 'schedule' | 'post';
-  let currentStep: PipelineStep = 'schedule'; // Default to calendar view
+  type PipelineStep = 'home' | 'upload' | 'generate' | 'review' | 'schedule' | 'post';
+  let currentStep: PipelineStep = 'home';
 
   interface UploadedAsset {
     gcsUrl: string;
@@ -92,7 +92,8 @@
         fileName: u.fileName,
       }));
       uploadedAssets = [...uploadedAssets, ...newAssets];
-      currentStep = uploadedAssets.length > 1 ? 'generate' : 'generate';
+      // Stay on upload so user sees the "Generate" button — don't auto-advance
+      currentStep = 'upload';
     } catch (e) {
       uploadError = e instanceof Error ? e.message : 'Upload failed';
     } finally {
@@ -246,99 +247,141 @@
 
 <div class="ca-container">
   <div class="ca-main">
-    <ContentPipelineStepper {currentStep} />
 
-    {#if currentStep === 'upload'}
-      <div class="ca-card">
-        <span class="ca-label">DROP ASSETS</span>
-        <div
-          class="ca-upload-zone"
-          on:drop={handleDrop}
-          on:dragover|preventDefault
-          role="button"
-          tabindex="0"
-        >
-          <div class="ca-upload-icon">⇪</div>
-          <div class="ca-upload-title">Drop images, videos, or carousels</div>
-          <div class="ca-upload-hint">.jpg .png .webp .mp4 .mov — or multiple for carousels</div>
-          <label class="ca-upload-browse">
-            or browse files
-            <input type="file" multiple accept="image/*,video/*" on:change={handleFiles} style="display:none" />
-          </label>
+    {#if currentStep === 'home'}
+      <!-- ═══ Landing: Two entry points + calendar overview ═══ -->
+      <div class="ca-home">
+        <div class="ca-home-actions">
+          <!-- Drop & Schedule -->
+          <button class="ca-action-card" on:click={() => (currentStep = 'upload')}>
+            <div class="ca-action-icon">⇪</div>
+            <div class="ca-action-content">
+              <h3 class="ca-action-title">Drop & Schedule</h3>
+              <p class="ca-action-desc">Upload creatives, AI writes captions & hashtags, schedule to Instagram</p>
+            </div>
+            <span class="ca-action-arrow">→</span>
+          </button>
+
+          <!-- AI Creative Studio -->
+          <div class="ca-action-card ca-action-card--coming">
+            <div class="ca-action-icon">✦</div>
+            <div class="ca-action-content">
+              <h3 class="ca-action-title">AI Creative Studio</h3>
+              <p class="ca-action-desc">Generate on-brand visuals from prompts, briefs, or existing assets</p>
+            </div>
+            <span class="ca-action-badge">Coming Soon</span>
+          </div>
         </div>
-        <div class="ca-context">
-          <span class="ca-label" style="margin-bottom:4px">CONTEXT FOR AI (OPTIONAL)</span>
-          <input
-            class="ca-context-input"
-            bind:value={contextHint}
-            placeholder='"summer campaign", "behind the scenes", "product launch"...'
+
+        <!-- Calendar overview below -->
+        <div class="ca-home-calendar">
+          <ScheduleCalendar
+            posts={scheduledPosts}
+            loading={calendarLoading}
+            on:newPost={() => (currentStep = 'upload')}
+            on:retry={retryPost}
+            on:refresh={loadScheduledPosts}
           />
         </div>
-        {#if uploading}
-          <div class="ca-status">Uploading...</div>
-        {/if}
-        {#if uploadError}
-          <div class="ca-error">{uploadError}</div>
-        {/if}
-        {#if uploadedAssets.length > 0}
-          <div class="ca-uploaded-bar">
-            <span class="ca-label">{uploadedAssets.length} ASSET{uploadedAssets.length > 1 ? 'S' : ''} READY</span>
-            {#if uploadedAssets.length > 1}
-              <button class="ca-btn-primary" on:click={() => (currentStep = 'generate')}>Set Cadence & Generate</button>
-            {:else}
-              <button class="ca-btn-primary" on:click={() => generateContent(uploadedAssets)}>Generate Content</button>
-            {/if}
-          </div>
-        {/if}
       </div>
 
-    {:else if currentStep === 'generate'}
-      {#if uploadedAssets.length > 1}
-        <BulkCadenceWizard
-          assets={uploadedAssets}
-          on:scheduleAll={bulkSchedule}
-          on:editIndividual={() => generateContent(uploadedAssets)}
-        />
-      {:else}
+    {:else}
+      <!-- ═══ Pipeline mode: stepper + active step ═══ -->
+      <div class="ca-pipeline-header">
+        <button class="ca-back-btn" on:click={() => { currentStep = 'home'; uploadedAssets = []; generatedPosts = []; uploadError = ''; }}>
+          ← Back
+        </button>
+        <ContentPipelineStepper currentStep={currentStep === 'home' ? 'upload' : currentStep} />
+      </div>
+
+      {#if currentStep === 'upload'}
         <div class="ca-card">
-          <span class="ca-label" style="color:#e8464a">AI GENERATING</span>
-          <div class="ca-processing">
-            <div class="ca-proc-title">Generating content...</div>
-            <div class="ca-proc-sub">Analysing visuals · Reading brand kit · Writing captions</div>
+          <span class="ca-label">DROP ASSETS</span>
+          <div
+            class="ca-upload-zone"
+            on:drop={handleDrop}
+            on:dragover|preventDefault
+            role="button"
+            tabindex="0"
+          >
+            <div class="ca-upload-icon">⇪</div>
+            <div class="ca-upload-title">Drop images, videos, or carousels</div>
+            <div class="ca-upload-hint">.jpg .png .webp .mp4 .mov — or multiple for carousels</div>
+            <label class="ca-upload-browse">
+              or browse files
+              <input type="file" multiple accept="image/*,video/*" on:change={handleFiles} style="display:none" />
+            </label>
           </div>
+          <div class="ca-context">
+            <span class="ca-label" style="margin-bottom:4px">CONTEXT FOR AI (OPTIONAL)</span>
+            <input
+              class="ca-context-input"
+              bind:value={contextHint}
+              placeholder='"summer campaign", "behind the scenes", "product launch"...'
+            />
+          </div>
+          {#if uploading}
+            <div class="ca-status">Uploading...</div>
+          {/if}
+          {#if uploadError}
+            <div class="ca-error">{uploadError}</div>
+          {/if}
+          {#if uploadedAssets.length > 0}
+            <div class="ca-uploaded-bar">
+              <span class="ca-label">{uploadedAssets.length} ASSET{uploadedAssets.length > 1 ? 'S' : ''} READY</span>
+              {#if uploadedAssets.length > 1}
+                <button class="ca-btn-primary" on:click={() => (currentStep = 'generate')}>Set Cadence & Generate</button>
+              {:else}
+                <button class="ca-btn-primary" on:click={() => generateContent(uploadedAssets)}>Generate Content</button>
+              {/if}
+            </div>
+          {/if}
         </div>
+
+      {:else if currentStep === 'generate'}
+        {#if uploadedAssets.length > 1}
+          <BulkCadenceWizard
+            assets={uploadedAssets}
+            on:scheduleAll={bulkSchedule}
+            on:editIndividual={() => generateContent(uploadedAssets)}
+          />
+        {:else}
+          <div class="ca-card">
+            <span class="ca-label" style="color:#e8464a">AI GENERATING</span>
+            <div class="ca-processing">
+              <div class="ca-proc-title">Generating content...</div>
+              <div class="ca-proc-sub">Analysing visuals · Reading brand kit · Writing captions</div>
+            </div>
+          </div>
+        {/if}
+
+      {:else if currentStep === 'review' && generatedPosts.length > 0}
+        <PostReviewCard
+          asset={generatedPosts[reviewIndex]}
+          index={reviewIndex}
+          total={generatedPosts.length}
+          on:schedule={schedulePost}
+          on:regenerate={regeneratePost}
+          on:publishNow={(e) => {
+            const { asset } = e.detail;
+            fetch('/api/brand/publish-now', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ postId: 'temp' }),
+            });
+          }}
+        />
+
+      {:else if currentStep === 'schedule'}
+        <ScheduleCalendar
+          posts={scheduledPosts}
+          loading={calendarLoading}
+          on:newPost={handleNewPost}
+          on:retry={retryPost}
+          on:refresh={loadScheduledPosts}
+        />
       {/if}
-
-    {:else if currentStep === 'review' && generatedPosts.length > 0}
-      <PostReviewCard
-        asset={generatedPosts[reviewIndex]}
-        index={reviewIndex}
-        total={generatedPosts.length}
-        on:schedule={schedulePost}
-        on:regenerate={regeneratePost}
-        on:publishNow={(e) => {
-          // Publish now flow — same as schedule but immediate
-          const { asset } = e.detail;
-          fetch('/api/brand/publish-now', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              // Need to schedule first then publish
-              postId: 'temp',
-            }),
-          });
-        }}
-      />
-
-    {:else if currentStep === 'schedule'}
-      <ScheduleCalendar
-        posts={scheduledPosts}
-        loading={calendarLoading}
-        on:newPost={handleNewPost}
-        on:retry={retryPost}
-        on:refresh={loadScheduledPosts}
-      />
     {/if}
   </div>
 
@@ -348,6 +391,113 @@
 <style>
   .ca-container { display: flex; gap: 0; min-height: 500px; width: 100%; }
   .ca-main { flex: 1; padding: 0; min-width: 0; overflow: hidden; }
+
+  /* ── Home landing ── */
+  .ca-home { display: flex; flex-direction: column; gap: 16px; }
+  .ca-home-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ca-home-calendar { margin-top: 4px; }
+
+  .ca-action-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 18px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+    color: inherit;
+    font-family: inherit;
+  }
+  .ca-action-card:hover {
+    border-color: rgba(232,70,74,0.3);
+    background: rgba(232,70,74,0.03);
+  }
+  .ca-action-card--coming {
+    cursor: default;
+    opacity: 0.5;
+  }
+  .ca-action-card--coming:hover {
+    border-color: rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.035);
+  }
+  .ca-action-icon {
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(232,70,74,0.08);
+    flex-shrink: 0;
+  }
+  .ca-action-content { flex: 1; min-width: 0; }
+  .ca-action-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ededef;
+    margin: 0 0 3px;
+  }
+  .ca-action-desc {
+    font-size: 12px;
+    color: #4a4a50;
+    margin: 0;
+    line-height: 1.4;
+  }
+  .ca-action-arrow {
+    font-size: 16px;
+    color: #e8464a;
+    flex-shrink: 0;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: all 0.2s ease;
+  }
+  .ca-action-card:hover .ca-action-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .ca-action-badge {
+    font-family: 'Geist Mono Variable','SF Mono','Courier New',monospace;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    color: #4a4a50;
+    flex-shrink: 0;
+  }
+
+  /* ── Pipeline header with back button ── */
+  .ca-pipeline-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .ca-back-btn {
+    font-family: 'Geist Mono Variable','SF Mono','Courier New',monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: #4a4a50;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .ca-back-btn:hover { color: #ededef; border-color: rgba(255,255,255,0.15); }
+
+  @media (max-width: 768px) {
+    .ca-home-actions { grid-template-columns: 1fr; }
+  }
 
   .ca-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 18px 16px; }
   .ca-label { font-family: 'Geist Mono Variable','SF Mono','Courier New',monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #4a4a50; display: block; margin-bottom: 8px; }
