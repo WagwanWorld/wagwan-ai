@@ -346,8 +346,8 @@
 </div>
 
 <style>
-  .ca-container { display: flex; gap: 0; min-height: 500px; }
-  .ca-main { flex: 1; padding: 0 16px 16px; min-width: 0; }
+  .ca-container { display: flex; gap: 0; min-height: 500px; width: 100%; }
+  .ca-main { flex: 1; padding: 0; min-width: 0; overflow: hidden; }
 
   .ca-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 18px 16px; }
   .ca-label { font-family: 'Geist Mono Variable','SF Mono','Courier New',monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #4a4a50; display: block; margin-bottom: 8px; }

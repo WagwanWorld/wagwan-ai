@@ -190,8 +190,8 @@
 </div>
 
 <style>
-  .cal { padding: 0; }
-  .bs-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; overflow: hidden; }
+  .cal { padding: 0; width: 100%; }
+  .bs-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; overflow: hidden; width: 100%; }
 
   .cal-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); }
   .cal-nav { display: flex; align-items: center; gap: 8px; }

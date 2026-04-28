@@ -946,7 +946,9 @@
       <BrandProfile />
 
     {:else if portalTab === 'automation' && data.brandProfile}
-      <ContentAutomation />
+      <div class="bos-automation-wrap">
+        <ContentAutomation />
+      </div>
 
     {:else if showManualSearch}
     <div class="manual-search-header">
@@ -1624,6 +1626,13 @@
   .bos-stat-val { font-weight: 700; }
   .bos-stat-val--active { color: #4d7cff; }
   .bos-stat-val--green { color: #4ade80; }
+
+  /* ── Automation wrapper — full-width inside bento grid ── */
+  .bos-automation-wrap {
+    grid-column: 1 / -1;
+    min-width: 0;
+    width: 100%;
+  }
 
   /* ── Bento grid ── */
   .bos-bento {
