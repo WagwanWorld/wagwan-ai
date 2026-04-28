@@ -36,17 +36,48 @@ export interface UploadResult {
   size: number;
 }
 
+// Extension → canonical MIME type (used as fallback when browser sends application/octet-stream)
+const EXT_MIME_MAP: Record<string, string> = {
+  svg: 'image/svg+xml',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  woff2: 'font/woff2',
+  ttf: 'font/ttf',
+  otf: 'font/otf',
+};
+
 export async function uploadCreativeToGCS(
   file: File,
   brandIgId: string,
 ): Promise<UploadResult> {
-  const isSvg = file.type === 'image/svg+xml';
-  const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
-  const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
-  const isFont = ALLOWED_FONT_TYPES.includes(file.type);
+  // Some OS file pickers (especially on macOS) send application/octet-stream for SVG/font files.
+  // Resolve the actual MIME type from the file extension before validation.
+  const fileExt = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const resolvedType =
+    (file.type && file.type !== 'application/octet-stream')
+      ? file.type
+      : (EXT_MIME_MAP[fileExt] ?? file.type);
+
+  // Work with the resolved type for validation and storage
+  const effectiveFile = resolvedType !== file.type
+    ? new File([file], file.name, { type: resolvedType })
+    : file;
+
+  const isSvg = effectiveFile.type === 'image/svg+xml';
+  const isImage = ALLOWED_IMAGE_TYPES.includes(effectiveFile.type);
+  const isVideo = ALLOWED_VIDEO_TYPES.includes(effectiveFile.type);
+  const isFont = ALLOWED_FONT_TYPES.includes(effectiveFile.type);
   if (!isImage && !isVideo && !isFont) {
-    throw new Error(`Unsupported file type: ${file.type}. Supported: JPEG, PNG, WebP, SVG, MP4, or font files (WOFF2, TTF, OTF).`);
+    throw new Error(`Unsupported file type: ${file.type}${fileExt ? ` (.${fileExt})` : ''}. Supported: JPEG, PNG, WebP, SVG, MP4, or font files (WOFF2, TTF, OTF).`);
   }
+
+  // Reassign file to the effective (type-corrected) version
+  // eslint-disable-next-line no-param-reassign
+  file = effectiveFile;
 
   const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
   if (file.size > maxSize) {

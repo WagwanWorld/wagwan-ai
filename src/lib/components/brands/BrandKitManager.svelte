@@ -87,14 +87,24 @@
   }
 
   async function setDefault(asset: BrandAsset) {
+    // Optimistic update
+    assets = assets.map(a => ({
+      ...a,
+      is_default: a.type === asset.type ? a.id === asset.id : a.is_default,
+    }));
     try {
-      // Optimistic update
-      assets = assets.map(a => ({
-        ...a,
-        is_default: a.type === asset.type ? a.id === asset.id : a.is_default,
-      }));
-      // No dedicated endpoint yet — handled via POST with isDefault:true on next upload
-    } catch { /* silent */ }
+      const res = await fetch('/api/brand/brand-assets', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId: asset.id, isDefault: true }),
+      });
+      if (!res.ok) throw new Error('Failed to set default');
+    } catch (e) {
+      // Roll back optimistic update on failure
+      await loadAssets();
+      uploadError = e instanceof Error ? e.message : 'Failed to set default';
+    }
   }
 
   function handleLogoDrop(e: DragEvent) {
