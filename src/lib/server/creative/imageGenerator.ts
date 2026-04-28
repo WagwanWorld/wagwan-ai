@@ -9,17 +9,143 @@ export interface ImageGenResult {
 }
 
 /**
- * Generate a COMPLETE Instagram creative using Gemini 2.5 Flash Image (Nano Banana).
- *
- * Nano Banana handles EVERYTHING: background, text rendering, layout, colors.
- * Only the logo is composited separately (needs pixel-perfect brand mark).
- *
- * The prompt includes:
- * - Scene/visual description from Claude's direction
- * - Brand color palette (hex codes)
- * - ALL on-image text with positioning
- * - Typography style guidance
- * - Up to 3 past post images as style references
+ * Build a structured design brief for Gemini from Claude's direction.
+ * This is the core quality driver — the more specific the prompt,
+ * the better Gemini's output.
+ */
+function buildDesignBrief(direction: CreativeDirection, brandPalette: string[], userOverride?: string): string {
+  // If user edited the prompt, use it but still append the text hierarchy
+  if (userOverride) {
+    const textSection = buildTextHierarchy(direction);
+    return `${userOverride}
+
+${textSection}`;
+  }
+
+  const d = direction.designDirection;
+  const palette = brandPalette.length > 0 ? brandPalette : d.palette.map(c => c.hex);
+
+  // Map palette roles to specific usage
+  const colorMap = d.palette.reduce((acc, c) => { acc[c.role] = c.hex; return acc; }, {} as Record<string, string>);
+  const bgColor = colorMap['background'] || palette[0] || '#1A1A1A';
+  const textColor = colorMap['primary-text'] || colorMap['text'] || '#FFFFFF';
+  const accentColor = colorMap['accent'] || colorMap['highlight'] || palette[1] || '#E8464A';
+
+  const sections: string[] = [];
+
+  // 1. CANVAS & BACKGROUND
+  sections.push(`CANVAS: 4:5 portrait Instagram post (1080×1350px).
+
+BACKGROUND & SCENE:
+${d.imagery || direction.imageModelPrompt || 'Clean, minimal brand background'}
+Primary background color: ${bgColor}
+${d.contrast || `Ensure strong contrast between background and text — use overlays, solid blocks, or gradients where text appears.`}`);
+
+  // 2. COMPOSITION GRID
+  const tp = d.textPlacement;
+  sections.push(`COMPOSITION & LAYOUT:
+Style: ${d.composition || 'balanced'}
+${d.layout}
+${tp ? `
+- Headline zone: ${tp.headline?.zone || 'top-third'}, aligned ${tp.headline?.alignment || 'left'}, max width ${tp.headline?.maxWidth || '80%'}
+- Body zone: ${tp.body?.zone || 'center'}, aligned ${tp.body?.alignment || 'left'}, max width ${tp.body?.maxWidth || '70%'}
+- CTA zone: ${tp.cta?.zone || 'bottom-quarter'}, style: ${tp.cta?.style || 'pill-button'}, aligned ${tp.cta?.alignment || 'center'}` : ''}
+- Logo space: reserved ${direction.assets.logo?.position || 'bottom-right'} corner (will be added separately)
+- Negative space: maintain at least 30% — the design should breathe, not feel cramped`);
+
+  // 3. TEXT HIERARCHY (the most critical part)
+  sections.push(buildTextHierarchy(direction));
+
+  // 4. TYPOGRAPHY
+  sections.push(`TYPOGRAPHY:
+${d.typography || 'Clean modern sans-serif system'}
+- All text must be RAZOR SHARP — no blur, no artifacts, no garbled characters
+- Letters must be perfectly formed and evenly spaced
+- Maintain consistent baseline alignment within each text block`);
+
+  // 5. COLOR SYSTEM
+  sections.push(`COLOR SYSTEM:
+- Background: ${bgColor}
+- Primary text: ${textColor}
+- Accent / CTA: ${accentColor}
+- Secondary text: ${colorMap['secondary'] || '#9A9AA0'}
+- Full palette: ${palette.join(', ')}
+Use the brand colors as the dominant visual identity — the final image should feel like it belongs to THIS brand's feed.`);
+
+  // 6. VISUAL MOTIFS
+  if (d.motifs?.length) {
+    sections.push(`BRAND MOTIFS: ${d.motifs.join(', ')}
+Incorporate these subtly — they should reinforce brand identity without dominating the composition.`);
+  }
+
+  // 7. QUALITY STANDARD
+  sections.push(`QUALITY STANDARD:
+- This must look like it was designed by a professional agency
+- High-end, polished, production-ready — not generic or stock-photo-like
+- Clean edges, precise alignment, intentional spacing
+- If the brand references above have a specific mood (warm/cool/minimal/bold), match it exactly`);
+
+  return sections.join('\n\n---\n\n');
+}
+
+/**
+ * Build the text hierarchy section — tells Gemini exactly what text
+ * to render, at what size, weight, color, and position.
+ */
+function buildTextHierarchy(direction: CreativeDirection): string {
+  const textBlocks = direction.copy.onImage || [];
+  if (textBlocks.length === 0 && !direction.copy.cta) {
+    return 'TEXT: No on-image text — this is a visual-only post.';
+  }
+
+  const lines: string[] = ['TEXT HIERARCHY (render in this exact order of visual dominance):'];
+
+  // Sort by role: headline first, then body, then CTA
+  const roleOrder: Record<string, number> = { headline: 0, body: 1, subtext: 2, cta: 3 };
+  const sorted = [...textBlocks].sort((a, b) => (roleOrder[a.role || 'body'] || 1) - (roleOrder[b.role || 'body'] || 1));
+
+  for (let i = 0; i < sorted.length; i++) {
+    const block = sorted[i];
+    const role = block.role || (i === 0 ? 'headline' : 'body');
+    const sizeMap: Record<string, string> = { xlarge: '~72pt, dominant', large: '~48pt, prominent', medium: '~28pt, supporting', small: '~18pt, subtle' };
+    const size = sizeMap[block.size || 'large'] || sizeMap['medium'];
+
+    lines.push(`
+${(i + 1)}. [${role.toUpperCase()}] "${block.text}"
+   Position: ${block.position || 'center'}
+   Size: ${size}
+   Weight: ${block.weight || (role === 'headline' ? 'bold' : 'regular')}
+   Color: ${block.color || (role === 'headline' ? '#FFFFFF' : '#CCCCCC')}
+   ${block.background ? `Background: ${block.background} (pill/block behind text)` : ''}`);
+  }
+
+  if (direction.copy.cta) {
+    const ctaBlock = sorted.find(b => b.role === 'cta');
+    if (!ctaBlock) {
+      lines.push(`
+${sorted.length + 1}. [CTA] "${direction.copy.cta}"
+   Position: bottom-quarter, centered
+   Style: rounded pill button or prominent banner
+   Size: ~20pt, semibold
+   Color: #FFFFFF on accent background
+   Background: brand accent color as solid pill/button`);
+    }
+  }
+
+  lines.push(`
+CRITICAL TEXT RULES:
+- Every character must be PERFECTLY legible — zero garbled, overlapping, or cut-off text
+- Headline is the HERO — it should be the first thing the eye sees
+- Body text supports the headline — clearly smaller, secondary visual weight
+- CTA is a distinct UI element (button/pill) — not just more text
+- Text blocks must have clear breathing room between them (at least 24px equivalent)
+- If text is over a busy background, add a semi-transparent dark overlay or solid color block behind it`);
+
+  return lines.join('');
+}
+
+/**
+ * Generate the complete Instagram creative via Gemini 2.5 Flash Image.
  */
 export async function generateImage(
   direction: CreativeDirection,
@@ -27,7 +153,7 @@ export async function generateImage(
     styleReferences?: Array<{ base64: string; mimeType: string }>;
     aspectRatio?: string;
     brandPalette?: string[];
-    userPromptOverride?: string; // if user edited the prompt
+    userPromptOverride?: string;
   },
 ): Promise<ImageGenResult> {
   const apiKey = env.GEMINI_API_KEY;
@@ -37,63 +163,33 @@ export async function generateImage(
 
   const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
-  // Send past post images as style references
+  // Style references — send past posts for Gemini to match
   if (options?.styleReferences?.length) {
     contents.push({
-      text: 'BRAND STYLE REFERENCES — match the visual identity, color grading, composition, and overall aesthetic of these posts:',
+      text: `BRAND STYLE REFERENCES — study these existing posts carefully. Match their:
+• Color grading and temperature
+• Typography style and text treatment
+• Composition patterns and layout approach
+• Level of polish and sophistication
+• Overall mood and aesthetic
+
+The new creative must look like it belongs alongside these posts in the same feed:`,
     });
     for (const ref of options.styleReferences.slice(0, 3)) {
       contents.push({
-        inlineData: {
-          mimeType: ref.mimeType,
-          data: ref.base64,
-        },
+        inlineData: { mimeType: ref.mimeType, data: ref.base64 },
       });
     }
   }
 
-  // Build the complete creative prompt
-  const palette = options?.brandPalette?.length
-    ? options.brandPalette.join(', ')
-    : direction.designDirection.palette.map(c => c.hex).join(', ');
+  // The structured design brief
+  const designBrief = buildDesignBrief(
+    direction,
+    options?.brandPalette || [],
+    options?.userPromptOverride,
+  );
 
-  // Gather ALL text that should appear on the image
-  const textBlocks = (direction.copy.onImage || [])
-    .map(block => `"${block.text}" — positioned at ${block.position}, ${block.lock ? 'EXACT wording' : 'can style freely'}`)
-    .join('\n');
-
-  const ctaText = direction.copy.cta ? `CTA button/text: "${direction.copy.cta}"` : '';
-
-  // Use the user's edited prompt if provided, otherwise build from direction
-  const sceneDescription = options?.userPromptOverride || direction.imageModelPrompt || direction.designDirection.imagery;
-
-  contents.push({
-    text: `Create a complete, ready-to-post Instagram creative (4:5 portrait, 1080×1350px).
-
-VISUAL SCENE:
-${sceneDescription}
-
-BRAND COLOR PALETTE (use these as dominant colors):
-${palette}
-
-TYPOGRAPHY & LAYOUT:
-${direction.designDirection.typography || 'Clean, modern sans-serif. Bold headlines, lighter body text.'}
-Layout: ${direction.designDirection.layout || 'Balanced with clear hierarchy'}
-
-TEXT TO RENDER ON THE IMAGE:
-${textBlocks || 'No on-image text specified'}
-${ctaText}
-
-DESIGN RULES:
-1. This is a FINISHED Instagram post — it must look polished, professional, and high-end.
-2. All text must be PERFECTLY LEGIBLE — clean rendering, high contrast against background, no garbled characters.
-3. Use the brand colors (${palette}) as the visual foundation — backgrounds, accents, text colors.
-4. Match the style of the reference images above — same level of sophistication, same color temperature, same mood.
-5. Text hierarchy: headlines are large and bold, supporting text is smaller, CTA stands out.
-6. Leave space for a small logo in the ${direction.assets.logo?.position || 'bottom-right'} corner (it will be added separately).
-7. Keep the design clean — high-end brand aesthetic, not cluttered or generic.
-8. Motifs: ${direction.designDirection.motifs?.join(', ') || 'none specified'}`,
-  });
+  contents.push({ text: designBrief });
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
