@@ -116,7 +116,7 @@ export const GET: RequestHandler = async ({ request }) => {
 
     const result = await publishPost(brandIgId, igAccessToken, {
       gcsUrl: post.gcs_url as string,
-      mediaType: post.media_type as string,
+      mediaType: post.media_type as 'IMAGE' | 'VIDEO' | 'REELS' | 'STORIES' | 'CAROUSEL',
       caption,
       altText: (post.alt_text as string) || undefined,
       carouselItems,
