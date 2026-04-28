@@ -37,8 +37,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 14px 0;
-    margin-bottom: 16px;
+    padding: 20px 0 24px;
+    margin-bottom: 8px;
   }
   .ca-step {
     display: flex;
@@ -84,10 +84,10 @@
   .ca-step-label--inactive { color: #4a4a50; }
   .ca-step-label--done { color: #4ade80; }
   .ca-step-connector {
-    width: 32px;
+    width: 48px;
     height: 1px;
     background: rgba(255, 255, 255, 0.08);
-    margin: 0 10px;
+    margin: 0 12px;
     transition: background 0.2s ease;
   }
   .ca-step-connector--done {

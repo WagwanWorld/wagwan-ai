@@ -393,7 +393,9 @@
     {/if}
   </div>
 
-  <ActivityFeed />
+  {#if currentStep === 'home'}
+    <ActivityFeed />
+  {/if}
 </div>
 
 <style>
@@ -507,17 +509,17 @@
     .ca-home-actions { grid-template-columns: 1fr; }
   }
 
-  .ca-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 18px 16px; }
+  .ca-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 24px; }
   .ca-label { font-family: 'Geist Mono Variable','SF Mono','Courier New',monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #4a4a50; display: block; margin-bottom: 8px; }
 
-  .ca-upload-zone { border: 1.5px dashed rgba(255,255,255,0.1); border-radius: 14px; padding: 40px 24px; text-align: center; background: rgba(255,255,255,0.015); cursor: pointer; transition: all 0.2s; }
+  .ca-upload-zone { border: 1.5px dashed rgba(255,255,255,0.1); border-radius: 14px; padding: 60px 24px; text-align: center; background: rgba(255,255,255,0.015); cursor: pointer; transition: all 0.2s; }
   .ca-upload-zone:hover { border-color: rgba(232,70,74,0.3); background: rgba(232,70,74,0.02); }
   .ca-upload-icon { font-size: 28px; margin-bottom: 10px; opacity: 0.5; }
   .ca-upload-title { font-size: 14px; font-weight: 600; color: #ededef; }
   .ca-upload-hint { font-size: 11px; color: #4a4a50; margin-top: 4px; }
   .ca-upload-browse { display: inline-block; margin-top: 14px; padding: 6px 16px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: #8a8a90; font-size: 11px; cursor: pointer; }
 
-  .ca-context { margin-top: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05); }
+  .ca-context { margin-top: 16px; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05); }
   .ca-context-input { width: 100%; background: transparent; border: none; color: #8a8a90; font-size: 12px; font-family: 'Inter',sans-serif; }
   .ca-context-input:focus { outline: none; }
   .ca-context-input::placeholder { color: #4a4a50; font-style: italic; }

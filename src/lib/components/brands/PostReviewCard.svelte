@@ -179,7 +179,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
+    padding: 18px 24px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
   .prc-label {
@@ -191,25 +191,26 @@
   .prc-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); }
   .prc-dot--active { background: #e8464a; }
 
-  .prc-body { display: flex; }
+  .prc-body { display: flex; min-height: 480px; }
 
   .prc-media {
-    width: 260px; padding: 18px;
+    width: 340px; padding: 24px;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    display: flex; flex-direction: column; gap: 10px;
+    display: flex; flex-direction: column; gap: 16px;
+    flex-shrink: 0;
   }
   .prc-preview {
-    width: 100%; aspect-ratio: 4/5; border-radius: 10px; overflow: hidden;
+    width: 100%; aspect-ratio: 4/5; border-radius: 12px; overflow: hidden;
     background: rgba(255, 255, 255, 0.03);
   }
   .prc-img { width: 100%; height: 100%; object-fit: cover; }
   .prc-video-placeholder {
     width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-    font-size: 24px; color: #4a4a50; background: linear-gradient(135deg, #1a1a2e, #2a1a3e);
+    font-size: 28px; color: #4a4a50; background: linear-gradient(135deg, #1a1a2e, #2a1a3e);
   }
-  .prc-type-pills { display: flex; gap: 4px; }
+  .prc-type-pills { display: flex; gap: 6px; }
   .prc-type-pill {
-    padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(255, 255, 255, 0.04); color: #4a4a50;
     font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
     font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
@@ -220,9 +221,9 @@
     border-color: rgba(232, 70, 74, 0.2);
   }
 
-  .prc-fields { flex: 1; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .prc-fields { flex: 1; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
 
-  .prc-field-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .prc-field-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .prc-field-label {
     font-family: 'Geist Mono Variable', 'SF Mono', 'Courier New', monospace;
     font-size: 10px; font-weight: 600; text-transform: uppercase;
@@ -233,16 +234,17 @@
     font-size: 9px; color: #3a3a40; letter-spacing: 0.05em;
   }
   .prc-caption {
-    width: 100%; padding: 10px 12px; border-radius: 10px;
+    width: 100%; padding: 14px 16px; border-radius: 12px;
     background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.06);
-    color: #9a9aa0; font-size: 13px; line-height: 1.6;
+    color: #9a9aa0; font-size: 13px; line-height: 1.7;
     font-family: 'Inter', sans-serif; resize: vertical;
+    min-height: 120px;
   }
   .prc-caption:focus { outline: none; border-color: rgba(232, 70, 74, 0.3); }
 
-  .prc-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .prc-tags { display: flex; gap: 6px; flex-wrap: wrap; }
   .prc-tag {
-    padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 500;
+    padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 500;
     cursor: pointer; border: none; transition: opacity 0.15s;
   }
   .prc-tag:hover { opacity: 0.7; }
@@ -250,43 +252,47 @@
   .prc-tag--purple { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
   .prc-tag-add { display: inline; }
   .prc-tag-input {
-    width: 60px; padding: 3px 8px; border-radius: 4px;
+    width: 70px; padding: 5px 10px; border-radius: 6px;
     background: rgba(255, 255, 255, 0.04); border: 1px dashed rgba(255, 255, 255, 0.08);
-    color: #4a4a50; font-size: 10px; font-family: 'Inter', sans-serif;
+    color: #4a4a50; font-size: 11px; font-family: 'Inter', sans-serif;
   }
   .prc-tag-input:focus { outline: none; border-color: rgba(232, 70, 74, 0.3); }
 
   .prc-location-input {
-    padding: 7px 12px; border-radius: 8px;
+    padding: 10px 14px; border-radius: 10px;
     background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #ededef; font-size: 12px; font-family: 'Inter', sans-serif; width: 200px;
+    color: #ededef; font-size: 13px; font-family: 'Inter', sans-serif; width: 260px;
   }
   .prc-location-input:focus { outline: none; border-color: rgba(232, 70, 74, 0.3); }
 
-  .prc-schedule-row { display: flex; gap: 8px; }
+  .prc-schedule-row { display: flex; gap: 10px; }
   .prc-schedule-input {
-    padding: 7px 12px; border-radius: 8px;
+    padding: 10px 14px; border-radius: 10px;
     background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #ededef; font-size: 12px; font-family: 'Inter', sans-serif;
+    color: #ededef; font-size: 13px; font-family: 'Inter', sans-serif;
   }
   .prc-schedule-input:focus { outline: none; border-color: rgba(232, 70, 74, 0.3); }
 
-  .prc-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .prc-actions { display: flex; gap: 10px; margin-top: 8px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.04); }
   .prc-btn-primary {
-    padding: 8px 18px; border-radius: 8px;
+    padding: 10px 24px; border-radius: 10px;
     background: rgba(232, 70, 74, 0.15); border: 1px solid rgba(232, 70, 74, 0.25);
-    color: #e8464a; font-size: 12px; font-weight: 600; cursor: pointer;
+    color: #e8464a; font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .prc-btn-primary:hover { background: rgba(232, 70, 74, 0.2); }
   .prc-btn-ghost {
-    padding: 8px 18px; border-radius: 8px;
+    padding: 10px 24px; border-radius: 10px;
     background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07);
-    color: #8a8a90; font-size: 12px; font-weight: 500; cursor: pointer;
+    color: #8a8a90; font-size: 13px; font-weight: 500; cursor: pointer;
   }
   .prc-btn-ghost:hover { background: rgba(255, 255, 255, 0.06); }
 
+  @media (max-width: 1024px) {
+    .prc-media { width: 280px; padding: 20px; }
+    .prc-fields { padding: 20px; }
+  }
   @media (max-width: 768px) {
-    .prc-body { flex-direction: column; }
+    .prc-body { flex-direction: column; min-height: auto; }
     .prc-media { width: 100%; border-right: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
   }
 </style>
