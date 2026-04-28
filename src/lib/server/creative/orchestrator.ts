@@ -97,8 +97,8 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
 
   const directionParts: Anthropic.Messages.ContentBlockParam[] = [];
 
-  // Send past post thumbnails as visual references
-  const thumbsToSend = brandBrief.thumbnailUrls.slice(0, 3);
+  // Send past post thumbnails as visual references (2 max — reduces prompt size + cost)
+  const thumbsToSend = brandBrief.thumbnailUrls.slice(0, 2);
   for (let i = 0; i < thumbsToSend.length; i++) {
     try {
       const imgRes = await fetch(thumbsToSend[i]);
@@ -142,12 +142,24 @@ Example: "Clean dark charcoal (#1A1A1A) background with subtle gradient to deep 
 ${DIRECTION_OUTPUT_SCHEMA}`,
   });
 
-  const directionResponse = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 3000,
-    system: CREATIVE_DIRECTOR_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: directionParts }],
-  });
+  // Retry once on transient API errors (500s)
+  let directionResponse;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      directionResponse = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 3000,
+        system: CREATIVE_DIRECTOR_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: directionParts }],
+      });
+      break;
+    } catch (e) {
+      if (attempt === 1) throw e;
+      // Wait 2s before retry on first failure
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  if (!directionResponse) throw new Error('Claude direction failed after retry');
 
   const directionText = directionResponse.content
     .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
