@@ -113,7 +113,7 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
 
   const directionResponse = await client.messages.create({
     model: directionModel,
-    max_tokens: 1500, // direction JSON is typically 800-1200 tokens
+    max_tokens: 3000, // direction JSON needs room for concept + imageModelPrompt
     system: CREATIVE_DIRECTOR_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: directionParts }],
   });
@@ -125,10 +125,27 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
 
   let direction: CreativeDirection;
   try {
-    const cleaned = directionText.replace(/^```json?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    // Strip markdown fences, trim whitespace
+    let cleaned = directionText
+      .replace(/^[\s\S]*?```json?\s*\n?/i, '') // everything before ```json
+      .replace(/\n?```[\s\S]*$/i, '')           // everything after ```
+      .trim();
+    // If no fences found, try the raw text
+    if (!cleaned || cleaned === directionText.trim()) {
+      cleaned = directionText.trim();
+    }
+    // Try to extract JSON object if there's text before/after it
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleaned = jsonMatch[0];
+    }
     direction = JSON.parse(cleaned);
   } catch {
-    throw new Error(`Claude returned invalid direction JSON: ${directionText.slice(0, 200)}`);
+    // If truncated (stop_reason = max_tokens), retry with higher limit
+    if (directionResponse.stop_reason === 'max_tokens') {
+      throw new Error('Direction response was truncated — try a shorter copy input');
+    }
+    throw new Error(`Claude returned invalid direction JSON: ${directionText.slice(0, 300)}`);
   }
 
   // Accurate cost: Haiku = $0.80/M input, $4/M output
