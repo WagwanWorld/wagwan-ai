@@ -120,13 +120,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assets, context: contextHint || undefined }),
       });
-      if (!res.ok) throw new Error('Generation failed');
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `Generation failed (${res.status})`);
       generatedPosts = data.results || [];
       reviewIndex = 0;
       currentStep = 'review';
-    } catch {
-      uploadError = 'AI generation failed — try again';
+    } catch (e) {
+      uploadError = e instanceof Error ? e.message : 'AI generation failed — try again';
       currentStep = 'upload';
     } finally {
       generating = false;

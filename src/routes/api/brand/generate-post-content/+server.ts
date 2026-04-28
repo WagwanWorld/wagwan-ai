@@ -4,11 +4,12 @@ import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
 import { env } from '$env/dynamic/private';
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY || '' });
-
 export const POST: RequestHandler = async ({ request }) => {
   const igUserId = assertBrandAccess(request);
   if (!igUserId) throw error(401, 'Brand IG session required');
+
+  const apiKey = env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw error(500, 'ANTHROPIC_API_KEY not configured');
 
   const body = await request.json();
   const { assets, context } = body as {
@@ -29,30 +30,36 @@ export const POST: RequestHandler = async ({ request }) => {
   const brand = brandRows[0];
   if (!brand) throw error(404, 'Brand not found');
 
-  // Fetch brand snapshot for pillars + audience
-  const snapRes = await fetch(
-    `${supabaseUrl}/rest/v1/brand_snapshots?brand_ig_id=eq.${igUserId}&select=intelligence&order=created_at.desc&limit=1`,
-    { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
-  );
-  const snapRows = snapRes.ok ? await snapRes.json() : [];
-  const intelligence = snapRows[0]?.intelligence || {};
+  // Fetch brand snapshot for pillars + audience (optional — don't fail if missing)
+  let intelligence: Record<string, unknown> = {};
+  try {
+    const snapRes = await fetch(
+      `${supabaseUrl}/rest/v1/brand_snapshots?brand_ig_id=eq.${igUserId}&select=intelligence&order=created_at.desc&limit=1`,
+      { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
+    );
+    const snapRows = snapRes.ok ? await snapRes.json() : [];
+    intelligence = snapRows[0]?.intelligence || {};
+  } catch { /* non-critical */ }
 
-  // Fetch recent post performance for hashtag/content patterns
-  const postsRes = await fetch(
-    `${supabaseUrl}/rest/v1/brand_fingerprints?brand_ig_id=eq.${igUserId}&order=posted_at.desc&limit=10&select=caption,hashtags,hook_archetype,engagement_score`,
-    { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
-  );
-  const recentFingerprints = postsRes.ok ? await postsRes.json() : [];
+  // Fetch recent post performance (optional)
+  let recentFingerprints: Array<Record<string, unknown>> = [];
+  try {
+    const postsRes = await fetch(
+      `${supabaseUrl}/rest/v1/brand_fingerprints?brand_ig_id=eq.${igUserId}&order=posted_at.desc&limit=10&select=caption,hashtags,hook_archetype,engagement_score`,
+      { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
+    );
+    recentFingerprints = postsRes.ok ? await postsRes.json() : [];
+  } catch { /* non-critical */ }
 
   const brandVoice = brand.brand_voice || 'Bold';
   const identity = brand.brand_identity || {};
-  const pillars = intelligence.contentPillars || [];
-  const audience = intelligence.audiencePersonas || [];
+  const pillars = (intelligence.contentPillars as string[]) || [];
+  const audience = (intelligence.audiencePersonas as Array<Record<string, string>>) || [];
   const topHashtags = recentFingerprints
-    .flatMap((p: Record<string, unknown>) => (p.hashtags as string[]) || [])
+    .flatMap((p) => (p.hashtags as string[]) || [])
     .reduce((acc: Record<string, number>, h: string) => { acc[h] = (acc[h] || 0) + 1; return acc; }, {});
   const sortedHashtags = Object.entries(topHashtags)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 15)
     .map(([h]) => h);
 
@@ -67,16 +74,21 @@ export const POST: RequestHandler = async ({ request }) => {
         if (imgRes.ok) {
           const buffer = await imgRes.arrayBuffer();
           const base64 = Buffer.from(buffer).toString('base64');
+          // Detect media type from response or filename
+          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+          const mediaType = (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(contentType)
+            ? contentType
+            : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
           contentParts.push({ type: 'text', text: `Asset ${i + 1} (${asset.fileName || 'image'}):` });
           contentParts.push({
             type: 'image',
-            source: { type: 'base64', media_type: 'image/jpeg', data: base64 },
+            source: { type: 'base64', media_type: mediaType, data: base64 },
           });
         } else {
-          contentParts.push({ type: 'text', text: `Asset ${i + 1}: ${asset.fileName || 'image'} (could not load for vision)` });
+          contentParts.push({ type: 'text', text: `Asset ${i + 1}: ${asset.fileName || 'image'} (could not load for vision — HTTP ${imgRes.status})` });
         }
-      } catch {
-        contentParts.push({ type: 'text', text: `Asset ${i + 1}: ${asset.fileName || 'image'} (could not load)` });
+      } catch (e) {
+        contentParts.push({ type: 'text', text: `Asset ${i + 1}: ${asset.fileName || 'image'} (fetch error: ${e instanceof Error ? e.message : 'unknown'})` });
       }
     } else {
       contentParts.push({
@@ -91,9 +103,9 @@ export const POST: RequestHandler = async ({ request }) => {
     text: `You are a social media content writer for @${brand.ig_username} (${brand.ig_name}, ${brand.ig_followers_count} followers).
 
 BRAND VOICE: ${brandVoice}
-${identity.bio ? `BIO: ${identity.bio}` : ''}
+${(identity as Record<string, string>).bio ? `BIO: ${(identity as Record<string, string>).bio}` : ''}
 ${pillars.length ? `CONTENT PILLARS: ${pillars.join(', ')}` : ''}
-${audience.length ? `AUDIENCE: ${audience.map((a: Record<string, string>) => a.name || a.label).join(', ')}` : ''}
+${audience.length ? `AUDIENCE: ${audience.map((a) => a.name || a.label).join(', ')}` : ''}
 ${sortedHashtags.length ? `BRAND'S TOP HASHTAGS: ${sortedHashtags.join(', ')}` : ''}
 ${context ? `USER CONTEXT: ${context}` : ''}
 
@@ -112,14 +124,21 @@ For each asset above, generate:
 Respond as a JSON array, one object per asset:
 [{ "caption": "...", "hashtags": [...], "mentions": [...], "location": "...", "altText": "...", "postType": "..." }]
 
-JSON only, no markdown.`,
+JSON only, no markdown fences.`,
   });
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6-20250514',
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: contentParts }],
-  });
+  let response;
+  try {
+    const client = new Anthropic({ apiKey });
+    response = await client.messages.create({
+      model: 'claude-sonnet-4-6-20250514',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: contentParts }],
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown AI error';
+    throw error(500, `Claude API error: ${msg}`);
+  }
 
   const text = response.content
     .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
@@ -128,9 +147,15 @@ JSON only, no markdown.`,
 
   let results;
   try {
-    results = JSON.parse(text);
+    // Strip markdown fences if present
+    const cleaned = text.replace(/^```json?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    results = JSON.parse(cleaned);
   } catch {
-    throw error(500, 'AI returned invalid JSON');
+    throw error(500, `AI returned invalid JSON: ${text.slice(0, 200)}`);
+  }
+
+  if (!Array.isArray(results)) {
+    results = [results];
   }
 
   // Merge gcsUrl back into results
@@ -138,12 +163,12 @@ JSON only, no markdown.`,
     gcsUrl: asset.gcsUrl,
     mediaType: asset.mediaType,
     fileName: asset.fileName,
-    ...results[i],
+    ...(results[i] || { caption: '', hashtags: [], mentions: [], location: '', altText: '', postType: asset.mediaType }),
   }));
 
-  // Log activity
+  // Log activity (non-blocking)
   for (const asset of merged) {
-    await fetch(`${supabaseUrl}/rest/v1/content_activity_log`, {
+    fetch(`${supabaseUrl}/rest/v1/content_activity_log`, {
       method: 'POST',
       headers: {
         apikey: supabaseKey,
@@ -155,7 +180,7 @@ JSON only, no markdown.`,
         event_type: 'generated',
         event_data: { gcsUrl: asset.gcsUrl, postType: asset.postType },
       }),
-    });
+    }).catch(() => {});
   }
 
   return json({ ok: true, results: merged, brandVoice });
