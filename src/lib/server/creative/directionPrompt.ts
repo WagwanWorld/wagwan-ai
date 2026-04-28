@@ -32,7 +32,7 @@ export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no ma
     "locked": [{ "text": "exact text that MUST be composited", "position": "bottom|top", "style": "small|legal" }]
   },
   "whyThisWorks": ["bullet 1 connecting choice to brand reference", "bullet 2"],
-  "imageModelPrompt": "BACKGROUND SCENE ONLY — describe the visual scene, style, colors, lighting, composition, mood. NEVER mention any text, words, headlines, captions, or copy in this field. Example: 'Minimalist workspace with warm oak desk, soft golden hour light, dark charcoal wall, subtle plant shadow'. The image model will ONLY create the background — all text is added separately by a compositor."
+  "imageModelPrompt": "Detailed visual scene description for the AI image generator. Describe: the background scene, lighting, camera angle, color palette (use brand hex codes), mood, texture, and composition style. The image generator will also receive the on-image text separately and render it — so focus on the VISUAL ENVIRONMENT here, not the text content. Example: 'Clean dark charcoal (#1A1A1A) background with subtle gradient to deep navy (#0D1B2A). Geometric accent shapes in brand orange (#E8833A) — thin diagonal lines crossing upper-right. Soft overhead studio lighting, matte texture, premium minimalist feel. Generous negative space in center and bottom for text overlay.'"
 }`;
 
 export interface CreativeDirection {

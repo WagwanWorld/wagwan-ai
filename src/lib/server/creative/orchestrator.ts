@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/private';
 import { CREATIVE_DIRECTOR_SYSTEM_PROMPT, DIRECTION_OUTPUT_SCHEMA, type CreativeDirection } from './directionPrompt';
 import { assembleBrandBrief, logCost, type BrandBrief } from './contextBuilder';
 import { generateImage } from './imageGenerator';
-import { compositeImage } from './compositor';
+import { compositeLogoOnly } from './compositor';
 import { runQC } from './qc';
 import { uploadCreativeToGCS } from '$lib/server/marketplace/gcsUpload';
 
@@ -132,11 +132,11 @@ ${caption ? `\nCAPTION: ${caption}` : ''}${brief ? `\nBRIEF: ${brief}` : ''}
 FORMAT: 4:5 static (1080x1350)
 
 CRITICAL — THE imageModelPrompt FIELD:
-This is the MOST important field. It will be sent directly to an image generation AI to create the background visual.
-Write it as a detailed, specific scene description — like you're briefing a photographer or illustrator.
+This is the MOST important field. It will be sent to Gemini (Nano Banana) which generates the COMPLETE creative — both the visual scene AND renders the text on the image.
+Write it as a detailed, specific scene description — like you're briefing a photographer or art director.
 Include: scene/subject, lighting, camera angle, color palette (use the brand hex codes), mood, texture, style.
-NEVER include any text, words, headlines, or copy — only the visual scene.
-Example: "Overhead flat-lay on a matte charcoal surface (#1A1A1A). A single espresso cup with cream swirl, surrounded by scattered coffee beans. Warm directional light from top-left creating long shadows. Brand orange (#E8833A) napkin folded in bottom-right corner. Shot on 85mm, shallow depth of field. Clean, minimal, premium."
+The on-image text from copy.onImage will be sent separately to Gemini — so focus on the VISUAL ENVIRONMENT in this prompt.
+Example: "Clean dark charcoal (#1A1A1A) background with subtle gradient to deep navy. Geometric accent shapes in brand orange (#E8833A) — thin diagonal lines. Soft studio lighting, matte texture, premium minimalist feel. Generous negative space in center for text."
 
 ${DIRECTION_OUTPUT_SCHEMA}`,
   });
@@ -183,7 +183,7 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
   };
 }
 
-// ─── Step 2: Render Image (user-approved prompt → Gemini → composite → QC) ───
+// ─── Step 2: Render (Gemini generates COMPLETE creative + logo overlay + QC) ───
 
 export async function renderImage(input: RenderInput): Promise<RenderResult> {
   const { brandIgId, imagePrompt, direction, generationId, version } = input;
@@ -199,46 +199,52 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
   const logos = logoRes.ok ? await logoRes.json() : [];
   const logoUrl = logos[0]?.url || null;
 
-  // Get brand palette for Gemini
-  const brandPaletteHexes = direction.designDirection.palette.map((c) => c.hex).slice(0, 5);
-
-  // Get style reference from recent posts
+  // Get style references from past posts (send actual images to Gemini)
   const brandBrief = await assembleBrandBrief(brandIgId);
-  let styleRefBase64: string | undefined;
-  if (brandBrief.thumbnailUrls.length > 0) {
+  const styleReferences: Array<{ base64: string; mimeType: string }> = [];
+  for (const thumbUrl of brandBrief.thumbnailUrls.slice(0, 3)) {
     try {
-      const refRes = await fetch(brandBrief.thumbnailUrls[0]);
+      const refRes = await fetch(thumbUrl);
       if (refRes.ok) {
         const buffer = await refRes.arrayBuffer();
-        styleRefBase64 = Buffer.from(buffer).toString('base64');
+        styleReferences.push({
+          base64: Buffer.from(buffer).toString('base64'),
+          mimeType: refRes.headers.get('content-type') || 'image/jpeg',
+        });
       }
-    } catch { /* no ref */ }
+    } catch { /* skip */ }
   }
 
-  // Generate background image with the user-approved prompt
-  const imageResult = await generateImage(imagePrompt, {
-    styleReferenceBase64: styleRefBase64,
+  // Brand palette for Gemini
+  const brandPaletteHexes = [
+    ...(brandBrief.visualAnalysis.colorPalette || []),
+    ...direction.designDirection.palette.map((c) => c.hex),
+  ].filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
+
+  // Generate COMPLETE creative — Gemini renders everything including text
+  const imageResult = await generateImage(direction, {
+    styleReferences,
     aspectRatio: '4:5',
     brandPalette: brandPaletteHexes,
+    userPromptOverride: imagePrompt,
   });
 
   const imgCost = 0.039 + ((imageResult.tokensUsed || 500) * 0.3) / 1_000_000;
   renderCost += imgCost;
   await logCost(brandIgId, generationId, 'image_generation', 'gemini-2.5-flash-image', imageResult.tokensUsed || 500, 1290, imgCost, 1);
 
-  // Composite ALL text + logo
-  const composited = await compositeImage({
-    backgroundBase64: imageResult.base64,
-    backgroundMimeType: imageResult.mimeType,
-    direction,
+  // Logo-only composite (Gemini handled all text)
+  const composited = await compositeLogoOnly({
+    imageBase64: imageResult.base64,
+    imageMimeType: imageResult.mimeType,
     logoUrl: logoUrl || undefined,
-    brandColors: direction.designDirection.palette,
+    logoPosition: direction.assets.logo?.position,
   });
 
   // QC pass
-  const compositedBase64 = composited.pngBuffer.toString('base64');
+  const finalBase64 = composited.pngBuffer.toString('base64');
   const paletteHexes = direction.designDirection.palette.map((c) => c.hex);
-  const qcReport = await runQC(compositedBase64, 'image/png', paletteHexes, direction.assets.logo.position);
+  const qcReport = await runQC(finalBase64, 'image/png', paletteHexes, direction.assets.logo?.position || 'bottom-right');
   renderCost += 0.003;
   await logCost(brandIgId, generationId, 'qc', 'claude-haiku-4-5-20251001', 0, 0, 0.003);
 

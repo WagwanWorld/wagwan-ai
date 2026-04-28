@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { env } from '$env/dynamic/private';
+import type { CreativeDirection } from './directionPrompt';
 
 export interface ImageGenResult {
   base64: string;
@@ -8,20 +9,25 @@ export interface ImageGenResult {
 }
 
 /**
- * Generate a BACKGROUND IMAGE using Gemini 2.5 Flash Image.
+ * Generate a COMPLETE Instagram creative using Gemini 2.5 Flash Image (Nano Banana).
  *
- * CRITICAL: This generates a text-free background only.
- * All text, logos, and brand elements are composited by Satori afterwards.
+ * Nano Banana handles EVERYTHING: background, text rendering, layout, colors.
+ * Only the logo is composited separately (needs pixel-perfect brand mark).
  *
- * The prompt must describe the SCENE, not the final post.
+ * The prompt includes:
+ * - Scene/visual description from Claude's direction
+ * - Brand color palette (hex codes)
+ * - ALL on-image text with positioning
+ * - Typography style guidance
+ * - Up to 3 past post images as style references
  */
 export async function generateImage(
-  scenePrompt: string,
+  direction: CreativeDirection,
   options?: {
-    styleReferenceBase64?: string;
-    styleReferenceMimeType?: string;
+    styleReferences?: Array<{ base64: string; mimeType: string }>;
     aspectRatio?: string;
-    brandPalette?: string[]; // hex colors to enforce
+    brandPalette?: string[];
+    userPromptOverride?: string; // if user edited the prompt
   },
 ): Promise<ImageGenResult> {
   const apiKey = env.GEMINI_API_KEY;
@@ -31,38 +37,62 @@ export async function generateImage(
 
   const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
-  // Style reference for brand consistency
-  if (options?.styleReferenceBase64) {
+  // Send past post images as style references
+  if (options?.styleReferences?.length) {
     contents.push({
-      text: 'STYLE REFERENCE — match this image\'s visual tone, color grading, composition style, and mood:',
+      text: 'BRAND STYLE REFERENCES — match the visual identity, color grading, composition, and overall aesthetic of these posts:',
     });
-    contents.push({
-      inlineData: {
-        mimeType: options.styleReferenceMimeType || 'image/jpeg',
-        data: options.styleReferenceBase64,
-      },
-    });
+    for (const ref of options.styleReferences.slice(0, 3)) {
+      contents.push({
+        inlineData: {
+          mimeType: ref.mimeType,
+          data: ref.base64,
+        },
+      });
+    }
   }
 
-  // Build the final prompt — scene-only, no text
-  const paletteInstruction = options?.brandPalette?.length
-    ? `\nCOLOR PALETTE: Use these brand colors prominently: ${options.brandPalette.join(', ')}`
-    : '';
+  // Build the complete creative prompt
+  const palette = options?.brandPalette?.length
+    ? options.brandPalette.join(', ')
+    : direction.designDirection.palette.map(c => c.hex).join(', ');
+
+  // Gather ALL text that should appear on the image
+  const textBlocks = (direction.copy.onImage || [])
+    .map(block => `"${block.text}" — positioned at ${block.position}, ${block.lock ? 'EXACT wording' : 'can style freely'}`)
+    .join('\n');
+
+  const ctaText = direction.copy.cta ? `CTA button/text: "${direction.copy.cta}"` : '';
+
+  // Use the user's edited prompt if provided, otherwise build from direction
+  const sceneDescription = options?.userPromptOverride || direction.imageModelPrompt || direction.designDirection.imagery;
 
   contents.push({
-    text: `Generate a professional background image for a social media post.
+    text: `Create a complete, ready-to-post Instagram creative (4:5 portrait, 1080×1350px).
 
-SCENE DESCRIPTION:
-${scenePrompt}
-${paletteInstruction}
+VISUAL SCENE:
+${sceneDescription}
 
-ABSOLUTE RULES — VIOLATION MEANS FAILURE:
-1. ZERO TEXT in the image. No words, no letters, no numbers, no symbols, no watermarks, no captions.
-2. This is a BACKGROUND ONLY. Text and logos will be added in post-production.
-3. Leave generous negative space (at least 30% of the image) for text overlay — preferably in the top third and bottom quarter.
-4. The image must be clean, professional, and suitable for a brand's Instagram feed.
-5. Use the color palette specified above as the dominant tones.
-6. High resolution, sharp details, no artifacts, no blur unless intentionally artistic.`,
+BRAND COLOR PALETTE (use these as dominant colors):
+${palette}
+
+TYPOGRAPHY & LAYOUT:
+${direction.designDirection.typography || 'Clean, modern sans-serif. Bold headlines, lighter body text.'}
+Layout: ${direction.designDirection.layout || 'Balanced with clear hierarchy'}
+
+TEXT TO RENDER ON THE IMAGE:
+${textBlocks || 'No on-image text specified'}
+${ctaText}
+
+DESIGN RULES:
+1. This is a FINISHED Instagram post — it must look polished, professional, and high-end.
+2. All text must be PERFECTLY LEGIBLE — clean rendering, high contrast against background, no garbled characters.
+3. Use the brand colors (${palette}) as the visual foundation — backgrounds, accents, text colors.
+4. Match the style of the reference images above — same level of sophistication, same color temperature, same mood.
+5. Text hierarchy: headlines are large and bold, supporting text is smaller, CTA stands out.
+6. Leave space for a small logo in the ${direction.assets.logo?.position || 'bottom-right'} corner (it will be added separately).
+7. Keep the design clean — high-end brand aesthetic, not cluttered or generic.
+8. Motifs: ${direction.designDirection.motifs?.join(', ') || 'none specified'}`,
   });
 
   const response = await ai.models.generateContent({

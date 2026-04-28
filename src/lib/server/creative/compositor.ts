@@ -1,13 +1,11 @@
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
-import type { CreativeDirection } from './directionPrompt';
 
-export interface CompositeOptions {
-  backgroundBase64: string;
-  backgroundMimeType: string;
-  direction: CreativeDirection;
+export interface LogoCompositeOptions {
+  imageBase64: string;
+  imageMimeType: string;
   logoUrl?: string;
-  brandColors: { hex: string; role: string }[];
+  logoPosition?: string; // bottom-right, bottom-left, top-right, top-left
   width?: number;
   height?: number;
 }
@@ -18,161 +16,51 @@ export interface CompositeResult {
   height: number;
 }
 
-// Font cache to avoid re-fetching on every composite
-let fontCache: { regular: ArrayBuffer; bold: ArrayBuffer } | null = null;
+// Font cache
+let fontCache: ArrayBuffer | null = null;
 
-async function loadFonts() {
+async function loadFont() {
   if (fontCache) return fontCache;
-  const [regular, bold] = await Promise.all([
-    fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff').then(r => r.arrayBuffer()),
-    fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff').then(r => r.arrayBuffer()),
-  ]);
-  fontCache = { regular, bold };
+  const res = await fetch('https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff');
+  fontCache = await res.arrayBuffer();
   return fontCache;
 }
 
 /**
- * Composite ALL text + logo onto the AI-generated background.
+ * LOGO-ONLY compositor.
  *
- * This is the layer that ensures brand correctness:
- * - ALL on-image text is rendered here with real fonts (not AI-generated)
- * - Logo is always composited (never AI-generated)
- * - Brand colors are used for text and overlays
- * - Semi-transparent background panels behind text for legibility
+ * Gemini (Nano Banana) now handles ALL text rendering in the image.
+ * This compositor ONLY overlays the brand logo onto the final image.
+ * If no logo is provided, it passes the image through unchanged.
  */
-export async function compositeImage(options: CompositeOptions): Promise<CompositeResult> {
-  const { backgroundBase64, backgroundMimeType, direction, logoUrl, brandColors } = options;
+export async function compositeLogoOnly(options: LogoCompositeOptions): Promise<CompositeResult> {
+  const { imageBase64, imageMimeType, logoUrl, logoPosition } = options;
   const width = options.width || 1080;
-  const height = options.height || 1350; // 4:5
+  const height = options.height || 1350;
 
-  const fonts = await loadFonts();
-
-  // Extract brand colors
-  const bgColor = brandColors.find((c) => c.role === 'background')?.hex || '#000000';
-  const textColor = brandColors.find((c) => c.role === 'text')?.hex || '#FFFFFF';
-  const accentColor = brandColors.find((c) => c.role === 'accent' || c.role === 'primary')?.hex || brandColors[0]?.hex || '#FFFFFF';
-
-  // ALL onImage text gets composited — not just locked ones
-  const allTextBlocks = [
-    ...(direction.copy.onImage || []),
-    ...(direction.assets.locked || []),
-  ];
-
-  // Deduplicate by text content
-  const seen = new Set<string>();
-  const textBlocks = allTextBlocks.filter((t) => {
-    if (seen.has(t.text)) return false;
-    seen.add(t.text);
-    return true;
-  });
-
-  // Build positioned text elements with legibility panels
-  const textElements = textBlocks.map((block, i) => {
-    const isSmall = block.style === 'legal' || block.style === 'small';
-    const isHeadline = i === 0 && !isSmall;
-    const fontSize = isSmall ? '18px' : isHeadline ? '42px' : '28px';
-    const fontWeight = isSmall ? '400' : '700';
-
-    // Position mapping
-    const positionStyle: Record<string, string | number> = { position: 'absolute', left: '48px', right: '48px' };
-    const pos = block.position || 'center';
-    if (pos.includes('top')) { positionStyle.top = '80px'; }
-    else if (pos.includes('bottom')) { positionStyle.bottom = '120px'; }
-    else { positionStyle.top = '45%'; }
-
+  // If no logo, just convert base64 to buffer and return
+  if (!logoUrl) {
     return {
-      type: 'div',
-      key: `text-${i}`,
-      props: {
-        style: {
-          ...positionStyle,
-          display: 'flex',
-          flexDirection: 'column' as const,
-        },
-        children: [{
-          type: 'div',
-          props: {
-            style: {
-              backgroundColor: 'rgba(0,0,0,0.55)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: '12px',
-              padding: isSmall ? '8px 16px' : '16px 24px',
-              display: 'inline-flex',
-              alignSelf: pos.includes('left') ? 'flex-start' : pos.includes('right') ? 'flex-end' : 'flex-start',
-            },
-            children: [{
-              type: 'span',
-              props: {
-                style: {
-                  color: isHeadline ? accentColor : textColor,
-                  fontSize,
-                  fontWeight,
-                  lineHeight: '1.35',
-                  letterSpacing: isHeadline ? '-0.02em' : '0',
-                },
-                children: block.text,
-              },
-            }],
-          },
-        }],
-      },
+      pngBuffer: Buffer.from(imageBase64, 'base64'),
+      width,
+      height,
     };
-  });
+  }
 
-  // CTA element if present
-  const ctaElement = direction.copy.cta ? {
-    type: 'div',
-    key: 'cta',
-    props: {
-      style: {
-        position: 'absolute' as const,
-        bottom: '48px',
-        left: '48px',
-        right: '48px',
-        display: 'flex',
-        justifyContent: 'center' as const,
-      },
-      children: [{
-        type: 'div',
-        props: {
-          style: {
-            backgroundColor: accentColor,
-            color: '#FFFFFF',
-            padding: '12px 32px',
-            borderRadius: '8px',
-            fontSize: '18px',
-            fontWeight: '700',
-            letterSpacing: '0.02em',
-          },
-          children: direction.copy.cta,
-        },
-      }],
-    },
-  } : null;
+  const font = await loadFont();
 
-  // Logo element
-  const logoElement = logoUrl ? {
-    type: 'img',
-    key: 'logo',
-    props: {
-      src: logoUrl,
-      style: {
-        position: 'absolute' as const,
-        width: '64px',
-        height: '64px',
-        objectFit: 'contain' as const,
-        ...(direction.assets.logo.position?.includes('bottom') ? { bottom: '48px' } : { top: '48px' }),
-        ...(direction.assets.logo.position?.includes('left') ? { left: '48px' } : { right: '48px' }),
-      },
-    },
-  } : null;
-
-  // Assemble the full element tree
-  const children = [
-    ...textElements,
-    ...(ctaElement ? [ctaElement] : []),
-    ...(logoElement ? [logoElement] : []),
-  ];
+  // Position the logo
+  const pos = logoPosition || 'bottom-right';
+  const logoStyle: Record<string, string | number> = {
+    position: 'absolute',
+    width: '64px',
+    height: '64px',
+    objectFit: 'contain',
+  };
+  if (pos.includes('bottom')) logoStyle.bottom = '40px';
+  else logoStyle.top = '40px';
+  if (pos.includes('right')) logoStyle.right = '40px';
+  else logoStyle.left = '40px';
 
   const element = {
     type: 'div',
@@ -182,31 +70,33 @@ export async function compositeImage(options: CompositeOptions): Promise<Composi
         height: `${height}px`,
         position: 'relative' as const,
         display: 'flex',
-        flexDirection: 'column' as const,
-        backgroundImage: `url(data:${backgroundMimeType};base64,${backgroundBase64})`,
+        backgroundImage: `url(data:${imageMimeType};base64,${imageBase64})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       },
-      children,
+      children: [{
+        type: 'img',
+        key: 'logo',
+        props: {
+          src: logoUrl,
+          style: logoStyle,
+        },
+      }],
     },
   };
 
-  // Render to SVG via Satori
   const svg = await satori(element as unknown as React.ReactNode, {
     width,
     height,
-    fonts: [
-      { name: 'Inter', data: fonts.regular, weight: 400, style: 'normal' as const },
-      { name: 'Inter', data: fonts.bold, weight: 700, style: 'normal' as const },
-    ],
+    fonts: [{ name: 'Inter', data: font, weight: 400, style: 'normal' as const }],
   });
 
-  // Render SVG to PNG via resvg
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: 'width' as const, value: width },
-  });
+  const resvg = new Resvg(svg, { fitTo: { mode: 'width' as const, value: width } });
   const pngData = resvg.render();
-  const pngBuffer = pngData.asPng();
 
-  return { pngBuffer: Buffer.from(pngBuffer), width, height };
+  return {
+    pngBuffer: Buffer.from(pngData.asPng()),
+    width,
+    height,
+  };
 }
