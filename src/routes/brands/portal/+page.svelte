@@ -18,20 +18,21 @@
   import LaunchModal from '$lib/components/brands/LaunchModal.svelte';
   import BrandProfile from '$lib/components/brands/BrandProfile.svelte';
   import BrandOsDashboard from '$lib/components/brands/BrandOsDashboard.svelte';
+  import ContentAutomation from '$lib/components/brands/ContentAutomation.svelte';
   import type { BrandOsDashboard as BrandOsDashboardType } from '$lib/types/brand-os';
 
   export let data: { brandSessionValid: boolean; brandProfile: Record<string, unknown> | null };
 
   // Read tab from URL param (set by editorial shell nav)
-  $: urlTab = $page.url.searchParams.get('tab') as 'content' | 'creators' | 'profile' | null;
-  let portalTab: 'content' | 'creators' | 'profile' = data.brandProfile ? 'content' : 'creators';
+  $: urlTab = $page.url.searchParams.get('tab') as 'content' | 'creators' | 'profile' | 'automation' | null;
+  let portalTab: 'content' | 'creators' | 'profile' | 'automation' = data.brandProfile ? 'content' : 'creators';
   let osDashboard: BrandOsDashboardType | null = null;
   let osLoading = false;
   let osError = '';
   let osSyncing = false;
 
   // URL tab param handled by reactive block above
-  $: if (urlTab && ['content', 'creators', 'profile'].includes(urlTab)) {
+  $: if (urlTab && ['content', 'creators', 'profile', 'automation'].includes(urlTab)) {
     portalTab = urlTab;
   }
 
@@ -943,6 +944,9 @@
 
     {:else if portalTab === 'profile' && data.brandProfile}
       <BrandProfile />
+
+    {:else if portalTab === 'automation' && data.brandProfile}
+      <ContentAutomation />
 
     {:else if showManualSearch}
     <div class="manual-search-header">
