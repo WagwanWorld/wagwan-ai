@@ -84,15 +84,23 @@
         credentials: 'include',
         body: formData,
       });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Upload failed (${res.status})`);
+      }
       const data = await res.json();
-      const newAssets: UploadedAsset[] = (data.uploads || []).map((u: { url: string; mediaType: string; fileName: string }) => ({
+      if (data.errors?.length) {
+        uploadError = data.errors.map((e: { file: string; error: string }) => `${e.file}: ${e.error}`).join(', ');
+      }
+      const newAssets: UploadedAsset[] = (data.uploads || []).map((u: { url: string; mediaType: string; fileName?: string; gcsPath?: string }) => ({
         gcsUrl: u.url,
         mediaType: u.mediaType,
-        fileName: u.fileName,
+        fileName: u.fileName || u.gcsPath?.split('/').pop() || 'asset',
       }));
+      if (newAssets.length === 0 && data.errors?.length) {
+        throw new Error(uploadError || 'All files failed to upload');
+      }
       uploadedAssets = [...uploadedAssets, ...newAssets];
-      // Stay on upload so user sees the "Generate" button — don't auto-advance
       currentStep = 'upload';
     } catch (e) {
       uploadError = e instanceof Error ? e.message : 'Upload failed';

@@ -25,8 +25,8 @@ function getStorage(): Storage {
 const BUCKET_NAME = 'wagwan-ai';
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;   // 8MB
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024;  // 100MB
-const ALLOWED_IMAGE_TYPES = ['image/jpeg'];
-const ALLOWED_VIDEO_TYPES = ['video/mp4'];
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
 
 export interface UploadResult {
   url: string;

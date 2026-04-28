@@ -18,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
   for (const file of files) {
     try {
       const result = await uploadCreativeToGCS(file, igUserId);
-      results.push(result);
+      results.push({ ...result, fileName: file.name });
     } catch (e) {
       errors.push({ file: file.name, error: e instanceof Error ? e.message : 'Upload failed' });
     }
