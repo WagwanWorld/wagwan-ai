@@ -57,23 +57,33 @@ ALWAYS:
 
 ═══ THE imageModelPrompt FIELD ═══
 
-This is the most important output. It goes DIRECTLY to GPT-4o's image generator alongside the moodboard images. GPT will SEE the references AND read your brief.
+This goes DIRECTLY to GPT-4o alongside the moodboard images. GPT will SEE the references AND read your brief.
 
-Structure it as:
+CRITICAL PROMPT RULES:
+- MAX 250 WORDS. Tight, decisive, no filler. Every sentence is a design decision.
+- ZERO AMBIGUITY. No "or" statements. No "optional". No "depending on". Make every choice.
+- NO CSS SPECS. No point sizes, no pixel measurements, no line-heights. Describe type as character: "massive, architectural, fills the frame" not "80pt condensed."
+- DESIGN RULES FIRST. Start with 3-5 extracted rules from the moodboard, then describe the specific design.
 
-1. MOODBOARD TRANSLATION: "The references show [specific design patterns]. The aesthetic is [specific description]. Key techniques: [list the exact craft decisions you observed]."
+Structure:
 
-2. THIS DESIGN: "Applying that language to this copy: [vivid, specific description of the complete design — every element, how they relate, the spatial logic, the emotional impact]."
+RULES (from moodboard):
+• [3-5 actionable design rules extracted from your moodboard analysis]
+• Example: "Type fills 50%+ of frame", "Max 3 colors", "No photography", "Text IS the design"
 
-3. QUALITY ANCHORS: "This should feel like [cultural reference]. The type should feel [character]. The color should feel [emotion]. The composition should feel [energy]."
+DESIGN:
+[The complete design in ~150 vivid words. ONE clear hero element. Describe spatial relationships, not measurements. Every element is a decision, not a suggestion.]
 
-EXAMPLE (this is the bar):
+FEEL:
+[2 sentences combining cultural reference + emotional quality. Example: "Sagmeister & Walsh poster energy — architectural type, alive color, controlled danger."]
 
-"MOODBOARD: The references show brutalist typographic poster design — heavyweight condensed type at extreme scale dominating solid color fields, geometric slashes creating visual tension, restrained 2-3 color palettes (always including black), and radical type-scale contrast between headlines and body copy. No photography. Text IS the design.
+EXAMPLE (250 words, decisive, no ambiguity):
 
-THIS DESIGN: A blood-red canvas fills the entire frame — deep, vivid, uncompromising. The headline 'YOUR INSTAGRAM. ON AUTOPILOT.' is set in a heavyweight compressed grotesque (think Druk or Impact energy) in stark white, occupying the top 55% of the frame. The period after 'INSTAGRAM.' is intentional — it's a full stop, a mic drop. Below, a sharp diagonal cut — the red gives way to pure black at a 15° angle, creating a dynamic tension line. In the black zone, body copy sits in thin, airy sans-serif — regular weight, a whisper after the headline's shout. The CTA 'LINK IN BIO' sits in a small pill button with a red background, floating in the lower quarter — it's confident, not desperate. A thin white horizontal rule separates headline from body, adding structural discipline to the raw energy. The overall composition has warehouse-poster energy — streetwear meets Swiss precision. Only three colors: red, black, white. No decoration. Pure intent.
+"RULES: Type fills 55% of the frame. Maximum 3 colors (red, black, white). No photography. Text IS the design. Headline in condensed heavyweight, body in thin regular — radical scale contrast.
 
-QUALITY: This should feel like a Sagmeister & Walsh poster. The type should feel architectural — like the letters could hold weight. The red should feel alive, not corporate. The composition should feel controlled but dangerous, like it might break its own grid."`;
+DESIGN: Blood-red canvas, entire frame, vivid and uncompromising. Headline 'YOUR INSTAGRAM. ON AUTOPILOT.' in massive white condensed sans-serif — architectural, fills the top half, left-aligned, bleeds close to the frame edge. A sharp diagonal white slash cuts across the midpoint at 15 degrees — geometric tension, breaking the grid with confidence. Below the slash: pure black. Body copy 'Connect in 2 minutes. We handle everything. You run the business.' sits small and thin in the black zone, right-aligned — a whisper after the headline's shout. CTA 'LINK IN BIO' in a red pill button at bottom-center — confident, not desperate. One thin white horizontal rule below the headline adds Swiss discipline. No decoration. Every element load-bearing.
+
+FEEL: Sagmeister & Walsh poster for a techno event. Type feels like it could hold weight. Red feels alive, not corporate. Composition is controlled danger — precision with edge."`;
 
 export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no markdown fences):
 {
@@ -111,7 +121,7 @@ export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no ma
     "locked": []
   },
   "whyThisWorks": ["connects design choices to moodboard patterns and copy energy"],
-  "imageModelPrompt": "THE COMPLETE DESIGN BRIEF — structured as: 1) MOODBOARD TRANSLATION (what you extracted from the references), 2) THIS DESIGN (vivid description of the complete post), 3) QUALITY ANCHORS (cultural references, emotional descriptors). See the example in the system prompt. This must be the most detailed, specific, vivid design brief you've ever written."
+  "imageModelPrompt": "MAX 250 WORDS. Structure: RULES (3-5 moodboard rules) → DESIGN (vivid, decisive, ~150 words) → FEEL (2 sentences). NO ambiguity, NO 'or' statements, NO CSS specs. See system prompt example. Every sentence is a design decision."
 }`;
 
 export interface CreativeDirection {
