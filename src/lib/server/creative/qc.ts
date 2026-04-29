@@ -1,18 +1,28 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from '$env/dynamic/private';
 
+export interface QCFix {
+  type: 'add_contrast_backing' | 'adjust_exposure' | 'add_vignette' | 'sharpen_region';
+  region?: string;
+  opacity?: number;
+  delta?: number;
+}
+
 export interface QCReport {
+  verdict: 'ship' | 'fix' | 'reject';
   textLegible: boolean;
   logoOk: boolean;
   paletteOk: boolean;
   safeZoneOk: boolean;
   issues: string[];
+  fixes: QCFix[];
+  rejectReason: string;
   passed: boolean;
 }
 
 /**
- * Run a QC pass on the final PNG using Claude Haiku with vision.
- * Checks: text legibility, logo presence, palette accuracy, safe zone compliance.
+ * Three-bucket QC triage using Claude Haiku vision.
+ * SHIP → proceed. FIX → apply Sharp post-processing (free). REJECT → one retry (capped).
  */
 export async function runQC(
   imageBase64: string,
@@ -24,7 +34,7 @@ export async function runQC(
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 500,
+    max_tokens: 600,
     messages: [{
       role: 'user',
       content: [
@@ -34,15 +44,26 @@ export async function runQC(
         },
         {
           type: 'text',
-          text: `Check this Instagram creative (4:5, 1080x1350) for quality issues.
+          text: `Review this Instagram creative (4:5) and triage:
 
-1. Is all text legible and correctly spelled? Look for garbled, overlapping, or cut-off text.
-2. Is there a logo or brand mark visible, approximately in the ${expectedLogoPosition} area? (If no logo was expected, mark logoOk as true.)
-3. Are the dominant colors approximately matching this palette: ${expectedPalette.join(', ')}? (Within reasonable creative interpretation, not exact match.)
-4. Is any important text inside the Instagram safe zone violation area (top 250px or bottom 340px where UI overlays appear)?
+SHIP — looks good. Text crisp, colors match, composition clean.
 
-Return JSON only, no markdown:
-{"textLegible": true/false, "logoOk": true/false, "paletteOk": true/false, "safeZoneOk": true/false, "issues": ["issue1"]}`,
+FIX — minor issues fixable with post-processing (prefer this over reject):
+- Low text contrast → {"type":"add_contrast_backing","region":"lower_third","opacity":0.4}
+- Too bright/dark area → {"type":"adjust_exposure","region":"center","delta":-0.2}
+- Lacks focus → {"type":"add_vignette"}
+- Slightly soft → {"type":"sharpen_region"}
+Regions: upper_third, lower_third, center, full, upper_left, upper_right, lower_left, lower_right
+
+REJECT — only for unfixable: garbled text, wrong palette entirely, severe artifacts, broken composition.
+
+Expected palette: ${expectedPalette.join(', ')}
+Logo expected: ${expectedLogoPosition}
+
+JSON only:
+{"verdict":"ship|fix|reject","textLegible":bool,"logoOk":bool,"paletteOk":bool,"safeZoneOk":bool,"issues":["..."],"fixes":[...],"rejectReason":"if reject"}
+
+PREFER fix over reject — post-processing is free.`,
         },
       ],
     }],
@@ -55,13 +76,24 @@ Return JSON only, no markdown:
 
   try {
     const cleaned = text.replace(/^```json?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-    const report = JSON.parse(cleaned) as Omit<QCReport, 'passed'>;
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+
     return {
-      ...report,
-      passed: report.textLegible && report.logoOk && report.paletteOk && report.safeZoneOk,
+      verdict: parsed.verdict || 'ship',
+      textLegible: parsed.textLegible ?? true,
+      logoOk: parsed.logoOk ?? true,
+      paletteOk: parsed.paletteOk ?? true,
+      safeZoneOk: parsed.safeZoneOk ?? true,
+      issues: parsed.issues || [],
+      fixes: parsed.fixes || [],
+      rejectReason: parsed.rejectReason || '',
+      passed: parsed.verdict === 'ship' || parsed.verdict === 'fix',
     };
   } catch {
-    // If QC parsing fails, pass by default (don't block generation)
-    return { textLegible: true, logoOk: true, paletteOk: true, safeZoneOk: true, issues: ['QC parse failed'], passed: true };
+    return {
+      verdict: 'ship', textLegible: true, logoOk: true, paletteOk: true, safeZoneOk: true,
+      issues: ['QC parse failed'], fixes: [], rejectReason: '', passed: true,
+    };
   }
 }

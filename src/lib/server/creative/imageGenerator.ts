@@ -59,6 +59,32 @@ function buildPrompt(direction: CreativeDirection, brandPalette: string[], userO
   // Visual elements
   const visualElements = d.visualElements || '';
 
+  // Structured text hierarchy from copy decomposition + creative direction
+  const th = direction.textHierarchy;
+  const textSection = th ? `
+TEXT TO RENDER (these are the EXACT words — render them precisely):
+${th.hook?.text ? `→ HOOK (dominant): "${th.hook.text}" — ${th.hook.treatment}` : ''}
+${th.body?.text ? `→ BODY (supporting): "${th.body.text}" — ${th.body.treatment}` : ''}
+${th.cta?.text ? `→ CTA (action): "${th.cta.text}" — ${th.cta.treatment}` : ''}
+` : `TEXT TO RENDER:\n${textLines.join('\n')}`;
+
+  // Typography direction
+  const typoDir = direction.typography;
+  const typoSection = typoDir
+    ? `TYPOGRAPHY: ${typoDir.character}. Mood: ${typoDir.mood}.`
+    : `TYPE: ${d.typography || 'Bold sans-serif headlines, light body copy'}`;
+
+  // Logo
+  const logoSection = options?.logoUrl
+    ? `LOGO: Place the provided brand logo in the ${direction.logoPlacement?.position || direction.assets.logo?.position || 'bottom-right'} corner. ${direction.logoPlacement?.size || 'Small'}, clean, unmodified.`
+    : `LOGO: Leave space in ${direction.logoPlacement?.position || direction.assets.logo?.position || 'bottom-right'} for a logo.`;
+
+  // Negative constraints
+  const constraints = direction.constraints || [];
+  const constraintSection = constraints.length > 0
+    ? `\nAVOID:\n${constraints.map(c => `✗ ${c}`).join('\n')}`
+    : '';
+
   return `Create a production-ready Instagram post (4:5 portrait, 1080×1350).
 
 ${moodboardSection}
@@ -68,40 +94,24 @@ ${designBrief}
 
 COLORS: ${d.palette.map(c => `${c.hex} (${c.feel || c.role})`).join(' | ')}
 
-${visualElements ? `VISUAL ELEMENTS & GRAPHIC RICHNESS:\n${visualElements}\n\nThese elements should feel NATIVE to the brand — like they've always been part of this visual system. Integrate them into the composition as design elements, not afterthoughts. Icons, emojis, illustrations, textures should ADD depth and personality while reinforcing the brand's visual language.\n` : ''}
+${visualElements ? `VISUAL ELEMENTS: ${visualElements}\nIntegrate these as native brand elements — not afterthoughts.\n` : ''}
 
-TEXT TO RENDER:
-${textLines.join('\n')}
+${textSection}
 
-TYPE DIRECTION: ${d.typography || 'Bold sans-serif headlines, light body copy'}
+${typoSection}
 
-LOGO: ${options?.logoUrl ? `Place the provided brand logo image in the ${direction.assets.logo?.position || 'bottom-right'} corner. Small, subtle, clean. Use the logo EXACTLY as provided — do not redraw or modify it.` : `Leave space in the ${direction.assets.logo?.position || 'bottom-right'} corner for a logo.`}
+${logoSection}
+${constraintSection}
 
-═══ VISUAL RICHNESS STANDARD ═══
+═══ SELF-CRITIQUE (check before rendering) ═══
+1. BRAND FIT — looks native to this brand's feed and moodboard?
+2. TEXT — every character crisp, perfectly formed, zero garbled letters?
+3. HIERARCHY — instantly clear: hook first, body second, CTA third?
+4. INTEGRATION — text is PART of the design, not pasted on top?
+5. SCROLL-STOP — would a real person pause for this? Not a template?
+6. RESTRAINT — every element earns its place?
 
-This post must feel like it was designed by someone who DEEPLY understands this brand — not just the colors and fonts, but the CULTURE, the ENERGY, the ATTITUDE.
-
-- Use icons, emojis, or graphic elements if they ADD to the composition (not clutter it)
-- Textures and subtle patterns give flat color fields DEPTH and LIFE
-- Every visual element should feel like it BELONGS to this brand's world
-- If you remove any element and the design feels the same, that element wasn't needed
-- The final output should scroll-stop because it has PERSONALITY, not just structure
-
-═══ SELF-CRITIQUE CHECKLIST ═══
-
-1. BRAND FIT: Would this look native on this brand's Instagram feed? Does it feel like the SAME designer made this and the moodboard references? If not, adjust.
-
-2. TEXT QUALITY: Every character crisp, perfectly formed. Zero garbled text. If composition is too complex for clean text, simplify.
-
-3. HIERARCHY: Instantly clear what to read first, second, third. Headline DOMINATES.
-
-4. INTEGRATION: Does the text feel DESIGNED INTO the composition — or pasted on top? Text and visual should be one unified design, not layers.
-
-5. SCROLL-STOP: Would this actually make someone stop scrolling? If it looks like a template or an AI generated it, it's not good enough. Push it.
-
-6. RESTRAINT: Is every element earning its place? Could you remove something and make it better? Less is almost always more.
-
-Only render when all 6 checks pass. Quality over speed.`;
+Only render when all 6 pass.`;
 }
 
 /**

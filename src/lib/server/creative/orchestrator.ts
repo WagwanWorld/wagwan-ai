@@ -2,9 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { env } from '$env/dynamic/private';
 import { CREATIVE_DIRECTOR_SYSTEM_PROMPT, DIRECTION_OUTPUT_SCHEMA, type CreativeDirection } from './directionPrompt';
 import { assembleBrandBrief, logCost, type BrandBrief } from './contextBuilder';
+import { decomposeCopy } from './copyDecomposer';
 import { generateImage } from './imageGenerator';
-// Satori compositor removed — GPT handles everything including logo
 import { runQC } from './qc';
+import { applyFixes } from './postProcessor';
 import { uploadCreativeToGCS } from '$lib/server/marketplace/gcsUpload';
 
 // ─── JSON extraction helper ───
@@ -176,9 +177,12 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
     } catch { /* skip */ }
   }
 
+  // Decompose copy into structured hierarchy (rule-based, no LLM cost)
+  const decomposed = decomposeCopy(copy);
+
   let processedCopy = copy;
   if (lockedPhrases?.length) {
-    processedCopy += `\nLOCKED TEXT (compositor will render verbatim): ${lockedPhrases.join(', ')}`;
+    processedCopy += `\nLOCKED TEXT: ${lockedPhrases.join(', ')}`;
   }
 
   directionParts.push({
@@ -187,11 +191,20 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
 ${brandVoice ? `\nBRAND VOICE: ${brandVoice}` : ''}
 ---
 
-COPY TO DESIGN FOR:
-${processedCopy}
+COPY (pre-decomposed into hierarchy):
+• HOOK (attention-grabber, render as dominant headline): "${decomposed.hook}"
+${decomposed.body ? `• BODY (supporting text, render smaller): "${decomposed.body}"` : ''}
+${decomposed.cta ? `• CTA (call to action, render as distinct element): "${decomposed.cta}"` : ''}
+${decomposed.hashtags.length ? `• HASHTAGS: ${decomposed.hashtags.join(' ')}` : ''}
+
+RAW COPY: ${processedCopy}
 ${caption ? `\nCAPTION: ${caption}` : ''}${brief ? `\nBRIEF: ${brief}` : ''}
 
 FORMAT: 4:5 static (1080x1350)
+
+IMPORTANT: In the imageModelPrompt, include the EXACT text to render in quotes. GPT renders quoted text more reliably. Weave the hook, body, and CTA into the design description with clear emphasis on hierarchy.
+
+Also output "textHierarchy", "typography", "logoPlacement", and "constraints" fields (see schema).
 
 YOUR TASK: Read the copy first. Feel its energy. Then design something that EMBODIES that energy.
 
@@ -329,28 +342,46 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
   ].filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
 
   // Generate COMPLETE creative via OpenAI gpt-image-1
-  // GPT handles EVERYTHING: visuals, text, AND logo placement
-  const imageResult = await generateImage(direction, {
-    styleReferences: allStyleRefs,
-    aspectRatio: '4:5',
-    brandPalette: brandPaletteHexes,
-    userPromptOverride: imagePrompt,
-    quality: 'high',
-    logoUrl: logoUrl || undefined,
-  });
+  // GPT designs everything holistically: visuals, text, logo — one unified composition
+  async function generateAndQC(attempt: number): Promise<{ base64: string; qcReport: ReturnType<typeof runQC> extends Promise<infer T> ? T : never; cost: number }> {
+    let cost = 0;
 
-  const imgCost = imageResult.quality === 'high' ? 0.19 : imageResult.quality === 'medium' ? 0.07 : 0.02;
-  renderCost += imgCost;
-  await logCost(brandIgId, generationId, 'image_generation', imageResult.model, 0, 0, imgCost, 1);
+    const imageResult = await generateImage(direction, {
+      styleReferences: allStyleRefs,
+      aspectRatio: '4:5',
+      brandPalette: brandPaletteHexes,
+      userPromptOverride: imagePrompt,
+      quality: 'high',
+      logoUrl: logoUrl || undefined,
+    });
 
-  // No Satori composite — GPT renders everything including logo
-  const finalBase64 = imageResult.base64;
+    const imgCost = imageResult.quality === 'high' ? 0.19 : imageResult.quality === 'medium' ? 0.07 : 0.02;
+    cost += imgCost;
+    await logCost(brandIgId, generationId, 'image_generation', imageResult.model, 0, 0, imgCost, 1);
 
-  // QC pass
-  const paletteHexes = direction.designDirection.palette.map((c) => c.hex);
-  const qcReport = await runQC(finalBase64, 'image/png', paletteHexes, direction.assets.logo?.position || 'bottom-right');
-  renderCost += 0.003;
-  await logCost(brandIgId, generationId, 'qc', 'claude-haiku-4-5-20251001', 0, 0, 0.003);
+    let currentBase64 = imageResult.base64;
+
+    // Three-bucket QC triage
+    const paletteHexes = direction.designDirection.palette.map((c) => c.hex);
+    const qcReport = await runQC(currentBase64, 'image/png', paletteHexes, direction.logoPlacement?.position || direction.assets.logo?.position || 'bottom-right');
+    cost += 0.003;
+    await logCost(brandIgId, generationId, 'qc', 'claude-haiku-4-5-20251001', 0, 0, 0.003);
+
+    if (qcReport.verdict === 'fix' && qcReport.fixes.length > 0) {
+      // Apply programmatic fixes with Sharp — FREE, no API cost
+      currentBase64 = await applyFixes(currentBase64, qcReport.fixes);
+      qcReport.issues.push(`Applied ${qcReport.fixes.length} post-processing fix(es)`);
+      qcReport.passed = true;
+    } else if (qcReport.verdict === 'reject' && attempt === 0) {
+      // ONE retry, capped — regenerate image only (not the whole pipeline)
+      return generateAndQC(1);
+    }
+
+    return { base64: currentBase64, qcReport, cost };
+  }
+
+  const { base64: finalBase64, qcReport, cost: genCost } = await generateAndQC(0);
+  renderCost += genCost;
 
   // Upload to GCS
   const finalBuffer = Buffer.from(finalBase64, 'base64');
