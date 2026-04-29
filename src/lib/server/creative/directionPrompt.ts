@@ -32,6 +32,24 @@ COLLAGE — Layered elements, mixed textures, controlled chaos. Works for: creat
 
 POSTER — Full-bleed color with bold typographic hierarchy. Street poster energy. Works for: announcements, calls-to-action, brand manifestos.
 
+═══ STEP 2B: VISUAL RICHNESS — BEYOND PURE TYPOGRAPHY ═══
+
+Great brand posts aren't just text on color. Study the moodboard and brand posts — then decide which visual elements to include. These add DEPTH, TEXTURE, and PERSONALITY:
+
+ICONS & SYMBOLS — Minimal line icons, brand-relevant symbols (📱⚡🔥✦→), geometric marks. Use when: the copy references features, tools, or actions. Place as accent elements, not decoration.
+
+EMOJIS AS DESIGN — Enlarged emojis used as graphic elements (not inline text). A giant 🔥 as a background element, ⚡ as an accent mark. Use when: brand voice is playful, streetwear, or youth-culture-coded.
+
+PHOTOGRAPHY — Editorial-style, NOT stock. Styled product shots, textured surfaces, abstract crops. Use when: moodboard shows photographic references. Integrate with type, don't put text ON TOP of photos.
+
+ILLUSTRATIONS & GRAPHICS — Flat vector elements, hand-drawn accents, abstract shapes, line art. Use when: brand aesthetic is creative, playful, or editorial. Layer WITH type, not separate.
+
+TEXTURES & PATTERNS — Grain overlays, halftone dots, noise, subtle grid patterns, gradient meshes. Use when: you want depth and tactile quality. Apply subtly — texture should be felt, not seen.
+
+OBJECTS & PROPS — Relevant real-world objects (phones, calendars, coffee cups, headphones) rendered as design elements. Use when: copy references specific tools or lifestyle.
+
+DECIDE based on what the brand's feed and moodboard ACTUALLY show. If the brand uses illustration, use illustration. If it's purely typographic, stay typographic. If it mixes photography with bold type, do that. DON'T add random elements that aren't part of the brand's visual vocabulary.
+
 ═══ STEP 3: DESIGN THE POST ═══
 
 Now design. The copy's rhythm dictates the visual rhythm:
@@ -98,7 +116,7 @@ export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no ma
     "layout": "Spatial composition in relational terms. How elements relate to each other and to the frame.",
     "palette": [{ "hex": "#XXXXXX", "role": "background|type|accent|secondary", "feel": "emotional color description" }],
     "typography": "Type as CHARACTER. What does the headline FEEL like? What's the contrast between headline and body?",
-    "visualElements": "Graphic elements: lines, shapes, textures, patterns. Or empty if pure type.",
+    "visualElements": "Icons, emojis-as-design, geometric shapes, textures, illustrations, objects, photography crops. Describe WHAT and WHY each adds to the composition. Example: 'Giant ⚡ at 200px as background texture in top-right — adds energy. Halftone dot pattern at 5% opacity across red field — gives tactile depth. Small phone icon next to CTA — reinforces the app connection.'",
     "imagery": "Photography/illustration direction. Empty if not needed.",
     "textPlacement": {
       "headline": { "zone": "dominates-top|fills-center|anchored-bottom", "alignment": "left|center|right" },

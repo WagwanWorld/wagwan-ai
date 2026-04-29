@@ -56,6 +56,9 @@ function buildPrompt(direction: CreativeDirection, brandPalette: string[], userO
   };
   const pattern = direction.designPattern || 'poster';
 
+  // Visual elements
+  const visualElements = d.visualElements || '';
+
   return `Create a production-ready Instagram post (4:5 portrait, 1080×1350).
 
 ${moodboardSection}
@@ -65,6 +68,8 @@ ${designBrief}
 
 COLORS: ${d.palette.map(c => `${c.hex} (${c.feel || c.role})`).join(' | ')}
 
+${visualElements ? `VISUAL ELEMENTS & GRAPHIC RICHNESS:\n${visualElements}\n\nThese elements should feel NATIVE to the brand — like they've always been part of this visual system. Integrate them into the composition as design elements, not afterthoughts. Icons, emojis, illustrations, textures should ADD depth and personality while reinforcing the brand's visual language.\n` : ''}
+
 TEXT TO RENDER:
 ${textLines.join('\n')}
 
@@ -72,15 +77,23 @@ TYPE DIRECTION: ${d.typography || 'Bold sans-serif headlines, light body copy'}
 
 Logo space: ${direction.assets.logo?.position || 'bottom-right'} corner (small, will be added later).
 
-═══ BEFORE YOU RENDER — SELF-CRITIQUE CHECKLIST ═══
+═══ VISUAL RICHNESS STANDARD ═══
 
-Imagine you've created the image. Now review it as a creative director:
+This post must feel like it was designed by someone who DEEPLY understands this brand — not just the colors and fonts, but the CULTURE, the ENERGY, the ATTITUDE.
 
-1. MOODBOARD MATCH: Does this feel like it belongs in the same world as the reference images? Same level of craft? Same design language? If not, adjust.
+- Use icons, emojis, or graphic elements if they ADD to the composition (not clutter it)
+- Textures and subtle patterns give flat color fields DEPTH and LIFE
+- Every visual element should feel like it BELONGS to this brand's world
+- If you remove any element and the design feels the same, that element wasn't needed
+- The final output should scroll-stop because it has PERSONALITY, not just structure
 
-2. TEXT QUALITY: Is every single character crisp, perfectly formed, properly kerned? Any garbled or overlapping text? If so, simplify the composition to make text cleaner.
+═══ SELF-CRITIQUE CHECKLIST ═══
 
-3. HIERARCHY: Can you instantly tell what to read first, second, third? The headline should DOMINATE. If everything is the same size, it fails.
+1. BRAND FIT: Would this look native on this brand's Instagram feed? Does it feel like the SAME designer made this and the moodboard references? If not, adjust.
+
+2. TEXT QUALITY: Every character crisp, perfectly formed. Zero garbled text. If composition is too complex for clean text, simplify.
+
+3. HIERARCHY: Instantly clear what to read first, second, third. Headline DOMINATES.
 
 4. INTEGRATION: Does the text feel DESIGNED INTO the composition — or pasted on top? Text and visual should be one unified design, not layers.
 
