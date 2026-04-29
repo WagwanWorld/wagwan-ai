@@ -235,7 +235,7 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
     try {
       directionResponse = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 3000,
+        max_tokens: 4096,
         system: CREATIVE_DIRECTOR_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: directionParts }],
       });
