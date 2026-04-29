@@ -158,7 +158,7 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
   directionParts.push({
     type: 'text',
     text: `${buildBrandContextPrompt(brandBrief)}
-${brandVoice ? `\nBRAND VOICE OVERRIDE: ${brandVoice} — Apply this tone throughout the creative direction, copy, and caption.` : ''}
+${brandVoice ? `\nBRAND VOICE: ${brandVoice}` : ''}
 ---
 
 COPY TO DESIGN FOR:
@@ -167,12 +167,19 @@ ${caption ? `\nCAPTION: ${caption}` : ''}${brief ? `\nBRIEF: ${brief}` : ''}
 
 FORMAT: 4:5 static (1080x1350)
 
-CRITICAL — THE imageModelPrompt FIELD:
-This is the MOST important field. It will be sent to Gemini (Nano Banana) which generates the COMPLETE creative — both the visual scene AND renders the text on the image.
-Write it as a detailed, specific scene description — like you're briefing a photographer or art director.
-Include: scene/subject, lighting, camera angle, color palette (use the brand hex codes), mood, texture, style.
-The on-image text from copy.onImage will be sent separately to Gemini — so focus on the VISUAL ENVIRONMENT in this prompt.
-Example: "Clean dark charcoal (#1A1A1A) background with subtle gradient to deep navy. Geometric accent shapes in brand orange (#E8833A) — thin diagonal lines. Soft studio lighting, matte texture, premium minimalist feel. Generous negative space in center for text."
+YOUR TASK: Design this post like a senior art director would. NOT a stock photo with text.
+
+The imageModelPrompt field is a DESIGN SPECIFICATION — describe the exact visual layout, color fields, typography placement, and graphic elements. Think of it as a Figma frame description, not a photography brief.
+
+DO NOT describe a "scene" (nightclub, office, coffee shop). Instead describe a DESIGN:
+- Canvas color and spatial divisions
+- Where each text block sits (size, weight, color, position)
+- Graphic elements (lines, shapes, patterns) if any
+- How contrast and readability are achieved through layout, not overlays
+
+GOOD: "Canvas: solid black (#0A0A0A). Top 55%: headline in white (#FFF), bold condensed, ~80pt, left-aligned with 48px margin. Thin horizontal rule in brand red (#E8464A) below headline. Bottom 35%: body text in grey (#888), regular weight, ~20pt. CTA pill in bottom-right, red background, white text."
+
+BAD: "A dramatic nightclub scene with neon lights and a DJ mixing music..."
 
 ${DIRECTION_OUTPUT_SCHEMA}`,
   });
