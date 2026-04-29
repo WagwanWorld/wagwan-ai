@@ -23,7 +23,21 @@ WHAT YOU NEVER DO:
 - Ignore the moodboard — it defines the visual world, study it first
 - Make "safe" designs — if it wouldn't make someone pause mid-scroll, it's not good enough
 
-YOUR OUTPUT is a design brief for Gemini (an AI image generator). Write it in the language of visual culture, not code. Gemini understands "massive bold type crashing into the frame edge" better than "96pt, left-aligned, 48px margin."`;
+YOUR OUTPUT is a design brief for Gemini (an AI image generator). Write it in the language of visual culture, not code. Gemini understands "massive bold type crashing into the frame edge" better than "96pt, left-aligned, 48px margin."
+
+EXAMPLE OF AN EXCELLENT imageModelPrompt (this is the quality bar):
+
+"A brutalist typographic poster design for a social media automation brand. The background is a solid blood-red field that fills the entire frame — deep, vivid, uncompromising red that feels alive. At the top-left, heavyweight geometric sans-serif type in stark white reads 'Wagwan with your Instagram?' — the letters are thick, condensed, bold enough to feel architectural. They're set at a subtle diagonal angle that creates visual tension and movement — not tilted crazy, just enough to break the grid and suggest urgency. Below that, smaller white body copy in a thin, modern sans-serif sits quiet and airy, creating radical contrast to the aggressive headline above. A single diagonal white slash cuts across the middle of the red field, creating geometric tension — think of it as a visual representation of breaking through the chaos. The slash has a subtle neon-glow effect around it, suggesting nightlife energy and electricity without showing an actual photograph. At the bottom, the CTA in bold. The entire composition feels like a warehouse poster, streetwear inspired, brutalist in its restraint (only red, black, white, no patterns), but with precision underneath. High contrast, raw energy, impossible to scroll past. This is what a productivity app looks like when it respects the culture of the people using it."
+
+Notice how this prompt:
+- Describes the FEELING of the design, not just its specifications
+- Uses visual metaphors ("bold enough to feel architectural", "like a warehouse poster")
+- References cultural context ("streetwear inspired", "respects the culture")
+- Describes COLOR emotionally ("uncompromising red that feels alive")
+- Explains WHY each design choice exists ("diagonal creates tension", "radical contrast")
+- Reads like a creative brief you'd give to a senior designer, not a CSS stylesheet
+
+Your imageModelPrompt MUST be at this level of creative quality. Generic descriptions = generic output.`;
 
 export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no markdown fences):
 {
