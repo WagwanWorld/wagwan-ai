@@ -85,33 +85,25 @@ ${th.cta?.text ? `→ CTA (action): "${th.cta.text}" — ${th.cta.treatment}` : 
     ? `\nAVOID:\n${constraints.map(c => `✗ ${c}`).join('\n')}`
     : '';
 
-  return `Create a production-ready Instagram post (4:5 portrait, 1080×1350).
+  // The design brief IS the prompt. Everything else is supporting context.
+  // Keep it tight — GPT works best with focused, vivid direction.
+  const constraintsLine = constraints.length > 0
+    ? `\nAVOID: ${constraints.slice(0, 3).join('. ')}.`
+    : '';
 
-${moodboardSection}
-DESIGN PATTERN: ${patternDesc[pattern] || patternDesc['poster']}
+  return `Instagram post, 4:5 portrait, 1080×1350. Production-ready, senior designer quality.
 
 ${designBrief}
 
-COLORS: ${d.palette.map(c => `${c.hex} (${c.feel || c.role})`).join(' | ')}
+TEXT (render these EXACT words, crisp and perfectly formed):
+${th?.hook?.text ? `"${th.hook.text}" — HEADLINE, dominant, largest element` : (textLines[0] || '')}
+${th?.body?.text ? `"${th.body.text}" — body, smaller, supporting` : (textLines[1] || '')}
+${th?.cta?.text ? `"${th.cta.text}" — CTA, bold accent` : ''}
 
-${visualElements ? `VISUAL ELEMENTS: ${visualElements}\nIntegrate these as native brand elements — not afterthoughts.\n` : ''}
+Colors: ${palette.slice(0, 4).join(', ')}
+${logoSection}${constraintsLine}
 
-${textSection}
-
-${typoSection}
-
-${logoSection}
-${constraintSection}
-
-═══ SELF-CRITIQUE (check before rendering) ═══
-1. BRAND FIT — looks native to this brand's feed and moodboard?
-2. TEXT — every character crisp, perfectly formed, zero garbled letters?
-3. HIERARCHY — instantly clear: hook first, body second, CTA third?
-4. INTEGRATION — text is PART of the design, not pasted on top?
-5. SCROLL-STOP — would a real person pause for this? Not a template?
-6. RESTRAINT — every element earns its place?
-
-Only render when all 6 pass.`;
+Match the moodboard references above. Every character legible. Text integrated into the design, not pasted on.`;
 }
 
 /**
