@@ -62,6 +62,8 @@ export const POST: RequestHandler = async ({ request }) => {
       generationId: generation.id,
       // Creative direction (shown to user)
       concept: result.direction.concept,
+      designPattern: result.direction.designPattern || 'poster',
+      moodboardAnalysis: result.direction.moodboardAnalysis || '',
       designDirection: result.direction.designDirection.layout,
       whyThisWorks: result.direction.whyThisWorks,
       caption: result.direction.copy.caption,
