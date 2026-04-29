@@ -127,7 +127,7 @@ export async function generateImage(
       type: 'input_text',
       text: 'MOODBOARD REFERENCES — these define the design world. Study the design patterns, color architecture, typography treatment, and compositional structure. Your output must match this level of craft:',
     });
-    for (const ref of moodboardRefs.slice(0, 3)) {
+    for (const ref of moodboardRefs.slice(0, 6)) {
       contentBlocks.push({
         type: 'input_image',
         image_url: `data:${ref.mimeType};base64,${ref.base64}`,

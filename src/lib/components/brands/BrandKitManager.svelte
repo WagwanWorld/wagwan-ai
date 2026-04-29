@@ -136,14 +136,14 @@
   function handleMoodboardDrop(e: DragEvent) {
     e.preventDefault();
     dragOverMoodboard = false;
-    if (moodboard.length >= 8) return;
+    if (moodboard.length >= 12) return;
     const files = e.dataTransfer?.files;
     if (files?.length) uploadFile(files[0], 'moodboard');
   }
 
   function handleMoodboardFile(e: Event) {
     const input = e.target as HTMLInputElement;
-    if (input.files?.[0] && moodboard.length < 8) uploadFile(input.files[0], 'moodboard');
+    if (input.files?.[0] && moodboard.length < 12) uploadFile(input.files[0], 'moodboard');
   }
 
   function formatBytes(bytes?: number): string {
@@ -311,7 +311,7 @@
     <div class="bkm-section-hint" style="margin-top: -4px;">Upload images that represent the visual style you want — design inspo, competitor posts, aesthetic references</div>
 
     <!-- Upload zone -->
-    {#if moodboard.length < 8}
+    {#if moodboard.length < 12}
       <div
         class="bkm-drop-zone"
         class:bkm-drop-zone--active={dragOverMoodboard}
@@ -323,7 +323,7 @@
       >
         <div class="bkm-drop-icon">◫</div>
         <div class="bkm-drop-title">Drop reference images here</div>
-        <div class="bkm-drop-hint">JPG, PNG, or WEBP — {moodboard.length}/8 uploaded</div>
+        <div class="bkm-drop-hint">JPG, PNG, or WEBP — {moodboard.length}/12 uploaded</div>
         <label class="bkm-browse-btn">
           Browse files
           <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" on:change={handleMoodboardFile} style="display:none" />

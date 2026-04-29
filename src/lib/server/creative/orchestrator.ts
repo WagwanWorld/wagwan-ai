@@ -143,7 +143,7 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
 
   if (moodboardAssets.length > 0) {
     directionParts.push({ type: 'text', text: `MOODBOARD — These are the creative references chosen by the brand. Study them deeply. Your design MUST feel like it belongs in this visual world. Analyze: color language, typography treatment, composition style, energy level, craft quality, how text and visuals integrate:` });
-    for (const asset of moodboardAssets.slice(0, 3)) {
+    for (const asset of moodboardAssets.slice(0, 6)) {
       try {
         const imgRes = await fetch(asset.url);
         if (imgRes.ok) {
@@ -305,7 +305,7 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
 
   // Fetch moodboard images as base64 — these take priority over brand posts
   const moodboardRefs: Array<{ base64: string; mimeType: string; source?: 'moodboard' | 'brand-post' }> = [];
-  for (const asset of moodboardAssets.slice(0, 4)) {
+  for (const asset of moodboardAssets.slice(0, 6)) {
     try {
       const res = await fetch(asset.url);
       if (res.ok) {
