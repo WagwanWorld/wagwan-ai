@@ -167,19 +167,17 @@ ${caption ? `\nCAPTION: ${caption}` : ''}${brief ? `\nBRIEF: ${brief}` : ''}
 
 FORMAT: 4:5 static (1080x1350)
 
-YOUR TASK: Design this post like a senior art director would. NOT a stock photo with text.
+YOUR TASK: Read the copy first. Feel its energy. Then design something that EMBODIES that energy.
 
-The imageModelPrompt field is a DESIGN SPECIFICATION — describe the exact visual layout, color fields, typography placement, and graphic elements. Think of it as a Figma frame description, not a photography brief.
+The imageModelPrompt is a CREATIVE BRIEF — describe the design in the language of visual culture, not CSS.
 
-DO NOT describe a "scene" (nightclub, office, coffee shop). Instead describe a DESIGN:
-- Canvas color and spatial divisions
-- Where each text block sits (size, weight, color, position)
-- Graphic elements (lines, shapes, patterns) if any
-- How contrast and readability are achieved through layout, not overlays
+GOOD: "Heavyweight condensed type in white smashing across a blood-red canvas — bleeds off the left edge like it can't be contained. The headline IS the design. Body copy sits quiet and small at the bottom, a whisper after a shout. Single diagonal slash in white cuts the red field — creates tension, gives it edge. Streetwear poster energy meets Swiss precision."
 
-GOOD: "Canvas: solid black (#0A0A0A). Top 55%: headline in white (#FFF), bold condensed, ~80pt, left-aligned with 48px margin. Thin horizontal rule in brand red (#E8464A) below headline. Bottom 35%: body text in grey (#888), regular weight, ~20pt. CTA pill in bottom-right, red background, white text."
+BAD: "96pt bold text, left-aligned, 48px margin, on red background #FF0000 with 140% line-height"
 
-BAD: "A dramatic nightclub scene with neon lights and a DJ mixing music..."
+ALSO BAD: "A dramatic nightclub scene with neon lights and a DJ mixing music"
+
+The brief should make someone FEEL the design before they see it.
 
 ${DIRECTION_OUTPUT_SCHEMA}`,
   });

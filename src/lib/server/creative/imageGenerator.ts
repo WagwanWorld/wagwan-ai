@@ -10,143 +10,110 @@ export interface ImageGenResult {
 
 /**
  * Build the Gemini prompt from Claude's direction.
- *
- * KEY INSIGHT: We're asking Gemini to produce a DESIGNED COMPOSITION,
- * not a photo with text. The prompt reads like a design specification,
- * not a scene description.
+ * Written in creative director language, not CSS specifications.
  */
-function buildDesignSpec(direction: CreativeDirection, brandPalette: string[], userOverride?: string): string {
+function buildCreativeBrief(direction: CreativeDirection, brandPalette: string[], userOverride?: string): string {
   const d = direction.designDirection;
-  const palette = brandPalette.length > 0 ? brandPalette : d.palette.map(c => c.hex);
 
-  // If user edited the prompt, use it but append text specs
+  // If user edited the prompt, use theirs + append text info
   if (userOverride) {
+    const textInfo = buildTextInfo(direction);
     return `${userOverride}
 
-${buildTextSpec(direction)}
+${textInfo}
 
-OUTPUT STANDARD: This must look like a production-ready Instagram post designed by a senior designer at a top agency. Not a template. Not AI-looking. A crafted, intentional design where typography and layout are the design.`;
+Render this as a finished, scroll-stopping Instagram post. Production quality. Would make a creative director proud.`;
   }
 
-  const colorMap = d.palette.reduce((acc, c) => { acc[c.role] = c.hex; return acc; }, {} as Record<string, string>);
+  const palette = brandPalette.length > 0 ? brandPalette : d.palette.map(c => c.hex);
+  const colorDescriptions = d.palette.map(c => `${c.hex} (${c.feel || c.role})`).join(', ');
 
   const sections: string[] = [];
 
-  // THE CORE INSTRUCTION
-  sections.push(`Design a production-ready Instagram post (4:5, 1080×1350px).
+  // THE VIBE — sets the emotional context
+  if (d.vibe) {
+    sections.push(`VIBE: ${d.vibe}`);
+  }
 
-THIS IS A DESIGN SPECIFICATION — NOT A PHOTO REQUEST.
-Study the moodboard references above carefully. Replicate their DESIGN LANGUAGE:
-• Layout structure and spatial logic
-• Typography treatment and text-image relationship
-• Color blocking and field division
-• Level of craft and intentionality
-• Overall approach (typographic, graphic, editorial, mixed-media)
+  // VISUAL REFERENCES — tie to culture
+  if (d.references) {
+    sections.push(`STYLE REFERENCE: ${d.references}`);
+  }
 
-DO NOT default to stock photography with text overlaid. The moodboard defines the approach.`);
-
-  // DESIGN APPROACH
-  sections.push(`DESIGN APPROACH: ${d.approach || 'typographic'}
-
-LAYOUT SPECIFICATION:
+  // THE DESIGN — spatial and relational, not pixel-measured
+  sections.push(`DESIGN:
 ${d.layout}
 
-${d.visualElements ? `GRAPHIC ELEMENTS:\n${d.visualElements}` : ''}
-${d.imagery ? `IMAGERY (only if design calls for it):\n${d.imagery}` : ''}`);
+${d.visualElements ? `GRAPHIC ELEMENTS: ${d.visualElements}` : ''}
+${d.imagery || ''}`);
 
-  // COLOR SYSTEM
-  sections.push(`COLOR SYSTEM:
-${d.palette.map(c => `• ${c.role}: ${c.hex}`).join('\n')}
-${palette.length > d.palette.length ? `\nFull brand palette: ${palette.join(', ')}` : ''}
+  // COLOR — emotional, not just hex codes
+  sections.push(`COLOR WORLD: ${colorDescriptions}
+Full palette: ${palette.join(', ')}
+Use color as ARCHITECTURE — big bold fields, not subtle tints. The colors should hit you.`);
 
-Apply these colors architecturally — as large color fields, type colors, and accent elements. Not as tints or overlays on photos.`);
-
-  // TEXT — the most important part
-  sections.push(buildTextSpec(direction));
-
-  // TYPOGRAPHY
+  // TYPE — as character, not specs
   sections.push(`TYPOGRAPHY:
-${d.typography || 'Clean grotesque sans-serif. Heavy weight for headlines, regular for body.'}
+${d.typography}
 
-TYPOGRAPHIC RULES:
-• Every letterform must be crisp, perfectly kerned, and properly anti-aliased
-• Headline type should be LARGE and COMMANDING — it's the focal point of the design
-• Maintain strict baseline alignment and consistent spacing
-• Type size contrast: headline should be 3-4x larger than body text
-• The typography itself should create visual interest — weight, size, and spatial contrast`);
+The type is not decoration — it IS the design. Render every letter with precision and intention.`);
 
-  // CONTRAST & READABILITY
-  sections.push(`READABILITY:
-${d.contrast || 'Achieve contrast through design decisions (color fields, spatial separation) — NOT through transparency overlays or drop shadows.'}
+  // THE TEXT TO RENDER
+  sections.push(buildTextInfo(direction));
 
-Text must be instantly readable at phone screen size. If you need to add a background for text — make it a DESIGN ELEMENT (a bold color block), not a "text box overlay."`);
+  // THE STANDARD
+  sections.push(`QUALITY:
+This is a finished Instagram post for a real brand. It must look like a human designer crafted it with intention — not like an AI generated it.
+${d.approach === 'typographic' ? 'This is a TYPOGRAPHIC design — the text creates the visual impact. No photography needed.' : ''}
+Match the moodboard references above in craft quality and design sophistication.
+Would a creative director post this? If not, it's not done.
 
-  // QUALITY BAR
-  sections.push(`QUALITY BAR:
-This design must look like it belongs on a Behance "Featured" project or in a design agency's portfolio.
+Leave a small space in the ${direction.assets.logo?.position || 'bottom-right'} for a logo mark.`);
 
-MANDATORY:
-• Clean, precise execution — pixel-perfect alignment
-• Intentional negative space (at least 25% of canvas)
-• Clear visual hierarchy: eye goes Headline → Supporting text → CTA
-• Every element is positioned with purpose, not randomly
-• The overall feel should be CONFIDENT and REFINED
-
-ABSOLUTELY NOT:
-• Canva template aesthetics
-• Stock photo with floating text boxes
-• Busy, cluttered composition
-• Generic gradients or effects
-• Anything that looks auto-generated or template-driven
-• Text that fights the background for attention
-
-Reserve space in the ${direction.assets.logo?.position || 'bottom-right'} for a logo (added separately).`);
-
-  return sections.join('\n\n---\n\n');
+  return sections.join('\n\n');
 }
 
 /**
- * Build the text specification — tells Gemini exactly what text to render.
+ * Build text information — what Gemini needs to render.
+ * Described in relational terms, not pixel specs.
  */
-function buildTextSpec(direction: CreativeDirection): string {
+function buildTextInfo(direction: CreativeDirection): string {
   const textBlocks = direction.copy.onImage || [];
   if (textBlocks.length === 0 && !direction.copy.cta) {
-    return 'TEXT: No on-image text.';
+    return 'No on-image text — purely visual.';
   }
 
-  const lines: string[] = ['TEXT TO RENDER (in order of visual hierarchy):'];
+  const lines: string[] = ['TEXT TO RENDER:'];
 
   const roleOrder: Record<string, number> = { headline: 0, body: 1, subtext: 2, cta: 3 };
   const sorted = [...textBlocks].sort((a, b) => (roleOrder[a.role || 'body'] || 1) - (roleOrder[b.role || 'body'] || 1));
 
-  for (let i = 0; i < sorted.length; i++) {
-    const block = sorted[i];
-    const role = block.role || (i === 0 ? 'headline' : 'body');
+  for (const block of sorted) {
+    const role = block.role || 'body';
+    const sizeDesc: Record<string, string> = {
+      massive: 'DOMINANT — the biggest thing on the canvas, impossible to miss',
+      large: 'Prominent — commands attention but shares the frame',
+      medium: 'Supporting — clearly secondary, anchors the composition',
+      small: 'Quiet — almost whispered, fine print energy',
+    };
 
-    lines.push(`
-${i + 1}. [${role.toUpperCase()}] "${block.text}"
-   Zone: ${block.position || 'center'}
-   Size: ${role === 'headline' ? 'DOMINANT — largest text on the canvas, commands attention' : role === 'cta' ? 'Medium, inside a distinct button/pill element' : 'Supporting — clearly secondary to the headline'}
-   Weight: ${block.weight || (role === 'headline' ? 'heavy/black' : 'regular')}
-   Color: ${block.color || (role === 'headline' ? 'primary text color from palette' : 'secondary text color from palette')}`);
+    lines.push(`• [${role.toUpperCase()}] "${block.text}"
+  ${sizeDesc[block.size || 'large'] || sizeDesc['medium']}
+  ${block.weight || (role === 'headline' ? 'Heavy/black weight' : 'Regular weight')}
+  Color: ${block.color || '#FFFFFF'}`);
   }
 
   if (direction.copy.cta && !sorted.find(b => b.role === 'cta')) {
-    lines.push(`
-${sorted.length + 1}. [CTA] "${direction.copy.cta}"
-   Zone: bottom section
-   Style: pill button or distinct call-to-action element — NOT just more body text
-   Color: accent color background with contrasting text`);
+    lines.push(`• [CTA] "${direction.copy.cta}"
+  A distinct call-to-action element — pill button, underlined text, or bold standalone line
+  Accent color, stands out from body text`);
   }
 
   lines.push(`
-TEXT RENDERING RULES:
-• Every character PERFECTLY formed — zero garbled, blurry, or broken letterforms
-• The headline IS the design — give it visual weight and spatial dominance
-• Text blocks have generous breathing room between them
-• Text must be DESIGNED INTO the layout — part of the composition grid, not floating on top`);
+Every character must be PERFECTLY rendered — crisp, clean, no artifacts.
+Text hierarchy must be instantly clear: what's the headline? what's supporting? what's the action?`);
 
-  return lines.join('');
+  return lines.join('\n');
 }
 
 /**
@@ -167,22 +134,21 @@ export async function generateImage(
   const ai = new GoogleGenAI({ apiKey });
   const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
-  // MOODBOARD REFERENCES — highest priority, define the design language
+  // MOODBOARD — defines the visual world
   if (options?.styleReferences?.length) {
     const moodboardRefs = options.styleReferences.filter(r => r.source === 'moodboard');
     const brandPostRefs = options.styleReferences.filter(r => r.source !== 'moodboard');
 
     if (moodboardRefs.length > 0) {
       contents.push({
-        text: `MOODBOARD — these define the design language. Study them carefully and replicate their:
-• Overall design approach (typographic, graphic, editorial, photographic)
-• Layout structure and spatial divisions
-• Typography treatment — how text is sized, weighted, and positioned
-• Color application — fields, blocks, accents
-• Level of craft and sophistication
-• How text and visual elements integrate as one composition
+        text: `MOODBOARD — this is the visual world we're designing in. Study these references:
+• Their energy and emotional tone
+• How they handle type — size, weight, placement, integration with visuals
+• Their color language — bold fields? subtle gradients? monochrome?
+• The level of craft — details, precision, intentionality
+• How photography/graphics relate to text (or if it's pure typography)
 
-MATCH THIS LEVEL OF QUALITY AND THIS DESIGN APPROACH:`,
+CREATE SOMETHING THAT BELONGS IN THIS WORLD:`,
       });
       for (const ref of moodboardRefs.slice(0, 4)) {
         contents.push({ inlineData: { mimeType: ref.mimeType, data: ref.base64 } });
@@ -191,7 +157,7 @@ MATCH THIS LEVEL OF QUALITY AND THIS DESIGN APPROACH:`,
 
     if (brandPostRefs.length > 0) {
       contents.push({
-        text: `BRAND IDENTITY REFERENCES — match this brand's color palette and visual identity:`,
+        text: 'BRAND FEED — match this brand\'s identity and color palette:',
       });
       for (const ref of brandPostRefs.slice(0, 2)) {
         contents.push({ inlineData: { mimeType: ref.mimeType, data: ref.base64 } });
@@ -199,14 +165,12 @@ MATCH THIS LEVEL OF QUALITY AND THIS DESIGN APPROACH:`,
     }
   }
 
-  // The design specification
-  const designSpec = buildDesignSpec(
-    direction,
-    options?.brandPalette || [],
-    options?.userPromptOverride,
-  );
+  // The creative brief
+  contents.push({
+    text: `Create a finished Instagram post (4:5, 1080×1350px).
 
-  contents.push({ text: designSpec });
+${buildCreativeBrief(direction, options?.brandPalette || [], options?.userPromptOverride)}`,
+  });
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
