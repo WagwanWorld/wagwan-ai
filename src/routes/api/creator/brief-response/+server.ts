@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { respondToBrief, completeBrief } from '$lib/server/creatorMarketplace';
 import { isCampaignUuid } from '$lib/server/flowState';
+import { authorizeUserSubjectMutation } from '$lib/server/userSubjectAccess';
 
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json().catch(() => null);
@@ -13,6 +14,11 @@ export const POST: RequestHandler = async ({ request }) => {
   const campaignId = String(body.campaignId).trim();
   if (!isCampaignUuid(campaignId)) {
     return json({ ok: false, error: 'invalid_campaign_id' }, { status: 400 });
+  }
+
+  const access = await authorizeUserSubjectMutation(request, sub);
+  if (!access.ok) {
+    return json({ ok: false, error: access.error }, { status: access.status });
   }
 
   const action = body.action as string;
