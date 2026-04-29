@@ -127,7 +127,7 @@ export async function generateImage(
       type: 'input_text',
       text: 'MOODBOARD REFERENCES — these define the design world. Study the design patterns, color architecture, typography treatment, and compositional structure. Your output must match this level of craft:',
     });
-    for (const ref of moodboardRefs.slice(0, 6)) {
+    for (const ref of moodboardRefs.slice(0, 4)) {
       contentBlocks.push({
         type: 'input_image',
         image_url: `data:${ref.mimeType};base64,${ref.base64}`,
@@ -140,7 +140,7 @@ export async function generateImage(
       type: 'input_text',
       text: 'BRAND IDENTITY — match this brand\'s color palette and visual language:',
     });
-    for (const ref of brandRefs.slice(0, 2)) {
+    for (const ref of brandRefs.slice(0, moodboardRefs.length > 0 ? 1 : 2)) {
       contentBlocks.push({
         type: 'input_image',
         image_url: `data:${ref.mimeType};base64,${ref.base64}`,
