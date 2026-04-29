@@ -76,17 +76,13 @@ function buildPrompt(direction: CreativeDirection, brandPalette: string[], userO
     ? `\nAVOID: ${constraints.slice(0, 3).join('. ')}.`
     : '';
 
-  return `Instagram post, 4:5 portrait, 1080×1350. Production-ready, senior designer quality.
+  return `Instagram post, 4:5 portrait. Production-ready.
 
 ${designBrief}
 
-TEXT (render these EXACT words, crisp and perfectly formed):
-${textLines.join('\n')}
+${logoSection}
 
-Colors: ${palette.slice(0, 4).join(', ')}
-${logoSection}${constraintsLine}
-
-Match the moodboard references above. Every character legible. Text integrated into the design, not pasted on.`;
+Match the moodboard references above. Text must be crisp and legible.`;
 }
 
 /**

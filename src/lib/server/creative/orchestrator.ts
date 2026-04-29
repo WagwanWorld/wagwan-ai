@@ -191,48 +191,27 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
 ${brandVoice ? `\nBRAND VOICE: ${brandVoice}` : ''}
 ---
 
-COPY (pre-decomposed into hierarchy):
-• HOOK (attention-grabber, render as dominant headline): "${decomposed.hook}"
-${decomposed.body ? `• BODY (supporting text, render smaller): "${decomposed.body}"` : ''}
-${decomposed.cta ? `• CTA (call to action, render as distinct element): "${decomposed.cta}"` : ''}
-${decomposed.hashtags.length ? `• HASHTAGS: ${decomposed.hashtags.join(' ')}` : ''}
+USER'S COPY:
+${processedCopy}
 
-RAW COPY: ${processedCopy}
-${caption ? `\nCAPTION: ${caption}` : ''}${brief ? `\nBRIEF: ${brief}` : ''}
+HOOK (first line): "${decomposed.hook}"
+${decomposed.cta ? `CTA: "${decomposed.cta}"` : ''}
 
 FORMAT: 4:5 static (1080x1350)
 
-IMPORTANT: In the imageModelPrompt, include the EXACT text to render in quotes. GPT renders quoted text more reliably. Weave the hook, body, and CTA into the design description with clear emphasis on hierarchy.
+TEXT ON IMAGE RULE: Put MAXIMUM 3 text elements on the image:
+1. A SHORT headline (rewrite the hook to be punchier if needed — max 6-8 words)
+2. ONE short supporting line (max 15 words) — or skip if the headline is strong enough alone
+3. CTA if present (2-4 words)
+Everything else goes in the "caption" field. Instagram posts with less text on the image perform better.
 
-Also output "constraints" field — things to AVOID in this design (see schema).
+THE imageModelPrompt FIELD:
+- 200 words max. Vivid. Specific. Every sentence is a design decision.
+- Describe what the moodboard references look like so GPT can match them
+- Include the EXACT text to render in "quotes"
+- RULES → DESIGN → FEEL structure
 
-YOUR TASK: Read the copy first. Feel its energy. Then design something that EMBODIES that energy.
-
-CRITICAL — THE imageModelPrompt FIELD:
-This prompt goes to OpenAI's image generator which CANNOT see the moodboard images. YOU are the bridge. You must:
-
-1. DESCRIBE the moodboard's visual language in vivid detail — what you see in those references. Colors, type treatment, composition, texture, energy. Paint a picture with words so the image model can recreate that world.
-
-2. Then describe THIS specific design within that visual language — how the copy, colors, typography, and layout come together as one composition.
-
-3. Write it like a creative director briefing a designer who hasn't seen the moodboard — be specific enough that they could recreate the aesthetic from your words alone.
-
-GOOD: "Moodboard aesthetic: high-contrast bold design, vivid red and black color blocking, heavyweight condensed typography dominating the frame, minimal elements, streetwear-meets-Swiss-precision energy. Raw but intentional.
-
-For this post: Deep vivid red canvas fills the entire frame — saturated, confident. Heavyweight condensed white type occupies the top half reading 'WAGWAN WITH YOUR INSTAGRAM?' — the letters feel architectural, monumental. Below, a clean transition to black. Body copy sits small and quiet in the dark space — supporting the headline's energy. A single white diagonal line crosses the canvas, adding geometric tension. Pure confidence."
-
-BAD: "Bold white text on red background, left-aligned"
-BAD: "A nightclub scene with neon lights"
-
-The brief should make someone FEEL the design before they see it.
-
-CRITICAL: Keep ALL JSON field values CONCISE.
-- "concept": 1-2 sentences max
-- "moodboardAnalysis": 2-3 sentences max
-- "whyThisWorks": max 3 bullets, 1 sentence each
-- "constraints": max 4 items
-- "imageModelPrompt": 200-250 words max
-Do NOT write essays. Tight, decisive, every word earns its place.
+Keep ALL JSON values concise. No essays.
 
 ${DIRECTION_OUTPUT_SCHEMA}`,
   });
