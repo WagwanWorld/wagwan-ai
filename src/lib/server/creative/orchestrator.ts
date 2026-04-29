@@ -226,6 +226,14 @@ BAD: "A nightclub scene with neon lights"
 
 The brief should make someone FEEL the design before they see it.
 
+CRITICAL: Keep ALL JSON field values CONCISE.
+- "concept": 1-2 sentences max
+- "moodboardAnalysis": 2-3 sentences max
+- "whyThisWorks": max 3 bullets, 1 sentence each
+- "constraints": max 4 items
+- "imageModelPrompt": 200-250 words max
+Do NOT write essays. Tight, decisive, every word earns its place.
+
 ${DIRECTION_OUTPUT_SCHEMA}`,
   });
 
@@ -235,7 +243,7 @@ ${DIRECTION_OUTPUT_SCHEMA}`,
     try {
       directionResponse = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
+        max_tokens: 6000,
         system: CREATIVE_DIRECTOR_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: directionParts }],
       });
