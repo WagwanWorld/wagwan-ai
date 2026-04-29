@@ -76,7 +76,7 @@ function buildPrompt(direction: CreativeDirection, brandPalette: string[], userO
     ? `\nAVOID: ${constraints.slice(0, 3).join('. ')}.`
     : '';
 
-  return `Instagram post, 4:5 portrait. Production-ready.
+  return `Instagram post. VERTICAL 4:5 portrait format (taller than wide, 1024×1536 pixels). The design MUST fill the ENTIRE vertical canvas — no black bars, no cropping, no empty space at top or bottom.
 
 ${designBrief}
 
