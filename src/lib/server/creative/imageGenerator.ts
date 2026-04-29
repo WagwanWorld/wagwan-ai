@@ -18,7 +18,7 @@ export interface ImageGenResult {
  * 3. Text rendering instructions
  * 4. Self-critique checklist (GPT reviews before rendering)
  */
-function buildPrompt(direction: CreativeDirection, brandPalette: string[], userOverride?: string): string {
+function buildPrompt(direction: CreativeDirection, brandPalette: string[], userOverride?: string, options?: { logoUrl?: string }): string {
   const d = direction.designDirection;
   const palette = brandPalette.length > 0 ? brandPalette : d.palette.map(c => c.hex);
 
@@ -138,6 +138,7 @@ export async function generateImage(
     direction,
     options?.brandPalette || [],
     options?.userPromptOverride,
+    { logoUrl: options?.logoUrl },
   );
 
   const quality = options?.quality || 'high';
