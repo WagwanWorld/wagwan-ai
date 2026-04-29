@@ -10,68 +10,59 @@ export interface ImageGenResult {
 }
 
 /**
- * Build the creative brief from Claude's direction.
- * Written in visual culture language — vibes, energy, relationships.
+ * Build the text prompt for OpenAI from Claude's direction.
  */
-function buildCreativeBrief(direction: CreativeDirection, brandPalette: string[], userOverride?: string): string {
+function buildPrompt(direction: CreativeDirection, brandPalette: string[], userOverride?: string): string {
   const d = direction.designDirection;
-
-  if (userOverride) {
-    return `${userOverride}
-
-${buildTextInfo(direction)}
-
-This is a finished, production-ready Instagram post. Senior designer quality.`;
-  }
-
   const palette = brandPalette.length > 0 ? brandPalette : d.palette.map(c => c.hex);
-  const colorDescriptions = d.palette.map(c => `${c.hex} (${c.feel || c.role})`).join(', ');
 
-  const sections: string[] = [];
+  const designBrief = userOverride || direction.imageModelPrompt || '';
 
-  if (d.vibe) sections.push(`VIBE: ${d.vibe}`);
-  if (d.references) sections.push(`STYLE: ${d.references}`);
-
-  sections.push(`DESIGN:\n${d.layout}\n${d.visualElements || ''}\n${d.imagery || ''}`);
-  sections.push(`COLORS: ${colorDescriptions}\nFull palette: ${palette.join(', ')}`);
-  sections.push(`TYPE:\n${d.typography}`);
-  sections.push(buildTextInfo(direction));
-  sections.push(`This must look like it was crafted by a senior designer — not generated. Every element intentional. Leave space in ${direction.assets.logo?.position || 'bottom-right'} for a logo.`);
-
-  return sections.join('\n\n');
-}
-
-function buildTextInfo(direction: CreativeDirection): string {
+  // Text rendering block
   const textBlocks = direction.copy.onImage || [];
-  if (textBlocks.length === 0 && !direction.copy.cta) return '';
-
-  const lines: string[] = ['TEXT TO RENDER:'];
+  const textLines: string[] = [];
   const roleOrder: Record<string, number> = { headline: 0, body: 1, subtext: 2, cta: 3 };
   const sorted = [...textBlocks].sort((a, b) => (roleOrder[a.role || 'body'] || 1) - (roleOrder[b.role || 'body'] || 1));
 
   for (const block of sorted) {
     const role = block.role || 'body';
-    lines.push(`• [${role.toUpperCase()}] "${block.text}" — ${block.weight || (role === 'headline' ? 'bold/heavy' : 'regular')}, ${block.color || '#FFFFFF'}`);
+    const sizeDesc = role === 'headline' ? 'LARGE and DOMINANT — the focal point'
+      : role === 'cta' ? 'medium, inside a distinct button element'
+      : 'smaller, supporting — secondary to headline';
+    textLines.push(`"${block.text}" — ${role.toUpperCase()}, ${sizeDesc}, ${block.weight || 'bold'}, ${block.color || '#FFFFFF'}`);
   }
 
   if (direction.copy.cta && !sorted.find(b => b.role === 'cta')) {
-    lines.push(`• [CTA] "${direction.copy.cta}" — distinct button/pill element, accent color`);
+    textLines.push(`"${direction.copy.cta}" — CTA, pill button or bold standalone, accent color`);
   }
 
-  lines.push('\nEvery character must be PERFECTLY rendered — crisp, clean, zero artifacts. Text hierarchy must be instantly clear.');
-  return lines.join('\n');
+  return `Create a production-ready Instagram post (4:5 portrait format).
+
+${designBrief}
+
+COLORS: ${palette.join(', ')}
+${d.palette.map(c => `${c.hex} = ${c.feel || c.role}`).join(', ')}
+
+TEXT TO RENDER:
+${textLines.join('\n')}
+
+TYPOGRAPHY:
+- Every letter CRISP and PERFECTLY formed
+- Clear hierarchy: headline dominates, body supports, CTA stands out
+- Text DESIGNED INTO the composition — integrated, not overlaid
+- ${d.typography || 'Bold sans-serif headlines, lighter body'}
+
+QUALITY: Senior designer at a top agency made this. Crafted, intentional, confident. Not a template.
+
+Logo space: ${direction.assets.logo?.position || 'bottom-right'} corner.`;
 }
 
 /**
- * Generate a complete Instagram creative using OpenAI gpt-image-1.
+ * Generate a complete Instagram creative using OpenAI Responses API
+ * with gpt-image-1 tool — supports INPUT IMAGES for style reference.
  *
- * Why OpenAI over Gemini:
- * - Significantly better text rendering (designed for accurate typography)
- * - Better at following detailed design briefs
- * - Cleaner, more production-ready output
- *
- * Pricing: ~$0.07/image (medium quality) or ~$0.19/image (high quality)
- * vs Gemini at ~$0.04/image but with worse text quality
+ * This is the key advantage over images.generate():
+ * We can pass moodboard images directly so GPT sees them while generating.
  */
 export async function generateImage(
   direction: CreativeDirection,
@@ -88,42 +79,73 @@ export async function generateImage(
 
   const client = new OpenAI({ apiKey });
 
-  // Build the creative brief
-  const brief = buildCreativeBrief(
+  const prompt = buildPrompt(
     direction,
     options?.brandPalette || [],
     options?.userPromptOverride,
   );
 
-  // Build the full prompt with moodboard context described in text
-  // (OpenAI images.generate doesn't accept reference images directly)
-  let fullPrompt = `Create a finished Instagram post (4:5 portrait, 1080×1350px).\n\n`;
+  const quality = options?.quality || 'high';
 
-  // Describe moodboard references in text since we can't pass images
-  if (options?.styleReferences?.length) {
-    const moodboardRefs = options.styleReferences.filter(r => r.source === 'moodboard');
-    if (moodboardRefs.length > 0) {
-      fullPrompt += `DESIGN STYLE: Match the aesthetic of high-end social media design — clean typography, bold color blocking, intentional composition. Think top-tier design agency output.\n\n`;
+  // Build input with reference images if available
+  const inputParts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+
+  // Add moodboard + brand post reference images
+  const refs = options?.styleReferences || [];
+  const moodboardRefs = refs.filter(r => r.source === 'moodboard');
+  const brandRefs = refs.filter(r => r.source === 'brand-post');
+
+  if (moodboardRefs.length > 0) {
+    inputParts.push({
+      type: 'input_text',
+      text: 'MOODBOARD — match this exact visual style, composition approach, color language, and craft quality:',
+    });
+    for (const ref of moodboardRefs.slice(0, 3)) {
+      inputParts.push({
+        type: 'input_image',
+        image_url: { url: `data:${ref.mimeType};base64,${ref.base64}` },
+      });
     }
   }
 
-  fullPrompt += brief;
+  if (brandRefs.length > 0) {
+    inputParts.push({
+      type: 'input_text',
+      text: 'BRAND FEED — match this brand identity and color palette:',
+    });
+    for (const ref of brandRefs.slice(0, 2)) {
+      inputParts.push({
+        type: 'input_image',
+        image_url: { url: `data:${ref.mimeType};base64,${ref.base64}` },
+      });
+    }
+  }
 
-  const quality = options?.quality || 'medium';
+  // Add the design brief
+  inputParts.push({ type: 'input_text', text: prompt });
 
-  const result = await client.images.generate({
-    model: 'gpt-image-1',
-    prompt: fullPrompt,
-    size: '1024x1536', // closest to 4:5 (actually 2:3, slightly taller)
-    quality,
-    response_format: 'b64_json',
+  // Use Responses API with image_generation tool — allows input images
+  const response = await client.responses.create({
+    model: 'gpt-4o',
+    input: inputParts,
+    tools: [{
+      type: 'image_generation',
+      quality,
+      size: '1024x1536',
+    }],
   });
 
-  const imageData = result.data[0]?.b64_json;
-  if (!imageData) throw new Error('OpenAI returned no image');
+  // Extract generated image from response
+  const imageOutput = response.output?.find(
+    (o: Record<string, unknown>) => o.type === 'image_generation_call'
+  ) as { type: string; result: string } | undefined;
+
+  if (!imageOutput?.result) {
+    throw new Error('OpenAI returned no image');
+  }
 
   return {
-    base64: imageData,
+    base64: imageOutput.result,
     mimeType: 'image/png',
     model: 'gpt-image-1',
     quality,

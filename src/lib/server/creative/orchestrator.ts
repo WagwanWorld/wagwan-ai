@@ -132,7 +132,33 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
 
   const directionParts: Anthropic.Messages.ContentBlockParam[] = [];
 
-  // Send past post thumbnails as visual references (2 max — reduces prompt size + cost)
+  // Fetch moodboard images and send to Claude for analysis
+  const supabaseUrl = env.SUPABASE_URL!;
+  const moodRes = await fetch(
+    `${supabaseUrl}/rest/v1/brand_assets?brand_account_id=eq.${brandIgId}&type=eq.moodboard&order=created_at.desc&limit=4`,
+    { headers: supaHeaders() },
+  );
+  const moodboardAssets = moodRes.ok ? await moodRes.json() : [];
+
+  if (moodboardAssets.length > 0) {
+    directionParts.push({ type: 'text', text: `MOODBOARD — These are the creative references chosen by the brand. Study them deeply. Your design MUST feel like it belongs in this visual world. Analyze: color language, typography treatment, composition style, energy level, craft quality, how text and visuals integrate:` });
+    for (const asset of moodboardAssets.slice(0, 3)) {
+      try {
+        const imgRes = await fetch(asset.url);
+        if (imgRes.ok) {
+          const buffer = await imgRes.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+          directionParts.push({
+            type: 'image',
+            source: { type: 'base64', media_type: contentType as 'image/jpeg', data: base64 },
+          });
+        }
+      } catch { /* skip */ }
+    }
+  }
+
+  // Send brand post thumbnails
   const thumbsToSend = brandBrief.thumbnailUrls.slice(0, 2);
   for (let i = 0; i < thumbsToSend.length; i++) {
     try {
@@ -141,7 +167,7 @@ export async function getDirection(input: DirectInput): Promise<DirectResult> {
         const buffer = await imgRes.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
         const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-        directionParts.push({ type: 'text', text: `BRAND POST ${i + 1} — match this style:` });
+        directionParts.push({ type: 'text', text: `BRAND POST ${i + 1}:` });
         directionParts.push({
           type: 'image',
           source: { type: 'base64', media_type: contentType as 'image/jpeg', data: base64 },
@@ -169,13 +195,21 @@ FORMAT: 4:5 static (1080x1350)
 
 YOUR TASK: Read the copy first. Feel its energy. Then design something that EMBODIES that energy.
 
-The imageModelPrompt is a CREATIVE BRIEF — describe the design in the language of visual culture, not CSS.
+CRITICAL — THE imageModelPrompt FIELD:
+This prompt goes to OpenAI's image generator which CANNOT see the moodboard images. YOU are the bridge. You must:
 
-GOOD: "Heavyweight condensed type in white smashing across a blood-red canvas — bleeds off the left edge like it can't be contained. The headline IS the design. Body copy sits quiet and small at the bottom, a whisper after a shout. Single diagonal slash in white cuts the red field — creates tension, gives it edge. Streetwear poster energy meets Swiss precision."
+1. DESCRIBE the moodboard's visual language in vivid detail — what you see in those references. Colors, type treatment, composition, texture, energy. Paint a picture with words so the image model can recreate that world.
 
-BAD: "96pt bold text, left-aligned, 48px margin, on red background #FF0000 with 140% line-height"
+2. Then describe THIS specific design within that visual language — how the copy, colors, typography, and layout come together as one composition.
 
-ALSO BAD: "A dramatic nightclub scene with neon lights and a DJ mixing music"
+3. Write it like a creative director briefing a designer who hasn't seen the moodboard — be specific enough that they could recreate the aesthetic from your words alone.
+
+GOOD: "Moodboard aesthetic: high-contrast brutalist design, blood-red and black color blocking, heavyweight condensed typography that dominates the frame, minimal elements, streetwear-meets-Swiss-precision energy. Raw but intentional.
+
+For this post: That same blood-red canvas fills the entire frame — vivid, uncompromising. Heavyweight condensed white type smashes across the top half reading 'WAGWAN WITH YOUR INSTAGRAM?' — the letters feel architectural, like they're carved into the red. Below, a stark transition to black. Body copy sits small and clean in the dark space — a whisper after a shout. A single white diagonal slash cuts across the canvas, breaking the grid, adding tension. Everything bleeds confidence."
+
+BAD: "Bold white text on red background, left-aligned"
+BAD: "A nightclub scene with neon lights"
 
 The brief should make someone FEEL the design before they see it.
 
@@ -300,7 +334,7 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
     aspectRatio: '4:5',
     brandPalette: brandPaletteHexes,
     userPromptOverride: imagePrompt,
-    quality: 'medium',
+    quality: 'high',
   });
 
   // Cost: gpt-image-1 medium quality ~$0.07/image
