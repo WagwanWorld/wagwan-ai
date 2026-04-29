@@ -33,13 +33,20 @@ ${textSection}`;
 
   const sections: string[] = [];
 
-  // 1. CANVAS & BACKGROUND
-  sections.push(`CANVAS: 4:5 portrait Instagram post (1080×1350px).
+  // 0. DESIGN PHILOSOPHY — forces integrated composition
+  sections.push(`YOU ARE DESIGNING A SINGLE, UNIFIED COMPOSITION — not layers.
 
-BACKGROUND & SCENE:
+The text, imagery, and visual elements must feel like they were designed together as ONE piece. The text is not "placed on top of" an image — it is an integral part of the visual design. Think of it like a magazine cover or a high-end brand campaign poster where typography and imagery are inseparable.
+
+Approach this like a senior art director at a top agency (Pentagram, Collins, Sagmeister & Walsh) would — every pixel is intentional.`);
+
+  // 1. CANVAS & BACKGROUND
+  sections.push(`CANVAS: 4:5 portrait (1080×1350px). Instagram post.
+
+VISUAL SCENE:
 ${d.imagery || direction.imageModelPrompt || 'Clean, minimal brand background'}
-Primary background color: ${bgColor}
-${d.contrast || `Ensure strong contrast between background and text — use overlays, solid blocks, or gradients where text appears.`}`);
+Primary background: ${bgColor}
+${d.contrast || 'Ensure strong contrast between background and text. Use color blocking, gradients, or depth of field to create natural text zones — NOT opaque overlays pasted on top.'}`);
 
   // 2. COMPOSITION GRID
   const tp = d.textPlacement;
@@ -56,12 +63,15 @@ ${tp ? `
   // 3. TEXT HIERARCHY (the most critical part)
   sections.push(buildTextHierarchy(direction));
 
-  // 4. TYPOGRAPHY
+  // 4. TYPOGRAPHY — studio grade
   sections.push(`TYPOGRAPHY:
-${d.typography || 'Clean modern sans-serif system'}
-- All text must be RAZOR SHARP — no blur, no artifacts, no garbled characters
-- Letters must be perfectly formed and evenly spaced
-- Maintain consistent baseline alignment within each text block`);
+${d.typography || 'Clean modern sans-serif. Think Helvetica Neue, Inter, or DM Sans family.'}
+- STUDIO GRADE text rendering — every letterform must be crisp, perfectly kerned, and anti-aliased
+- Consistent baseline grid — all text blocks align to an invisible grid
+- Type scale: headline is 3-4x larger than body. Body is 1.5x larger than fine print. Maintain this ratio strictly.
+- Line height: headline 1.1em (tight), body 1.4em (readable), CTA 1.0em (compact)
+- NEVER stretch, warp, or distort letterforms
+- Text should feel like it was set in a professional layout tool, not auto-generated`);
 
   // 5. COLOR SYSTEM
   sections.push(`COLOR SYSTEM:
@@ -78,12 +88,31 @@ Use the brand colors as the dominant visual identity — the final image should 
 Incorporate these subtly — they should reinforce brand identity without dominating the composition.`);
   }
 
-  // 7. QUALITY STANDARD
-  sections.push(`QUALITY STANDARD:
-- This must look like it was designed by a professional agency
-- High-end, polished, production-ready — not generic or stock-photo-like
-- Clean edges, precise alignment, intentional spacing
-- If the brand references above have a specific mood (warm/cool/minimal/bold), match it exactly`);
+  // 7. STUDIO QUALITY STANDARD
+  sections.push(`STUDIO QUALITY STANDARD — NON-NEGOTIABLE:
+
+COMPOSITION:
+- Golden ratio or rule-of-thirds alignment for all major elements
+- Clear visual hierarchy: the eye should travel Headline → Visual → Body → CTA in that order
+- Intentional whitespace — every gap between elements is a deliberate design choice, not leftover space
+- Text and imagery must feel INTEGRATED — like one composition, not a photo with text pasted on top
+
+VISUAL FIDELITY:
+- Render quality equivalent to a Behance/Dribbble featured design post
+- Subtle grain or texture if it matches the brand aesthetic — never flat/dead surfaces
+- Color grading should feel cinematic and intentional, not default/unprocessed
+- Lighting should have direction and purpose — soft gradients, not flat fills
+- If using photography elements, they should feel editorial (styled, lit, composed) not stock
+
+WHAT TO AVOID:
+- Generic stock photo aesthetics (overly bright, no personality)
+- Floating text boxes that look pasted onto a background
+- Clipart-style graphics or cheap gradient backgrounds
+- Text that fights with the visual instead of complementing it
+- Unintentional visual clutter — every element must earn its place
+- Cookie-cutter social media template look
+
+FINAL CHECK: Would a creative director at a leading design agency approve this for a premium brand's feed? If not, it's not good enough.`);
 
   return sections.join('\n\n---\n\n');
 }
@@ -135,8 +164,9 @@ ${sorted.length + 1}. [CTA] "${direction.copy.cta}"
   lines.push(`
 CRITICAL TEXT RULES:
 - Every character must be PERFECTLY legible — zero garbled, overlapping, or cut-off text
-- Headline is the HERO — it should be the first thing the eye sees
+- Headline is the HERO — it should be the first thing the eye sees, commanding the composition
 - Body text supports the headline — clearly smaller, secondary visual weight
+- Text must feel DESIGNED INTO the composition — not floating on top of it. Use color blocking, bleed zones, or integrated backgrounds that make text feel architectural
 - CTA is a distinct UI element (button/pill) — not just more text
 - Text blocks must have clear breathing room between them (at least 24px equivalent)
 - If text is over a busy background, add a semi-transparent dark overlay or solid color block behind it`);
