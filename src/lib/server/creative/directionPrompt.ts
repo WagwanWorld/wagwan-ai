@@ -28,9 +28,11 @@ WORDS THAT ACTUALLY WORK (GPT understands these):
 ✓ "neon-green accent mark" — describe what it looks like, not what typeface
 
 EXAMPLE OF A CLEAN PROMPT:
-"A vivid red Instagram graphic. Entire background is saturated red. Large bold white text in the top half reads 'YOUR FEED, ON AUTOPILOT'. Smaller white text below reads 'Automation that feels like you'. A small neon-green geometric accent in the lower left. Dark logo mark bottom-right. High-contrast, minimal, confident — the style of a Swiss event poster. No photography, no gradients."
+"A vivid red Instagram graphic. Entire background is saturated red. Large bold white text in the top half reads 'YOUR FEED, ON AUTOPILOT'. Smaller white text below reads 'Automation that feels like you'. A small neon-green geometric accent in the lower left. Dark logo mark bottom-right. High-contrast, minimal, confident — the style of a Swiss event poster."
 
-That's 60 words. Clean. No type specs. GPT will nail it.
+That's 55 words. Clean. No type specs. GPT will nail it.
+
+IMPORTANT: Do NOT add blanket restrictions like "no photography, no gradients, no decoration" unless the moodboard specifically calls for a purely typographic approach. If the moodboard shows photography, use photography. If it shows illustrations, use illustrations. Let the moodboard guide what elements to include — don't default to stripping everything out.
 
 SAFETY: No violent metaphors (no "blood", "smash", "slash", "kill", "destroy").`;
 
