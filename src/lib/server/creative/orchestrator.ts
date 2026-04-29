@@ -294,17 +294,19 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
     ...direction.designDirection.palette.map((c) => c.hex),
   ].filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
 
-  // Generate COMPLETE creative — Gemini renders everything including text
+  // Generate COMPLETE creative via OpenAI gpt-image-1
   const imageResult = await generateImage(direction, {
     styleReferences: allStyleRefs,
     aspectRatio: '4:5',
     brandPalette: brandPaletteHexes,
     userPromptOverride: imagePrompt,
+    quality: 'medium',
   });
 
-  const imgCost = 0.039 + ((imageResult.tokensUsed || 500) * 0.3) / 1_000_000;
+  // Cost: gpt-image-1 medium quality ~$0.07/image
+  const imgCost = imageResult.quality === 'high' ? 0.19 : imageResult.quality === 'medium' ? 0.07 : 0.02;
   renderCost += imgCost;
-  await logCost(brandIgId, generationId, 'image_generation', 'gemini-2.5-flash-image', imageResult.tokensUsed || 500, 1290, imgCost, 1);
+  await logCost(brandIgId, generationId, 'image_generation', imageResult.model, 0, 0, imgCost, 1);
 
   // Logo-only composite (Gemini handled all text)
   const composited = await compositeLogoOnly({
