@@ -409,6 +409,32 @@
     }
   }
 
+  async function handleScrapeIdentity(url?: string) {
+    if (!data.brandSessionValid) return;
+    osSyncing = true;
+    osError = '';
+    try {
+      const body: Record<string, string> = {};
+      if (url) body.websiteUrl = url;
+      const res = await fetch('/api/brand/os-scrape-identity', {
+        method: 'POST',
+        headers: jsonHeaders(),
+        ...fetchOpts,
+        body: JSON.stringify(body),
+      });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !j.ok) {
+        osError = j.error || 'Identity scan failed';
+        return;
+      }
+      await loadOsDashboard();
+    } catch {
+      osError = 'Identity scan failed';
+    } finally {
+      osSyncing = false;
+    }
+  }
+
   async function runOsSync(action: 'refresh_dashboard' | 'regenerate_synopsis' | 'regenerate_brand_kit') {
     if (!data.brandSessionValid) return;
     osSyncing = true;
@@ -941,6 +967,7 @@
           onRefresh={() => runOsSync('refresh_dashboard')}
           onRegenerateSynopsis={() => runOsSync('regenerate_synopsis')}
           onRegenerateBrandKit={() => runOsSync('regenerate_brand_kit')}
+          onScrapeIdentity={handleScrapeIdentity}
         />
       {/if}
 
