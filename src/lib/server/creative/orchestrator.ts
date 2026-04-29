@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/private';
 import { CREATIVE_DIRECTOR_SYSTEM_PROMPT, DIRECTION_OUTPUT_SCHEMA, type CreativeDirection } from './directionPrompt';
 import { assembleBrandBrief, logCost, type BrandBrief } from './contextBuilder';
 import { generateImage } from './imageGenerator';
-import { compositeLogoOnly } from './compositor';
+// Satori compositor removed — GPT handles everything including logo
 import { runQC } from './qc';
 import { uploadCreativeToGCS } from '$lib/server/marketplace/gcsUpload';
 
@@ -329,37 +329,33 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
   ].filter((v, i, a) => a.indexOf(v) === i).slice(0, 6);
 
   // Generate COMPLETE creative via OpenAI gpt-image-1
+  // GPT handles EVERYTHING: visuals, text, AND logo placement
   const imageResult = await generateImage(direction, {
     styleReferences: allStyleRefs,
     aspectRatio: '4:5',
     brandPalette: brandPaletteHexes,
     userPromptOverride: imagePrompt,
     quality: 'high',
+    logoUrl: logoUrl || undefined,
   });
 
-  // Cost: gpt-image-1 medium quality ~$0.07/image
   const imgCost = imageResult.quality === 'high' ? 0.19 : imageResult.quality === 'medium' ? 0.07 : 0.02;
   renderCost += imgCost;
   await logCost(brandIgId, generationId, 'image_generation', imageResult.model, 0, 0, imgCost, 1);
 
-  // Logo-only composite (Gemini handled all text)
-  const composited = await compositeLogoOnly({
-    imageBase64: imageResult.base64,
-    imageMimeType: imageResult.mimeType,
-    logoUrl: logoUrl || undefined,
-    logoPosition: direction.assets.logo?.position,
-  });
+  // No Satori composite — GPT renders everything including logo
+  const finalBase64 = imageResult.base64;
 
   // QC pass
-  const finalBase64 = composited.pngBuffer.toString('base64');
   const paletteHexes = direction.designDirection.palette.map((c) => c.hex);
   const qcReport = await runQC(finalBase64, 'image/png', paletteHexes, direction.assets.logo?.position || 'bottom-right');
   renderCost += 0.003;
   await logCost(brandIgId, generationId, 'qc', 'claude-haiku-4-5-20251001', 0, 0, 0.003);
 
   // Upload to GCS
+  const finalBuffer = Buffer.from(finalBase64, 'base64');
   const fileName = `creative-${generationId}-v${version}.png`;
-  const file = new File([composited.pngBuffer], fileName, { type: 'image/png' });
+  const file = new File([finalBuffer], fileName, { type: 'image/png' });
   const uploadResult = await uploadCreativeToGCS(file, brandIgId);
 
   // Store version in DB

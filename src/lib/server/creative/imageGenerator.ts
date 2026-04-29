@@ -75,7 +75,7 @@ ${textLines.join('\n')}
 
 TYPE DIRECTION: ${d.typography || 'Bold sans-serif headlines, light body copy'}
 
-Logo space: ${direction.assets.logo?.position || 'bottom-right'} corner (small, will be added later).
+LOGO: ${options?.logoUrl ? `Place the provided brand logo image in the ${direction.assets.logo?.position || 'bottom-right'} corner. Small, subtle, clean. Use the logo EXACTLY as provided — do not redraw or modify it.` : `Leave space in the ${direction.assets.logo?.position || 'bottom-right'} corner for a logo.`}
 
 ═══ VISUAL RICHNESS STANDARD ═══
 
@@ -116,6 +116,7 @@ export async function generateImage(
     brandPalette?: string[];
     userPromptOverride?: string;
     quality?: 'low' | 'medium' | 'high';
+    logoUrl?: string;
   },
 ): Promise<ImageGenResult> {
   const apiKey = env.OPENAI_API_KEY;
@@ -162,6 +163,26 @@ export async function generateImage(
         image_url: `data:${ref.mimeType};base64,${ref.base64}`,
       });
     }
+  }
+
+  // Pass logo image if available — GPT renders it directly in the design
+  if (options?.logoUrl) {
+    try {
+      const logoRes = await fetch(options.logoUrl);
+      if (logoRes.ok) {
+        const buffer = await logoRes.arrayBuffer();
+        const logoBase64 = Buffer.from(buffer).toString('base64');
+        const logoMime = logoRes.headers.get('content-type') || 'image/png';
+        contentBlocks.push({
+          type: 'input_text',
+          text: `BRAND LOGO — place this EXACTLY as-is in the ${direction.assets.logo?.position || 'bottom-right'} corner. Small size, subtle. Do NOT redraw or modify the logo — use it as provided:`,
+        });
+        contentBlocks.push({
+          type: 'input_image',
+          image_url: `data:${logoMime};base64,${logoBase64}`,
+        });
+      }
+    } catch { /* no logo */ }
   }
 
   contentBlocks.push({ type: 'input_text', text: prompt });
