@@ -124,7 +124,7 @@ export async function generateImage(
 
   // Use Responses API with image_generation tool — supports input images
   const response = await (client as any).responses.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o',
     input: [{
       role: 'user',
       content: contentBlocks,
