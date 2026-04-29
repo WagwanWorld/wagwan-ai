@@ -78,6 +78,53 @@ export interface RecentPost {
   permalink: string;
 }
 
+export interface CreatorMatch {
+  googleSub: string;
+  name: string;
+  handle: string;
+  followerCount: number;
+  score: number;
+  reasoning: string;
+  themes: string[];
+  location: string;
+  profilePic: string;
+}
+
+export interface BrandSchemeColor {
+  name: string;
+  hex: string;
+  role: 'primary' | 'secondary' | 'accent' | 'neutral' | 'background';
+}
+
+export interface BrandSchemeFont {
+  family: string;
+  weights: number[];
+  source: 'google' | 'adobe' | 'system' | 'custom';
+}
+
+export interface BrandScheme {
+  scrapedAt: string;
+  sourceUrl: string;
+  logo: {
+    darkUrl: string | null;
+    lightUrl: string | null;
+    faviconUrl: string | null;
+  };
+  palette: BrandSchemeColor[];
+  typography: {
+    heading: BrandSchemeFont;
+    body: BrandSchemeFont;
+    mono?: BrandSchemeFont;
+  };
+  tagline: string | null;
+  applications: {
+    igPost: string;
+    businessCard: string;
+    websiteHeader: string;
+    socialBanner: string;
+  };
+}
+
 export interface BrandOsDashboard {
   generatedAt: string;
   executive: {
@@ -100,5 +147,7 @@ export interface BrandOsDashboard {
   contentOps: ContentPipelineSummary;
   recentPosts: RecentPost[];
   brandVibes: string[];
+  creatorMatches: CreatorMatch[];
+  brandScheme?: BrandScheme;
 }
 
