@@ -143,16 +143,6 @@ export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no ma
     "logo": { "position": "bottom-right|bottom-left|none", "size": "small|subtle" },
     "locked": []
   },
-  "textHierarchy": {
-    "hook": {"text": "exact hook text in quotes", "treatment": "dominant, bold, high-contrast — how it should FEEL"},
-    "body": {"text": "exact body text in quotes", "treatment": "supporting, smaller scale"},
-    "cta": {"text": "exact CTA text or empty", "treatment": "accent color, bold, button-like"}
-  },
-  "logoPlacement": {"position": "top-left|top-right|bottom-left|bottom-right|none", "size": "small|subtle"},
-  "typography": {
-    "character": "typeface character — e.g. 'bold geometric sans-serif', 'editorial serif', 'condensed grotesque'",
-    "mood": "what the type FEELS like — e.g. 'confident and modern', 'raw and bold', 'elegant and refined'"
-  },
   "constraints": [
     "specific negative instructions — things to AVOID in this design",
     "e.g. 'no busy patterns behind text areas'",
@@ -197,13 +187,6 @@ export interface CreativeDirection {
     logo: { position: string; size: string };
     locked: { text: string; position: string; style: string }[];
   };
-  textHierarchy?: {
-    hook?: { text: string; treatment: string };
-    body?: { text: string; treatment: string };
-    cta?: { text: string; treatment: string };
-  };
-  logoPlacement?: { position: string; size: string };
-  typography?: { character: string; mood: string };
   constraints?: string[];
   whyThisWorks: string[];
   imageModelPrompt: string;

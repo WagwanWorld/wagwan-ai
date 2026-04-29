@@ -59,25 +59,10 @@ function buildPrompt(direction: CreativeDirection, brandPalette: string[], userO
   // Visual elements
   const visualElements = d.visualElements || '';
 
-  // Structured text hierarchy from copy decomposition + creative direction
-  const th = direction.textHierarchy;
-  const textSection = th ? `
-TEXT TO RENDER (these are the EXACT words — render them precisely):
-${th.hook?.text ? `→ HOOK (dominant): "${th.hook.text}" — ${th.hook.treatment}` : ''}
-${th.body?.text ? `→ BODY (supporting): "${th.body.text}" — ${th.body.treatment}` : ''}
-${th.cta?.text ? `→ CTA (action): "${th.cta.text}" — ${th.cta.treatment}` : ''}
-` : `TEXT TO RENDER:\n${textLines.join('\n')}`;
-
-  // Typography direction
-  const typoDir = direction.typography;
-  const typoSection = typoDir
-    ? `TYPOGRAPHY: ${typoDir.character}. Mood: ${typoDir.mood}.`
-    : `TYPE: ${d.typography || 'Bold sans-serif headlines, light body copy'}`;
-
   // Logo
   const logoSection = options?.logoUrl
-    ? `LOGO: Place the provided brand logo in the ${direction.logoPlacement?.position || direction.assets.logo?.position || 'bottom-right'} corner. ${direction.logoPlacement?.size || 'Small'}, clean, unmodified.`
-    : `LOGO: Leave space in ${direction.logoPlacement?.position || direction.assets.logo?.position || 'bottom-right'} for a logo.`;
+    ? `LOGO: Place the provided brand logo in the ${direction.assets.logo?.position || 'bottom-right'} corner. Small, clean, unmodified.`
+    : `LOGO: Leave space in ${direction.assets.logo?.position || 'bottom-right'} for a logo.`;
 
   // Negative constraints
   const constraints = direction.constraints || [];
@@ -96,9 +81,7 @@ ${th.cta?.text ? `→ CTA (action): "${th.cta.text}" — ${th.cta.treatment}` : 
 ${designBrief}
 
 TEXT (render these EXACT words, crisp and perfectly formed):
-${th?.hook?.text ? `"${th.hook.text}" — HEADLINE, dominant, largest element` : (textLines[0] || '')}
-${th?.body?.text ? `"${th.body.text}" — body, smaller, supporting` : (textLines[1] || '')}
-${th?.cta?.text ? `"${th.cta.text}" — CTA, bold accent` : ''}
+${textLines.join('\n')}
 
 Colors: ${palette.slice(0, 4).join(', ')}
 ${logoSection}${constraintsLine}

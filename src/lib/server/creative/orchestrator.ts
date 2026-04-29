@@ -204,7 +204,7 @@ FORMAT: 4:5 static (1080x1350)
 
 IMPORTANT: In the imageModelPrompt, include the EXACT text to render in quotes. GPT renders quoted text more reliably. Weave the hook, body, and CTA into the design description with clear emphasis on hierarchy.
 
-Also output "textHierarchy", "typography", "logoPlacement", and "constraints" fields (see schema).
+Also output "constraints" field — things to AVOID in this design (see schema).
 
 YOUR TASK: Read the copy first. Feel its energy. Then design something that EMBODIES that energy.
 
