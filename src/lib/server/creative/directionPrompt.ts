@@ -21,18 +21,22 @@ WORDS THAT WASTE THE PROMPT (GPT ignores or botches these — NEVER use them):
 ❌ Any font name (Druk, Helvetica, Inter, DIN)
 
 WORDS THAT ACTUALLY WORK (GPT understands these):
-✓ "large bold white text reading '...'" — just say what text, what color, how big
-✓ "smaller text below" — relative size, not specs
-✓ "vivid red background filling the entire image"
-✓ "minimal, high-contrast, the style of a modern event poster"
-✓ "neon-green accent mark" — describe what it looks like, not what typeface
+✓ Aesthetic/mood words: "bold", "editorial", "premium", "raw", "playful", "minimal", "confident"
+✓ Cultural vibes: "the energy of a premium nightlife brand", "like something a high-end design studio would make"
+✓ Color as atmosphere: "rich saturated red", "deep moody black", "electric neon-green accent"
+✓ Text content simply: "dominant text reading '...'", "quieter supporting copy reading '...'"
+✓ Visual elements as FEELINGS: "hints of nightlife atmosphere", "tech energy", "editorial confidence"
 
-EXAMPLE OF A CLEAN PROMPT:
-"A vivid red Instagram graphic. Entire background is saturated red. Large bold white text in the top half reads 'YOUR FEED, ON AUTOPILOT'. Smaller white text below reads 'Automation that feels like you'. A small neon-green geometric accent in the lower left. Dark logo mark bottom-right. High-contrast, minimal, confident — the style of a Swiss event poster."
+WORDS THAT WASTE THE PROMPT:
+❌ Exact positions: "top-left", "center-right", "bottom edge" — let GPT compose
+❌ Specific shapes: "thin vertical line on the right edge" — too literal
+❌ Prescriptive style combos: "Swiss transit poster meets underground warehouse" — too narrow
+❌ Blanket restrictions: "no photography, no gradients" — unless moodboard is purely typographic
 
-That's 55 words. Clean. No type specs. GPT will nail it.
+THE SWEET SPOT — describe the AESTHETIC, not the LAYOUT:
+"Bold, confident event poster energy. Rich saturated red with hints of nightlife atmosphere. 'INSTAGRAM ON AUTOPILOT' as the dominant text — commanding, takes up real space. 'Set it. Forget it. Grow.' as quieter supporting copy. A neon-green accent for tech energy. The kind of poster a premium brand would commission from a top design studio. Editorial confidence, not startup desperation."
 
-IMPORTANT: Do NOT add blanket restrictions like "no photography, no gradients, no decoration" unless the moodboard specifically calls for a purely typographic approach. If the moodboard shows photography, use photography. If it shows illustrations, use illustrations. Let the moodboard guide what elements to include — don't default to stripping everything out.
+70 words. All mood. All aesthetic. GPT composes the layout itself. Let the moodboard images GPT can see handle the specific style matching.
 
 SAFETY: No violent metaphors (no "blood", "smash", "slash", "kill", "destroy").`;
 
@@ -67,7 +71,7 @@ export const DIRECTION_OUTPUT_SCHEMA = `JSON only, no markdown fences:
   },
   "constraints": ["max 3 items — things to AVOID"],
   "whyThisWorks": ["max 2 bullets — connects choices to moodboard"],
-  "imageModelPrompt": "YOUR MASTERWORK. 200 words. Describe the design as if you're describing A PHOTOGRAPH OF A FINISHED POSTER hanging on a wall — what does someone SEE? The colors, the spatial feel, the mood, the text content in quotes. Do NOT describe typography specs (no font names, no tracking, no weight details). DO describe: the overall aesthetic ('Swiss transit poster'), the color feeling ('saturated red that fills the frame'), where the eye goes ('huge white headline dominates, tiny body text anchors bottom'), mood ('bold, confident, editorial'). Include exact text in quotes."
+  "imageModelPrompt": "YOUR MASTERWORK. ~100 words. Describe the AESTHETIC and MOOD — not the layout. What does this design FEEL like? What cultural energy does it channel? Include the text to render in quotes and the color atmosphere. Do NOT specify positions (no top-left, center-right), font specs, or exact shapes. Let GPT compose — it can see the moodboard images and will match their style. You describe the vibe, GPT handles the execution."
 }`;
 
 export interface CreativeDirection {
