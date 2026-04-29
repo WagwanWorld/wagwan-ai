@@ -146,7 +146,8 @@ export async function generateImage(
   // Build content blocks with reference images
   const contentBlocks: Array<{ type: string; text?: string; image_url?: string }> = [];
 
-  const refs = options?.styleReferences || [];
+  const supportedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const refs = (options?.styleReferences || []).filter(r => supportedMimes.includes(r.mimeType));
   const moodboardRefs = refs.filter(r => r.source === 'moodboard');
   const brandRefs = refs.filter(r => r.source === 'brand-post');
 
@@ -176,24 +177,29 @@ export async function generateImage(
     }
   }
 
-  // Pass logo image if available — GPT renders it directly in the design
+  // Pass logo image if available AND in a supported raster format
+  // OpenAI only accepts: image/jpeg, image/png, image/gif, image/webp — NOT SVG
   if (options?.logoUrl) {
     try {
       const logoRes = await fetch(options.logoUrl);
       if (logoRes.ok) {
-        const buffer = await logoRes.arrayBuffer();
-        const logoBase64 = Buffer.from(buffer).toString('base64');
-        const logoMime = logoRes.headers.get('content-type') || 'image/png';
-        contentBlocks.push({
-          type: 'input_text',
-          text: `BRAND LOGO — place this EXACTLY as-is in the ${direction.assets.logo?.position || 'bottom-right'} corner. Small size, subtle. Do NOT redraw or modify the logo — use it as provided:`,
-        });
-        contentBlocks.push({
-          type: 'input_image',
-          image_url: `data:${logoMime};base64,${logoBase64}`,
-        });
+        const logoMime = logoRes.headers.get('content-type') || '';
+        const supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (supportedFormats.includes(logoMime)) {
+          const buffer = await logoRes.arrayBuffer();
+          const logoBase64 = Buffer.from(buffer).toString('base64');
+          contentBlocks.push({
+            type: 'input_text',
+            text: `BRAND LOGO — place this EXACTLY as-is in the ${direction.logoPlacement?.position || direction.assets.logo?.position || 'bottom-right'} corner. Small, subtle. Do NOT redraw or modify:`,
+          });
+          contentBlocks.push({
+            type: 'input_image',
+            image_url: `data:${logoMime};base64,${logoBase64}`,
+          });
+        }
+        // If SVG or unsupported format, skip image but keep text instruction
       }
-    } catch { /* no logo */ }
+    } catch { /* no logo — prompt still tells GPT to leave space */ }
   }
 
   contentBlocks.push({ type: 'input_text', text: prompt });
