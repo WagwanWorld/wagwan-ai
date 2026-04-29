@@ -87,47 +87,48 @@ export async function generateImage(
 
   const quality = options?.quality || 'high';
 
-  // Build input with reference images if available
-  const inputParts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+  // Build content blocks with reference images
+  const contentBlocks: Array<{ type: string; text?: string; image_url?: string }> = [];
 
-  // Add moodboard + brand post reference images
   const refs = options?.styleReferences || [];
   const moodboardRefs = refs.filter(r => r.source === 'moodboard');
   const brandRefs = refs.filter(r => r.source === 'brand-post');
 
   if (moodboardRefs.length > 0) {
-    inputParts.push({
+    contentBlocks.push({
       type: 'input_text',
-      text: 'MOODBOARD — match this exact visual style, composition approach, color language, and craft quality:',
+      text: 'MOODBOARD — match this exact visual style, composition, color language, and craft quality:',
     });
     for (const ref of moodboardRefs.slice(0, 3)) {
-      inputParts.push({
+      contentBlocks.push({
         type: 'input_image',
-        image_url: { url: `data:${ref.mimeType};base64,${ref.base64}` },
+        image_url: `data:${ref.mimeType};base64,${ref.base64}`,
       });
     }
   }
 
   if (brandRefs.length > 0) {
-    inputParts.push({
+    contentBlocks.push({
       type: 'input_text',
-      text: 'BRAND FEED — match this brand identity and color palette:',
+      text: 'BRAND IDENTITY — match this brand\'s color palette and visual identity:',
     });
     for (const ref of brandRefs.slice(0, 2)) {
-      inputParts.push({
+      contentBlocks.push({
         type: 'input_image',
-        image_url: { url: `data:${ref.mimeType};base64,${ref.base64}` },
+        image_url: `data:${ref.mimeType};base64,${ref.base64}`,
       });
     }
   }
 
-  // Add the design brief
-  inputParts.push({ type: 'input_text', text: prompt });
+  contentBlocks.push({ type: 'input_text', text: prompt });
 
-  // Use Responses API with image_generation tool — allows input images
-  const response = await client.responses.create({
+  // Use Responses API with image_generation tool — supports input images
+  const response = await (client as any).responses.create({
     model: 'gpt-4o',
-    input: inputParts,
+    input: [{
+      role: 'user',
+      content: contentBlocks,
+    }],
     tools: [{
       type: 'image_generation',
       quality,
@@ -135,8 +136,9 @@ export async function generateImage(
     }],
   });
 
-  // Extract generated image from response
-  const imageOutput = response.output?.find(
+  // Extract generated image from response output
+  const outputs = response.output || [];
+  const imageOutput = outputs.find(
     (o: Record<string, unknown>) => o.type === 'image_generation_call'
   ) as { type: string; result: string } | undefined;
 
