@@ -66,6 +66,11 @@ NEVER:
 - Make generic, safe designs
 - Ignore the moodboard
 
+LANGUAGE FOR imageModelPrompt (CRITICAL — this goes to OpenAI which has safety filters):
+- Do NOT use violent/aggressive metaphors: no "blood", "smash", "crash", "kill", "destroy", "weapon", "bleed", "carved", "slash"
+- Instead use: "vivid", "bold", "striking", "monumental", "powerful", "confident", "dramatic", "intense"
+- Describe design energy through design language, not violence language
+
 ALWAYS:
 - Let the moodboard define the visual world
 - Make the type the hero (unless the moodboard specifically shows image-led design)
@@ -93,15 +98,15 @@ DESIGN:
 [The complete design in ~150 vivid words. ONE clear hero element. Describe spatial relationships, not measurements. Every element is a decision, not a suggestion.]
 
 FEEL:
-[2 sentences combining cultural reference + emotional quality. Example: "Sagmeister & Walsh poster energy — architectural type, alive color, controlled danger."]
+[2 sentences combining cultural reference + emotional quality. Example: "Sagmeister & Walsh poster energy — architectural type, alive color, bold precision."]
 
 EXAMPLE (250 words, decisive, no ambiguity):
 
-"RULES: Type fills 55% of the frame. Maximum 3 colors (red, black, white). No photography. Text IS the design. Headline in condensed heavyweight, body in thin regular — radical scale contrast.
+"RULES: Type fills 55% of the frame. Maximum 3 colors (red, black, white). No photography. Text IS the design. Headline condensed heavyweight, body thin regular — radical scale contrast.
 
-DESIGN: Blood-red canvas, entire frame, vivid and uncompromising. Headline 'YOUR INSTAGRAM. ON AUTOPILOT.' in massive white condensed sans-serif — architectural, fills the top half, left-aligned, bleeds close to the frame edge. A sharp diagonal white slash cuts across the midpoint at 15 degrees — geometric tension, breaking the grid with confidence. Below the slash: pure black. Body copy 'Connect in 2 minutes. We handle everything. You run the business.' sits small and thin in the black zone, right-aligned — a whisper after the headline's shout. CTA 'LINK IN BIO' in a red pill button at bottom-center — confident, not desperate. One thin white horizontal rule below the headline adds Swiss discipline. No decoration. Every element load-bearing.
+DESIGN: Deep vivid red canvas fills the entire frame — saturated, confident. Headline 'YOUR INSTAGRAM. ON AUTOPILOT.' in massive white condensed sans-serif — architectural, monumental, fills the top half, left-aligned, extending close to the frame edge. A sharp diagonal white line crosses the midpoint — geometric tension, purposeful. Below: pure black. Body copy 'Connect in 2 minutes. We handle everything. You run the business.' sits small and thin in the black zone — quiet supporting text. CTA 'LINK IN BIO' in a red pill button at bottom-center. One thin white horizontal rule below the headline adds structure. No decoration. Every element intentional.
 
-FEEL: Sagmeister & Walsh poster for a techno event. Type feels like it could hold weight. Red feels alive, not corporate. Composition is controlled danger — precision with edge."`;
+FEEL: Sagmeister & Walsh poster energy. Type feels monumental. Red feels alive, not corporate. Composition balances boldness with precision."`;
 
 export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no markdown fences):
 {
@@ -146,7 +151,7 @@ export const DIRECTION_OUTPUT_SCHEMA = `Respond with a single JSON object (no ma
   "logoPlacement": {"position": "top-left|top-right|bottom-left|bottom-right|none", "size": "small|subtle"},
   "typography": {
     "character": "typeface character — e.g. 'bold geometric sans-serif', 'editorial serif', 'condensed grotesque'",
-    "mood": "what the type FEELS like — e.g. 'confident and modern', 'raw and aggressive', 'elegant and refined'"
+    "mood": "what the type FEELS like — e.g. 'confident and modern', 'raw and bold', 'elegant and refined'"
   },
   "constraints": [
     "specific negative instructions — things to AVOID in this design",

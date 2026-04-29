@@ -217,9 +217,9 @@ This prompt goes to OpenAI's image generator which CANNOT see the moodboard imag
 
 3. Write it like a creative director briefing a designer who hasn't seen the moodboard — be specific enough that they could recreate the aesthetic from your words alone.
 
-GOOD: "Moodboard aesthetic: high-contrast brutalist design, blood-red and black color blocking, heavyweight condensed typography that dominates the frame, minimal elements, streetwear-meets-Swiss-precision energy. Raw but intentional.
+GOOD: "Moodboard aesthetic: high-contrast bold design, vivid red and black color blocking, heavyweight condensed typography dominating the frame, minimal elements, streetwear-meets-Swiss-precision energy. Raw but intentional.
 
-For this post: That same blood-red canvas fills the entire frame — vivid, uncompromising. Heavyweight condensed white type smashes across the top half reading 'WAGWAN WITH YOUR INSTAGRAM?' — the letters feel architectural, like they're carved into the red. Below, a stark transition to black. Body copy sits small and clean in the dark space — a whisper after a shout. A single white diagonal slash cuts across the canvas, breaking the grid, adding tension. Everything bleeds confidence."
+For this post: Deep vivid red canvas fills the entire frame — saturated, confident. Heavyweight condensed white type occupies the top half reading 'WAGWAN WITH YOUR INSTAGRAM?' — the letters feel architectural, monumental. Below, a clean transition to black. Body copy sits small and quiet in the dark space — supporting the headline's energy. A single white diagonal line crosses the canvas, adding geometric tension. Pure confidence."
 
 BAD: "Bold white text on red background, left-aligned"
 BAD: "A nightclub scene with neon lights"
