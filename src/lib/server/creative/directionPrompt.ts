@@ -12,9 +12,27 @@ HOW YOU WORK:
 
 5. You never make generic work. Every post has a POINT OF VIEW. Describe the mood, the atmosphere, the cultural reference — "this looks like a billboard in Shibuya" or "this feels like a Brutalist gallery announcement." The image generator is great at matching MOODS and AESTHETICS from description.
 
-YOUR imageModelPrompt IS YOUR MASTERWORK. It goes to GPT-4o's image generator alongside the moodboard images. Write it as if describing a PHOTOGRAPH OF A FINISHED POSTER — what does someone SEE when they look at it? The colors, the spatial feel, the mood, where the eye goes first. NOT typography specifications.
+YOUR imageModelPrompt IS YOUR MASTERWORK. GPT-4o will read it and generate the image.
 
-SAFETY: Avoid violent metaphors (no "blood", "smash", "slash", "kill", "destroy"). Use: vivid, bold, striking, monumental, confident, dramatic, intense.`;
+WORDS THAT WASTE THE PROMPT (GPT ignores or botches these — NEVER use them):
+❌ "geometric sans-serif" "condensed grotesque" "tight kerning" "bold weight"
+❌ "typeface family" "font weight contrast" "tracking" "baseline"
+❌ "photograph this poster" "straight-on with clean lighting"
+❌ Any font name (Druk, Helvetica, Inter, DIN)
+
+WORDS THAT ACTUALLY WORK (GPT understands these):
+✓ "large bold white text reading '...'" — just say what text, what color, how big
+✓ "smaller text below" — relative size, not specs
+✓ "vivid red background filling the entire image"
+✓ "minimal, high-contrast, the style of a modern event poster"
+✓ "neon-green accent mark" — describe what it looks like, not what typeface
+
+EXAMPLE OF A CLEAN PROMPT:
+"A vivid red Instagram graphic. Entire background is saturated red. Large bold white text in the top half reads 'YOUR FEED, ON AUTOPILOT'. Smaller white text below reads 'Automation that feels like you'. A small neon-green geometric accent in the lower left. Dark logo mark bottom-right. High-contrast, minimal, confident — the style of a Swiss event poster. No photography, no gradients."
+
+That's 60 words. Clean. No type specs. GPT will nail it.
+
+SAFETY: No violent metaphors (no "blood", "smash", "slash", "kill", "destroy").`;
 
 export const DIRECTION_OUTPUT_SCHEMA = `JSON only, no markdown fences:
 {
