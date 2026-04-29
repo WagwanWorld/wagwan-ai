@@ -240,9 +240,16 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
   const logos = logoRes.ok ? await logoRes.json() : [];
   const logoUrl = logos[0]?.url || null;
 
+  // Fetch moodboard assets
+  const moodRes = await fetch(
+    `${supabaseUrl}/rest/v1/brand_assets?brand_account_id=eq.${brandIgId}&type=eq.moodboard&order=created_at.desc&limit=5`,
+    { headers: supaHeaders() },
+  );
+  const moodboardAssets = moodRes.ok ? await moodRes.json() : [];
+
   // Get style references from past posts (send actual images to Gemini)
   const brandBrief = await assembleBrandBrief(brandIgId);
-  const styleReferences: Array<{ base64: string; mimeType: string }> = [];
+  const styleReferences: Array<{ base64: string; mimeType: string; source?: 'moodboard' | 'brand-post' }> = [];
   for (const thumbUrl of brandBrief.thumbnailUrls.slice(0, 3)) {
     try {
       const refRes = await fetch(thumbUrl);
@@ -251,10 +258,30 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
         styleReferences.push({
           base64: Buffer.from(buffer).toString('base64'),
           mimeType: refRes.headers.get('content-type') || 'image/jpeg',
+          source: 'brand-post',
         });
       }
     } catch { /* skip */ }
   }
+
+  // Fetch moodboard images as base64 — these take priority over brand posts
+  const moodboardRefs: Array<{ base64: string; mimeType: string; source?: 'moodboard' | 'brand-post' }> = [];
+  for (const asset of moodboardAssets.slice(0, 4)) {
+    try {
+      const res = await fetch(asset.url);
+      if (res.ok) {
+        const buffer = await res.arrayBuffer();
+        moodboardRefs.push({
+          base64: Buffer.from(buffer).toString('base64'),
+          mimeType: res.headers.get('content-type') || 'image/jpeg',
+          source: 'moodboard',
+        });
+      }
+    } catch { /* skip */ }
+  }
+
+  // Moodboard takes priority — prepend before brand post refs
+  const allStyleRefs = [...moodboardRefs, ...styleReferences];
 
   // Brand palette for Gemini
   const brandPaletteHexes = [
@@ -264,7 +291,7 @@ export async function renderImage(input: RenderInput): Promise<RenderResult> {
 
   // Generate COMPLETE creative — Gemini renders everything including text
   const imageResult = await generateImage(direction, {
-    styleReferences,
+    styleReferences: allStyleRefs,
     aspectRatio: '4:5',
     brandPalette: brandPaletteHexes,
     userPromptOverride: imagePrompt,

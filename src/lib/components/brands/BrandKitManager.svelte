@@ -22,9 +22,11 @@
   let licenseAttested = false;
   let dragOverLogo = false;
   let dragOverFont = false;
+  let dragOverMoodboard = false;
 
   $: logos = assets.filter(a => a.type === 'logo_primary' || a.type === 'logo_mark');
   $: fonts = assets.filter(a => a.type === 'font_file');
+  $: moodboard = assets.filter(a => a.type === 'moodboard');
 
   onMount(loadAssets);
 
@@ -129,6 +131,19 @@
   function handleFontFile(e: Event) {
     const input = e.target as HTMLInputElement;
     if (input.files?.[0]) uploadFile(input.files[0], 'font_file');
+  }
+
+  function handleMoodboardDrop(e: DragEvent) {
+    e.preventDefault();
+    dragOverMoodboard = false;
+    if (moodboard.length >= 8) return;
+    const files = e.dataTransfer?.files;
+    if (files?.length) uploadFile(files[0], 'moodboard');
+  }
+
+  function handleMoodboardFile(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0] && moodboard.length < 8) uploadFile(input.files[0], 'moodboard');
   }
 
   function formatBytes(bytes?: number): string {
@@ -284,6 +299,60 @@
       <div class="bkm-empty">
         <div class="bkm-empty-icon">Aa</div>
         <div class="bkm-empty-text">No fonts uploaded — fonts ensure your brand typography appears in AI creatives</div>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Moodboard Section -->
+  <div class="bkm-section">
+    <div class="bkm-section-header">
+      <span class="bkm-label">MOODBOARD — Visual references for AI creative generation</span>
+    </div>
+    <div class="bkm-section-hint" style="margin-top: -4px;">Upload images that represent the visual style you want — design inspo, competitor posts, aesthetic references</div>
+
+    <!-- Upload zone -->
+    {#if moodboard.length < 8}
+      <div
+        class="bkm-drop-zone"
+        class:bkm-drop-zone--active={dragOverMoodboard}
+        on:dragover|preventDefault={() => (dragOverMoodboard = true)}
+        on:dragleave={() => (dragOverMoodboard = false)}
+        on:drop={handleMoodboardDrop}
+        role="button"
+        tabindex="0"
+      >
+        <div class="bkm-drop-icon">◫</div>
+        <div class="bkm-drop-title">Drop reference images here</div>
+        <div class="bkm-drop-hint">JPG, PNG, or WEBP — {moodboard.length}/8 uploaded</div>
+        <label class="bkm-browse-btn">
+          Browse files
+          <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" on:change={handleMoodboardFile} style="display:none" />
+        </label>
+      </div>
+    {:else}
+      <div class="bkm-drop-zone bkm-drop-zone--disabled">
+        <div class="bkm-drop-icon">◫</div>
+        <div class="bkm-drop-title">Maximum 8 images reached</div>
+        <div class="bkm-drop-hint">Delete an image below to upload a new one</div>
+      </div>
+    {/if}
+
+    <!-- Moodboard grid -->
+    {#if loading}
+      <div class="bkm-loading">Loading assets...</div>
+    {:else if moodboard.length > 0}
+      <div class="bkm-moodboard-grid">
+        {#each moodboard as asset}
+          <div class="bkm-moodboard-card">
+            <img src={asset.url} alt={asset.metadata.originalName || 'Moodboard image'} />
+            <button class="bkm-moodboard-delete" on:click={() => deleteAsset(asset.id)} title="Remove">×</button>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <div class="bkm-empty">
+        <div class="bkm-empty-icon">◫</div>
+        <div class="bkm-empty-text">No moodboard images yet — add visual references to guide Gemini toward the exact aesthetic you want</div>
       </div>
     {/if}
   </div>
@@ -611,5 +680,52 @@
   @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.2; }
+  }
+
+  /* Moodboard grid */
+  .bkm-moodboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .bkm-moodboard-card {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 9px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .bkm-moodboard-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .bkm-moodboard-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .bkm-moodboard-card:hover .bkm-moodboard-delete {
+    opacity: 1;
+  }
+  .bkm-moodboard-delete:hover {
+    background: rgba(239, 68, 68, 0.4);
+    border-color: rgba(239, 68, 68, 0.6);
   }
 </style>

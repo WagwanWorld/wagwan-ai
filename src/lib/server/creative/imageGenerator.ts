@@ -150,7 +150,7 @@ CRITICAL TEXT RULES:
 export async function generateImage(
   direction: CreativeDirection,
   options?: {
-    styleReferences?: Array<{ base64: string; mimeType: string }>;
+    styleReferences?: Array<{ base64: string; mimeType: string; source?: 'moodboard' | 'brand-post' }>;
     aspectRatio?: string;
     brandPalette?: string[];
     userPromptOverride?: string;
@@ -163,10 +163,40 @@ export async function generateImage(
 
   const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
-  // Style references — send past posts for Gemini to match
+  // Style references — moodboard refs first (highest priority), then brand post refs
   if (options?.styleReferences?.length) {
-    contents.push({
-      text: `BRAND STYLE REFERENCES — study these existing posts carefully. Match their:
+    const moodboardRefs = options.styleReferences.filter(r => r.source === 'moodboard');
+    const brandPostRefs = options.styleReferences.filter(r => r.source !== 'moodboard');
+
+    if (moodboardRefs.length > 0) {
+      contents.push({
+        text: `MOODBOARD REFERENCES — this is the exact visual style, composition, and aesthetic to match. These are the creative director's chosen references for this brand. Study them carefully and replicate:
+• The overall visual mood and tone
+• Color grading, temperature, and palette feel
+• Composition style and spatial arrangement
+• Level of polish, texture, and finish
+• Typography treatment and text-image relationships
+
+These moodboard references take HIGHEST PRIORITY — the output must feel like it belongs in this aesthetic world:`,
+      });
+      for (const ref of moodboardRefs.slice(0, 4)) {
+        contents.push({ inlineData: { mimeType: ref.mimeType, data: ref.base64 } });
+      }
+    }
+
+    if (brandPostRefs.length > 0) {
+      contents.push({
+        text: `BRAND POST REFERENCES — match the brand's color palette and identity from these existing posts. The new creative must feel like it belongs in this brand's feed:`,
+      });
+      for (const ref of brandPostRefs.slice(0, 3)) {
+        contents.push({ inlineData: { mimeType: ref.mimeType, data: ref.base64 } });
+      }
+    }
+
+    // Fallback: if no source tags (legacy callers), use original generic label
+    if (moodboardRefs.length === 0 && brandPostRefs.length === 0) {
+      contents.push({
+        text: `BRAND STYLE REFERENCES — study these existing posts carefully. Match their:
 • Color grading and temperature
 • Typography style and text treatment
 • Composition patterns and layout approach
@@ -174,11 +204,10 @@ export async function generateImage(
 • Overall mood and aesthetic
 
 The new creative must look like it belongs alongside these posts in the same feed:`,
-    });
-    for (const ref of options.styleReferences.slice(0, 3)) {
-      contents.push({
-        inlineData: { mimeType: ref.mimeType, data: ref.base64 },
       });
+      for (const ref of options.styleReferences.slice(0, 3)) {
+        contents.push({ inlineData: { mimeType: ref.mimeType, data: ref.base64 } });
+      }
     }
   }
 
