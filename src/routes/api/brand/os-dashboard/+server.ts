@@ -2,9 +2,11 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
 import { getServiceSupabase } from '$lib/server/supabase';
-import type { BrandOsDashboard } from '$lib/types/brand-os';
+import type { BrandOsDashboard, CreatorMatch } from '$lib/types/brand-os';
 import { guardBrandAiEndpoint, logBrandAiCall } from '$lib/server/brand/llmGovernance';
 import { BRAND_OS_PROMPT_VERSIONS } from '$lib/server/prompts/brand-os';
+import { loadCreatorPortraits, scoreCreators } from '$lib/server/marketplace/creatorScoring';
+import type { BrandBrief } from '$lib/server/marketplace/brandMatchAgent';
 
 function toDelta(current: number, previous: number): { delta: string; trend: 'up' | 'down' | 'flat' } {
   if (!previous || Number.isNaN(previous)) return { delta: '0%', trend: 'flat' };
@@ -41,7 +43,7 @@ export const GET: RequestHandler = async ({ request }) => {
   const [brandRes, snapshotsRes, briefRes, dailyBriefRes, findingsRes, pillarsRes, campaignsRes, postsRes] = await Promise.all([
     sb
       .from('brand_accounts')
-      .select('ig_name,ig_username,ig_followers_count,brand_identity,identity_updated_at,brand_id')
+      .select('ig_name,ig_username,ig_followers_count,brand_identity,identity_updated_at,brand_id,ig_access_token')
       .eq('ig_user_id', igUserId)
       .maybeSingle(),
     sb
@@ -106,14 +108,30 @@ export const GET: RequestHandler = async ({ request }) => {
 
   const latestIntel = (latest?.intelligence as Record<string, any>) || {};
 
-  const rawPosts = Array.isArray(latestIntel.recentPosts)
+  let rawPosts = Array.isArray(latestIntel.recentPosts)
     ? latestIntel.recentPosts
     : Array.isArray(latestIntel.identity?.recentMedia)
       ? latestIntel.identity.recentMedia
       : [];
+
+  // If no posts in intelligence, fetch directly from Instagram API
+  if (rawPosts.length === 0 && brand.ig_access_token) {
+    try {
+      const igMediaRes = await fetch(
+        `https://graph.instagram.com/v25.0/${igUserId}/media?fields=id,media_type,thumbnail_url,media_url,like_count,comments_count,permalink&limit=8&access_token=${brand.ig_access_token}`,
+      );
+      if (igMediaRes.ok) {
+        const igMediaJson = await igMediaRes.json();
+        rawPosts = igMediaJson?.data ?? [];
+      }
+    } catch {
+      // Non-fatal — continue without posts
+    }
+  }
+
   const recentPosts = rawPosts.slice(0, 8).map((p: any) => ({
     id: String(p.id || ''),
-    thumbnail: String(p.thumbnail || p.media_url || ''),
+    thumbnail: String(p.thumbnail || p.thumbnail_url || p.media_url || ''),
     type: String(p.type || p.media_type || 'IMAGE'),
     likes: Number(p.likes ?? p.like_count ?? 0),
     comments: Number(p.comments ?? p.comments_count ?? 0),
@@ -121,9 +139,10 @@ export const GET: RequestHandler = async ({ request }) => {
   }));
 
   const brandVibes: string[] = (
-    Array.isArray(latestIntel.identity?.brandVibes) ? latestIntel.identity.brandVibes :
-    Array.isArray(latestIntel.identity?.interests) ? latestIntel.identity.interests :
+    Array.isArray(latestIntel.identity?.interests) && latestIntel.identity.interests.length > 0
+      ? latestIntel.identity.interests :
     Array.isArray(latestIntel.identity?.vibes) ? latestIntel.identity.vibes :
+    Array.isArray(latestIntel.identity?.brandVibes) ? latestIntel.identity.brandVibes :
     []
   ).slice(0, 6);
 
@@ -153,6 +172,71 @@ export const GET: RequestHandler = async ({ request }) => {
     },
     { draft: 0, scheduled: 0, published: 0, failed: 0 },
   );
+
+  // ── Creator Matching ──
+  // Build a lightweight brief from brand intelligence to score creators
+  const brandIdentity = (brand.brand_identity ?? {}) as Record<string, any>;
+  const contentThemes = Array.isArray(strategic.contentPillars) ? strategic.contentPillars
+    : pillars.length ? pillars.map(p => p.label).filter(l => !l.includes(' / '))
+    : brandVibes;
+  const autoBrief: BrandBrief = {
+    product_summary: brandIdentity.description || latestIntel.identity?.rawSummary || brand.ig_name || '',
+    buyer_roles: Array.isArray(audiencePortrait.personas) ? audiencePortrait.personas.map((p: any) => p.name) : [],
+    buyer_stage: ['awareness'],
+    buyer_identity_signals: [
+      ...(Array.isArray(latestIntel.identity?.interests) ? latestIntel.identity.interests : []),
+      ...(brandVibes || []),
+    ].slice(0, 8),
+    bad_fit_signals: [],
+    campaign_intent: 'awareness',
+    content_themes_needed: contentThemes.slice(0, 6),
+    budget_tier: 'micro',
+    timeline: '2 weeks',
+    geography: latestIntel.identity?.city ? [latestIntel.identity.city] : [],
+    success_metric: 'engagement',
+    brand_voice_match: brandIdentity.voice || latestIntel.identity?.personality || '',
+  };
+
+  let creatorMatches: CreatorMatch[] = [];
+  try {
+    const portraits = await loadCreatorPortraits();
+    // Exclude the brand's own profile if they happen to be in the user table
+    const filtered = portraits.filter(p => p.handle && p.handle !== brand.ig_username);
+    const result = scoreCreators(filtered, autoBrief, 6);
+    creatorMatches = result.matches.map(m => ({
+      googleSub: m.creator.google_sub,
+      name: m.creator.name || m.creator.handle,
+      handle: m.creator.handle,
+      followerCount: m.creator.follower_count,
+      score: m.score,
+      reasoning: m.reasoning,
+      themes: m.creator.content_themes.slice(0, 4),
+      location: m.creator.location,
+      profilePic: '', // Will be filled below
+    }));
+
+    // Fetch profile pictures for matched creators
+    if (creatorMatches.length > 0) {
+      const subs = creatorMatches.map(c => c.googleSub);
+      const { data: profileRows } = await sb
+        .from('user_profiles')
+        .select('google_sub, profile_data')
+        .in('google_sub', subs);
+      if (profileRows) {
+        const picMap = new Map<string, string>();
+        for (const row of profileRows) {
+          const pd = (row.profile_data ?? {}) as Record<string, any>;
+          const pic = pd.instagramIdentity?.profilePicture || pd.picture || '';
+          if (pic) picMap.set(row.google_sub as string, pic);
+        }
+        for (const match of creatorMatches) {
+          match.profilePic = picMap.get(match.googleSub) || '';
+        }
+      }
+    }
+  } catch {
+    // Non-fatal — dashboard still renders without creator matches
+  }
 
   const dashboard: BrandOsDashboard = {
     generatedAt: new Date().toISOString(),
@@ -203,16 +287,25 @@ export const GET: RequestHandler = async ({ request }) => {
         audiencePortrait.narrative ||
         audiencePortrait.summary ||
         (latestIntel.demographics as any)?.narrative ||
+        latestIntel.identity?.rawSummary ||
         'We\'re still getting to know your audience. Run an analysis to unlock insights.',
-      personas: Array.isArray(audiencePortrait.personas) ? audiencePortrait.personas.slice(0, 4) : [],
+      personas: Array.isArray(audiencePortrait.personas) && audiencePortrait.personas.length > 0
+        ? audiencePortrait.personas.slice(0, 4)
+        : (latestIntel.identity?.interests || []).slice(0, 4).map((interest: string) => ({
+            name: interest,
+            description: `Key brand signal in the ${interest} space`,
+          })),
       keyInsights: [
         {
           title: 'Primary demographic',
           value:
             audiencePortrait.primaryDemographic?.ageRange ||
+            latestIntel.identity?.city ||
             strategic.brandDirection?.slice(0, 32) ||
             'Not enough data',
-          rationale: 'Derived from latest audience portrait and identity synthesis.',
+          rationale: latestIntel.identity?.city
+            ? `Based in ${latestIntel.identity.city}`
+            : 'Derived from latest audience portrait and identity synthesis.',
         },
         {
           title: 'Posts per week',
@@ -236,6 +329,7 @@ export const GET: RequestHandler = async ({ request }) => {
         brief?.sections?.whats_working ||
         'Your numbers are here — run an analysis to turn them into a story.',
       whyItHappened:
+        (dailyBrief?.evidence as any)?.whyItHappened ||
         findings[0]?.summary ||
         brief?.sections?.whats_not ||
         strategic.competitiveGaps ||
@@ -252,11 +346,27 @@ export const GET: RequestHandler = async ({ request }) => {
       confidenceLabel: latest ? 'Model confidence: medium' : 'Model confidence: low',
     },
     brandKit: {
-      messagingPillars: pillars.length
-        ? pillars.map((p) => p.label).slice(0, 6)
-        : Array.isArray(strategic.contentPillars)
-          ? strategic.contentPillars.slice(0, 6)
-        : ['Outcome', 'Proof', 'Community'],
+      messagingPillars: (() => {
+        // Filter out raw classification labels like "generic / save" — they're format/interaction types, not pillars
+        const meaningfulPillars = pillars
+          .filter((p) => !p.label.includes(' / ') && p.label.toLowerCase() !== 'generic' && p.label.toLowerCase() !== 'none')
+          .map((p) => p.label);
+        // If we have real pillar labels from the DB, use those
+        if (meaningfulPillars.length >= 2) return meaningfulPillars.slice(0, 6);
+        // Otherwise try descriptions from content_pillars (often more meaningful)
+        const fromDescriptions = pillars
+          .filter((p) => p.description && p.description.length > 3)
+          .map((p) => p.description);
+        if (fromDescriptions.length >= 2) return fromDescriptions.slice(0, 6);
+        // Fall back to strategic positioning data
+        if (Array.isArray(strategic.contentPillars) && strategic.contentPillars.length > 0) return strategic.contentPillars.slice(0, 6);
+        // Fall back to brand identity pillars
+        const identityPillars = (brand.brand_identity as any)?.messaging?.pillars
+          || (brand.brand_identity as any)?.contentPillars
+          || (latestIntel.identity as any)?.contentPillars;
+        if (Array.isArray(identityPillars) && identityPillars.length > 0) return identityPillars.slice(0, 6);
+        return ['Outcome', 'Proof', 'Community'];
+      })(),
       visualDirection: {
         palette:
           (brand.brand_identity as any)?.visual?.colorPalette?.slice?.(0, 4)?.join(', ') ||
@@ -268,6 +378,8 @@ export const GET: RequestHandler = async ({ request }) => {
         mood:
           (brand.brand_identity as any)?.visual?.aesthetic?.tone ||
           (brand.brand_identity as any)?.aesthetic ||
+          latestIntel.identity?.aesthetic ||
+          latestIntel.identity?.musicVibe ||
           'Confident, modern, human',
         composition:
           (brand.brand_identity as any)?.visual?.aesthetic?.composition || 'Mixed composition',
@@ -318,6 +430,8 @@ export const GET: RequestHandler = async ({ request }) => {
     },
     recentPosts,
     brandVibes,
+    creatorMatches,
+    brandScheme: latestIntel.brandScheme || undefined,
     contentOps: {
       draft: contentCount.draft,
       scheduled: contentCount.scheduled,
