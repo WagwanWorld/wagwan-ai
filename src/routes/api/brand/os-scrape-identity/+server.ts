@@ -1,5 +1,7 @@
 import { error, json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import type { RequestHandler, RequestEvent } from './$types';
+
+export const config = { maxDuration: 300 };
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
 import { getServiceSupabase } from '$lib/server/supabase';
 import { ANTHROPIC_API_KEY } from '$env/static/private';
@@ -193,24 +195,22 @@ Output ONLY valid JSON with this exact structure (no markdown, no prose):
       },
     };
 
-    // Step 5: Store initial brandScheme (without mockup images yet)
+    // Step 5: Generate mockup images with GPT before saving
+    console.log(`[os-scrape-identity] Generating mockup images for ${igUserId}`);
+    try {
+      const mockups = await generateBrandMockups(brandScheme, brand.ig_name || brandName(resolvedUrl), igUserId);
+      brandScheme.applications = mockups;
+      console.log(`[os-scrape-identity] Mockup images generated for ${igUserId}`);
+    } catch (mockupErr) {
+      console.error('[os-scrape-identity] Mockup generation failed (keeping text descriptions):', mockupErr);
+      // brandScheme.applications already has text descriptions as fallback
+    }
+
+    // Step 6: Store final brandScheme with mockup images
     intel.brandScheme = brandScheme;
     await sb.from('brand_snapshots').update({ intelligence: intel }).eq('id', snapshot.id);
 
-    console.log(`[os-scrape-identity] Brand scheme saved for ${igUserId}: ${brandScheme.palette.length} colors, ${scraped.fonts.length} fonts`);
-
-    // Step 6: Generate mockup images with GPT (async, non-blocking for initial response)
-    // We fire this off and update the scheme in the background
-    generateBrandMockups(brandScheme, brand.ig_name || brandName(resolvedUrl), igUserId)
-      .then(async (mockups) => {
-        brandScheme.applications = mockups;
-        intel.brandScheme = brandScheme;
-        await sb.from('brand_snapshots').update({ intelligence: intel }).eq('id', snapshot.id);
-        console.log(`[os-scrape-identity] Mockup images saved for ${igUserId}`);
-      })
-      .catch((err) => {
-        console.error('[os-scrape-identity] Mockup generation failed (non-fatal):', err);
-      });
+    console.log(`[os-scrape-identity] Done for ${igUserId}: ${brandScheme.palette.length} colors, ${scraped.fonts.length} fonts`);
 
     return json({ ok: true, brandScheme });
   } catch (err) {
