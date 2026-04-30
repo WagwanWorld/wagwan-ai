@@ -69,11 +69,13 @@ export const POST: RequestHandler = async ({ request }) => {
   const identity = (intel.identity as Record<string, unknown>) || {};
   const brandIdentity = (brand.brand_identity as Record<string, unknown>) || {};
 
-  // Resolve URL: body → brand_identity.website → intel.identity.website
+  // Resolve URL: body → brand_identity.website → intel.identity.website → previous brandScheme.sourceUrl
+  const previousScheme = (intel.brandScheme as Record<string, unknown>) || {};
   const resolvedUrl =
     (body?.websiteUrl as string | undefined) ||
     (brandIdentity.website as string | undefined) ||
-    (identity.website as string | undefined);
+    (identity.website as string | undefined) ||
+    (previousScheme.sourceUrl as string | undefined);
 
   if (!resolvedUrl) {
     return json({ ok: false, error: 'No website URL found. Provide websiteUrl in body or set one in your brand profile.' }, { status: 400 });
