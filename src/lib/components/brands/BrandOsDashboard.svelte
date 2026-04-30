@@ -383,9 +383,9 @@
   {#if contentIdeas.length > 0}
     <ul class="bs-ideas-list">
       {#each contentIdeas as item, i}
-        <li class="bs-idea-item">
-          <span class="bs-idea-text">{item.concept}</span>
+        <li class="bs-idea-item" class:bs-idea-divider={i > 0}>
           <span class="bs-idea-tag" class:bs-tag-amber={i === 0} class:bs-tag-blue={i === 1} class:bs-tag-muted={i > 1}>{(item.pillar || '').split(':')[0].split(' ').slice(0, 3).join(' ')}</span>
+          <span class="bs-idea-text">{item.concept}</span>
         </li>
       {/each}
     </ul>
@@ -851,16 +851,19 @@
   }
   .bs-idea-item {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 10px;
+  }
+  .bs-idea-divider {
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding-top: 10px;
   }
   .bs-idea-text {
     font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: 12px;
+    line-height: 1.55;
     color: #8A8A92;
-    flex: 1;
   }
   .bs-idea-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
@@ -868,11 +871,10 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 2px 6px;
+    padding: 3px 8px;
     border-radius: 4px;
-    flex-shrink: 0;
-    margin-top: 2px;
-    max-width: 120px;
+    align-self: flex-start;
+    max-width: 160px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
