@@ -5,7 +5,17 @@ import { getServiceSupabase } from '$lib/server/supabase';
 import { ANTHROPIC_API_KEY } from '$env/static/private';
 import Anthropic from '@anthropic-ai/sdk';
 import { scrapeWebsiteIdentity } from '$lib/server/brand/websiteScraper';
+import { generateBrandMockups } from '$lib/server/brand/mockupGenerator';
 import type { BrandScheme } from '$lib/types/brand-os';
+
+/** Extract a brand name from a URL as fallback */
+function brandName(url: string): string {
+  try {
+    return new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace('www.', '').split('.')[0];
+  } catch {
+    return 'Brand';
+  }
+}
 
 /** Strip markdown code fences from LLM output before JSON.parse */
 function extractJson(raw: string): string {
@@ -174,18 +184,31 @@ Output ONLY valid JSON with this exact structure (no markdown, no prose):
       },
       tagline: parsed?.tagline ?? scraped.tagline ?? null,
       applications: {
-        igPost: parsed?.applications?.igPost ?? 'Brand-aligned square post with primary color background.',
-        businessCard: parsed?.applications?.businessCard ?? 'Clean card using brand palette and heading font.',
-        websiteHeader: parsed?.applications?.websiteHeader ?? 'Full-width hero with brand colors and logo.',
-        socialBanner: parsed?.applications?.socialBanner ?? 'Wide banner using primary and accent colors.',
+        igPost: { description: parsed?.applications?.igPost ?? 'Brand-aligned square post with primary color background.' },
+        businessCard: { description: parsed?.applications?.businessCard ?? 'Clean card using brand palette and heading font.' },
+        websiteHeader: { description: parsed?.applications?.websiteHeader ?? 'Full-width hero with brand colors and logo.' },
+        socialBanner: { description: parsed?.applications?.socialBanner ?? 'Wide banner using primary and accent colors.' },
       },
     };
 
-    // Step 5: Store in brand_snapshots.intelligence.brandScheme
+    // Step 5: Store initial brandScheme (without mockup images yet)
     intel.brandScheme = brandScheme;
     await sb.from('brand_snapshots').update({ intelligence: intel }).eq('id', snapshot.id);
 
-    console.log(`[os-scrape-identity] Done for brand ${igUserId}: ${brandScheme.palette.length} colors, ${scraped.fonts.length} fonts`);
+    console.log(`[os-scrape-identity] Brand scheme saved for ${igUserId}: ${brandScheme.palette.length} colors, ${scraped.fonts.length} fonts`);
+
+    // Step 6: Generate mockup images with GPT (async, non-blocking for initial response)
+    // We fire this off and update the scheme in the background
+    generateBrandMockups(brandScheme, brand.ig_name || brandName(resolvedUrl), igUserId)
+      .then(async (mockups) => {
+        brandScheme.applications = mockups;
+        intel.brandScheme = brandScheme;
+        await sb.from('brand_snapshots').update({ intelligence: intel }).eq('id', snapshot.id);
+        console.log(`[os-scrape-identity] Mockup images saved for ${igUserId}`);
+      })
+      .catch((err) => {
+        console.error('[os-scrape-identity] Mockup generation failed (non-fatal):', err);
+      });
 
     return json({ ok: true, brandScheme });
   } catch (err) {

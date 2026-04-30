@@ -118,10 +118,10 @@ export interface BrandScheme {
   };
   tagline: string | null;
   applications: {
-    igPost: string;
-    businessCard: string;
-    websiteHeader: string;
-    socialBanner: string;
+    igPost: { description: string; imageUrl?: string };
+    businessCard: { description: string; imageUrl?: string };
+    websiteHeader: { description: string; imageUrl?: string };
+    socialBanner: { description: string; imageUrl?: string };
   };
 }
 

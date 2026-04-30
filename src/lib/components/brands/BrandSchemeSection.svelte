@@ -20,6 +20,13 @@
     return `${days}d ago`;
   }
 
+  /** Get app description/image — handles both old string format and new object format */
+  function appField(val: unknown): { description: string; imageUrl?: string } {
+    if (typeof val === 'string') return { description: val };
+    if (val && typeof val === 'object' && 'description' in val) return val as { description: string; imageUrl?: string };
+    return { description: '' };
+  }
+
   function handleScan() {
     scanning = true;
     onRescan(urlInput.trim() || undefined);
@@ -219,49 +226,29 @@
       <div class="bss-card-label" style="margin-bottom:12px">APPLICATION EXAMPLES</div>
       <div class="bss-apps-grid">
 
-        <!-- Instagram Post 1:1 -->
-        <div class="bss-app-card">
-          <div class="bss-app-label">Instagram Post</div>
-          <div
-            class="bss-app-body bss-app-body--square"
-            style="background: linear-gradient(135deg, {brandScheme.palette[0]?.hex ?? '#1a1a2e'}, {brandScheme.palette[1]?.hex ?? '#E8833A'})"
-          >
-            <span class="bss-app-desc">{brandScheme.applications.igPost}</span>
+        {#each [
+          { label: 'Instagram Post', field: brandScheme.applications.igPost, cls: 'bss-app-body--square', grad: [0, 1] },
+          { label: 'Business Card', field: brandScheme.applications.businessCard, cls: 'bss-app-body--bc', grad: [0, 2] },
+          { label: 'Website Header', field: brandScheme.applications.websiteHeader, cls: 'bss-app-body--web', grad: [1, 3] },
+          { label: 'Social Banner', field: brandScheme.applications.socialBanner, cls: 'bss-app-body--banner', grad: [2, 0] },
+        ] as app}
+          {@const data = appField(app.field)}
+          <div class="bss-app-card">
+            <div class="bss-app-label">{app.label}</div>
+            {#if data.imageUrl}
+              <div class="bss-app-body {app.cls} bss-app-body--has-image">
+                <img src={data.imageUrl} alt="{app.label} mockup" class="bss-app-img" loading="lazy" />
+              </div>
+            {:else}
+              <div
+                class="bss-app-body {app.cls}"
+                style="background: linear-gradient(135deg, {brandScheme.palette[app.grad[0]]?.hex ?? '#1a1a2e'}, {brandScheme.palette[app.grad[1]]?.hex ?? '#E8833A'})"
+              >
+                <span class="bss-app-desc">{data.description}</span>
+              </div>
+            {/if}
           </div>
-        </div>
-
-        <!-- Business Card 1.6:1 -->
-        <div class="bss-app-card">
-          <div class="bss-app-label">Business Card</div>
-          <div
-            class="bss-app-body bss-app-body--bc"
-            style="background: linear-gradient(135deg, {brandScheme.palette[0]?.hex ?? '#1a1a2e'}, {brandScheme.palette[2]?.hex ?? '#E87FA8'})"
-          >
-            <span class="bss-app-desc">{brandScheme.applications.businessCard}</span>
-          </div>
-        </div>
-
-        <!-- Website Header 3:1 -->
-        <div class="bss-app-card">
-          <div class="bss-app-label">Website Header</div>
-          <div
-            class="bss-app-body bss-app-body--web"
-            style="background: linear-gradient(135deg, {brandScheme.palette[1]?.hex ?? '#E8833A'}, {brandScheme.palette[3]?.hex ?? '#EDEDEF'})"
-          >
-            <span class="bss-app-desc">{brandScheme.applications.websiteHeader}</span>
-          </div>
-        </div>
-
-        <!-- Social Banner 16:9 -->
-        <div class="bss-app-card">
-          <div class="bss-app-label">Social Banner</div>
-          <div
-            class="bss-app-body bss-app-body--banner"
-            style="background: linear-gradient(135deg, {brandScheme.palette[2]?.hex ?? '#E87FA8'}, {brandScheme.palette[0]?.hex ?? '#1a1a2e'})"
-          >
-            <span class="bss-app-desc">{brandScheme.applications.socialBanner}</span>
-          </div>
-        </div>
+        {/each}
 
       </div>
     </div>
@@ -607,6 +594,16 @@
     line-height: 1.4;
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     letter-spacing: 0.03em;
+  }
+  .bss-app-body--has-image {
+    padding: 0;
+    background: none !important;
+  }
+  .bss-app-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0 0 8px 8px;
   }
 
   /* ── RESPONSIVE ── */
