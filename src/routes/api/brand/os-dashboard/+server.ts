@@ -401,9 +401,13 @@ export const GET: RequestHandler = async ({ request }) => {
         : [],
       contentCalendar: (() => {
         const quickWins: string[] = Array.isArray(strategic.quickWins) ? strategic.quickWins : [];
-        const safePillars = pillars.length
-          ? pillars.map((p) => p.label)
-          : Array.isArray(strategic.contentPillars)
+        // Filter out raw classification labels like "generic / save" — same filtering as messagingPillars
+        const meaningfulPillarLabels = pillars
+          .filter((p) => !p.label.includes(' / ') && p.label.toLowerCase() !== 'generic' && p.label.toLowerCase() !== 'none')
+          .map((p) => p.label);
+        const safePillars = meaningfulPillarLabels.length >= 2
+          ? meaningfulPillarLabels
+          : Array.isArray(strategic.contentPillars) && strategic.contentPillars.length > 0
             ? strategic.contentPillars
             : ['Education', 'Proof', 'Community'];
         if (quickWins.length >= 3) {
