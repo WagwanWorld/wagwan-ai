@@ -385,7 +385,7 @@
       {#each contentIdeas as item, i}
         <li class="bs-idea-item">
           <span class="bs-idea-text">{item.concept}</span>
-          <span class="bs-idea-tag" class:bs-tag-amber={i === 0} class:bs-tag-blue={i === 1} class:bs-tag-muted={i > 1}>{item.pillar}</span>
+          <span class="bs-idea-tag" class:bs-tag-amber={i === 0} class:bs-tag-blue={i === 1} class:bs-tag-muted={i > 1}>{(item.pillar || '').split(':')[0].split(' ').slice(0, 3).join(' ')}</span>
         </li>
       {/each}
     </ul>
@@ -864,14 +864,18 @@
   }
   .bs-idea-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     padding: 2px 6px;
     border-radius: 4px;
     flex-shrink: 0;
     margin-top: 2px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .bs-tag-amber {
     color: #E8833A;
