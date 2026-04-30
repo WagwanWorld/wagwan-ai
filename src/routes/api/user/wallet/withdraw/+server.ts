@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { isSupabaseConfigured } from '$lib/server/supabase';
 import { withdrawAvailableEarnings } from '$lib/server/creatorMarketplace';
+import { authorizeUserGoogleSub } from '$lib/server/userMutationAuth';
 
 /**
  * POST /api/user/wallet/withdraw
@@ -21,7 +22,19 @@ export const POST: RequestHandler = async ({ request }) => {
   const sub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
   if (!sub) throw error(400, 'googleSub is required');
 
-  const { amount, rowIds } = await withdrawAvailableEarnings(sub);
+  const auth = await authorizeUserGoogleSub(request, sub);
+  if (!auth.ok) {
+    return json(
+      {
+        ok: false,
+        error: auth.error,
+        ...(auth.message ? { message: auth.message } : {}),
+      },
+      { status: auth.status },
+    );
+  }
+
+  const { amount, rowIds } = await withdrawAvailableEarnings(auth.googleSub);
 
   if (amount <= 0) {
     return json(
