@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isCampaignUuid } from '../src/lib/server/flowState';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * Campaign IDs are Postgres UUIDs after migration 011. Any accidental
@@ -31,5 +33,21 @@ describe('isCampaignUuid (brief-response guard)', () => {
     const uuid = '1f3a9d22-0b3b-4d4b-9f8b-6a2d8c8f4e1c';
     expect(Number.isFinite(Number(uuid))).toBe(false);
     expect(isCampaignUuid(uuid)).toBe(true);
+  });
+});
+
+describe('atomic brief completion migration', () => {
+  it('marks a brief completed only after the pending earning insert path', () => {
+    const sql = readFileSync(join(process.cwd(), 'supabase/012_atomic_brief_completion.sql'), 'utf8');
+    const earningInsert = sql.indexOf('insert into user_earnings');
+    const briefUpdate = sql.indexOf('update brief_responses');
+
+    expect(sql).toContain('create or replace function complete_brief_with_pending_earning');
+    expect(sql).toContain('for update');
+    expect(sql).toContain('returns boolean');
+    expect(sql).toContain('campaign % not found');
+    expect(sql).toContain('where not exists');
+    expect(earningInsert).toBeGreaterThan(-1);
+    expect(briefUpdate).toBeGreaterThan(earningInsert);
   });
 });
