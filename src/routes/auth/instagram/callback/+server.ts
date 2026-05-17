@@ -17,6 +17,7 @@ import {
   analyseInstagramIdentity,
 } from '$lib/server/instagram';
 import { storeIdentity } from '$lib/server/igIdentityStore';
+import { instagramOAuthReturnBase } from '$lib/auth/instagramReturn';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
 const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
@@ -38,7 +39,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
   const fromPage = cookies.get('ig_oauth_from') ?? 'onboarding';
   cookies.delete('ig_oauth_from', { path: '/' });
-  const returnBase = fromPage === 'landing' ? '/' : fromPage === 'profile' ? '/profile' : '/onboarding';
+  const returnBase = instagramOAuthReturnBase(fromPage);
 
   if (err) {
     console.warn('[IG Callback] User denied or error:', err, errReason, errDesc);
