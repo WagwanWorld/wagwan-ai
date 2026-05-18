@@ -5,6 +5,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getInstagramAuthUrl } from '$lib/server/instagram';
+import { instagramOAuthReturnBase } from '$lib/server/instagramOAuthReturn';
 import { INSTAGRAM_APP_ID } from '$env/static/private';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
@@ -13,7 +14,7 @@ const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const from = url.searchParams.get('from') ?? 'onboarding';
   if (!INSTAGRAM_APP_ID?.trim()) {
-    const dest = from === 'landing' ? '/' : from === 'profile' ? '/profile' : '/onboarding';
+    const dest = instagramOAuthReturnBase(from);
     throw redirect(302, `${dest}?ig_error=not_configured`);
   }
   const state = crypto.randomUUID();
