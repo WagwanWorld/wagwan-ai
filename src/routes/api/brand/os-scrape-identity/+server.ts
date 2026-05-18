@@ -208,7 +208,14 @@ Output ONLY valid JSON with this exact structure (no markdown, no prose):
 
     // Step 6: Store final brandScheme with mockup images
     intel.brandScheme = brandScheme;
-    await sb.from('brand_snapshots').update({ intelligence: intel }).eq('id', snapshot.id);
+    const { error: updateError } = await sb
+      .from('brand_snapshots')
+      .update({ intelligence: intel })
+      .eq('id', snapshot.id);
+
+    if (updateError) {
+      throw new Error(`Failed to save brand scheme: ${updateError.message}`);
+    }
 
     console.log(`[os-scrape-identity] Done for ${igUserId}: ${brandScheme.palette.length} colors, ${scraped.fonts.length} fonts`);
 
