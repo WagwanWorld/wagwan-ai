@@ -2,7 +2,12 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import type { CampaignChannels, CampaignTargetInput, ParsedAudience } from '$lib/server/marketplace/types';
+import type {
+  CampaignChannels,
+  CampaignTargetInput,
+  ParsedAudience,
+} from '$lib/server/marketplace/types';
+import { normalizeBriefAssets } from '$lib/server/marketplace/briefAssets';
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
@@ -18,6 +23,7 @@ export const POST: RequestHandler = async ({ request }) => {
     reward_inr?: number;
     structured_query?: ParsedAudience;
     targets?: CampaignTargetInput[];
+    creatives?: unknown[];
   };
   try {
     body = await request.json();
@@ -32,9 +38,10 @@ export const POST: RequestHandler = async ({ request }) => {
     throw error(400, 'title is required');
   }
 
-  const brand_name = (typeof body.brand_name === 'string' && body.brand_name.trim()
-    ? body.brand_name.trim()
-    : 'Brand');
+  const brand_name =
+    typeof body.brand_name === 'string' && body.brand_name.trim()
+      ? body.brand_name.trim()
+      : 'Brand';
 
   const creative_text = typeof body.creative_text === 'string' ? body.creative_text : '';
   const reward_inr =
@@ -50,9 +57,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const structured_query = (body.structured_query ?? {}) as ParsedAudience;
   const targets = Array.isArray(body.targets) ? body.targets : [];
-  if (!targets.length) {
-    throw error(400, 'targets must include at least one user');
-  }
+  const creatives = normalizeBriefAssets(body.creatives);
 
   const sb = getServiceSupabase();
 
@@ -125,21 +130,47 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const campaign_id = camp.id as string;
 
-  const audienceRows = targets.map((t) => ({
-    campaign_id,
-    user_google_sub: t.user_google_sub,
-    match_score: t.match_score ?? 0,
-    match_reason: (t.match_reason ?? '').slice(0, 500),
-  }));
+  if (creatives.length > 0) {
+    const briefAssetRows = creatives.map((asset, idx) => ({
+      campaign_id,
+      brand_id,
+      media_type: asset.mediaType,
+      url: asset.url,
+      gcs_path: asset.gcsPath,
+      thumb_url: asset.thumbUrl ?? null,
+      caption: asset.caption ?? '',
+      sort_order: asset.sortOrder ?? idx,
+      metadata: asset.metadata ?? {},
+    }));
+    const { error: assetErr } = await sb.from('brief_assets').insert(briefAssetRows);
+    if (assetErr) {
+      console.error('[create-campaign] brief_assets insert', assetErr.message);
+      await sb.from('campaigns').delete().eq('id', campaign_id);
+      throw error(500, 'Could not attach creatives');
+    }
+  }
 
-  const { error: audErr } = await sb.from('campaign_audience').insert(audienceRows);
+  let audienceCount = 0;
 
-  if (audErr) {
-    // Compensate: delete the just-created campaign so we don't orphan a row
-    // with zero audience. `brief_responses` is also cascade-deleted via FK.
-    console.error('[create-campaign] audience insert', audErr.message);
-    await sb.from('campaigns').delete().eq('id', campaign_id);
-    throw error(500, 'Could not attach audience');
+  if (targets.length > 0) {
+    const audienceRows = targets.map((t) => ({
+      campaign_id,
+      user_google_sub: t.user_google_sub,
+      match_score: t.match_score ?? 0,
+      match_reason: (t.match_reason ?? '').slice(0, 500),
+    }));
+
+    const { error: audErr } = await sb.from('campaign_audience').insert(audienceRows);
+
+    if (audErr) {
+      // Compensate: delete the just-created campaign so we don't orphan a row
+      // with zero audience. `brief_responses` is also cascade-deleted via FK.
+      console.error('[create-campaign] audience insert', audErr.message);
+      await sb.from('campaigns').delete().eq('id', campaign_id);
+      throw error(500, 'Could not attach audience');
+    }
+
+    audienceCount = audienceRows.length;
   }
 
   // `brief_responses` rows are seeded automatically by the
@@ -150,6 +181,7 @@ export const POST: RequestHandler = async ({ request }) => {
     ok: true,
     campaign_id,
     brand_id,
-    audience_count: audienceRows.length,
+    audience_count: audienceCount,
+    creative_count: creatives.length,
   });
 };

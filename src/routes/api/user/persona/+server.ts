@@ -16,7 +16,10 @@ import {
   mergeNextInference,
   parseInferenceIdentityWrapper,
 } from '$lib/server/marketplace/inferenceIdentitySchema';
-import { buildInferenceSignalBundle, runInferenceFromBundle } from '$lib/server/marketplace/inferIdentityGraph';
+import {
+  buildInferenceSignalBundle,
+  runInferenceFromBundle,
+} from '$lib/server/marketplace/inferIdentityGraph';
 import { parseHyperInferenceWrapper } from '$lib/server/marketplace/hyperInferenceSchema';
 import { runIdentitySnapshotFromInputs } from '$lib/server/marketplace/inferIdentitySnapshot';
 import { runIdentityIntelligenceFromInputs } from '$lib/server/marketplace/inferIdentityIntelligence';
@@ -48,13 +51,11 @@ function buildInferenceCompact(raw: unknown): Record<string, unknown> | null {
   const wrap = parseInferenceIdentityWrapper(raw);
   if (!wrap?.current) return null;
   const c = wrap.current;
-  const domains = [...(c.life_domains ?? [])].sort(
-    (a, b) => b.salience_0_100 - a.salience_0_100,
-  );
+  const domains = [...(c.life_domains ?? [])].sort((a, b) => b.salience_0_100 - a.salience_0_100);
   return {
     intent_primary: c.intent?.primary ?? '',
     predictive_one_liner: c.predictive_read?.you_in_one_line ?? '',
-    life_domains_top: domains.slice(0, 4).map(d => ({
+    life_domains_top: domains.slice(0, 4).map((d) => ({
       id: d.id,
       label: d.label,
       salience: d.salience_0_100,
@@ -72,7 +73,7 @@ function buildHyperInferenceCompact(raw: unknown): Record<string, unknown> | nul
       intent_type: p.intent_type,
       archetype: p.identity.archetype,
       true_intent: p.inference_layer.true_intent,
-      predictions: p.prediction_layer.slice(0, 5).map(x => ({
+      predictions: p.prediction_layer.slice(0, 5).map((x) => ({
         action: x.action,
         probability: x.probability,
         timeframe: x.timeframe,
@@ -101,7 +102,7 @@ function buildSignalHighlights(raw: unknown): Array<{
 }> {
   const meter = (raw ?? null) as SignalMeterOutput | null;
   const signals = Array.isArray(meter?.signals) ? meter.signals : [];
-  return signals.slice(0, 6).map(signal => ({
+  return signals.slice(0, 6).map((signal) => ({
     type: signal.type,
     category: signal.category,
     value: signal.value,
@@ -120,7 +121,7 @@ function buildSignalClustersPreview(raw: unknown): Array<{
   return [...clusters]
     .sort((a, b) => (b.intensity ?? 0) - (a.intensity ?? 0))
     .slice(0, 3)
-    .map(c => ({
+    .map((c) => ({
       theme: c.theme,
       intensity: c.intensity,
       signals: [...(c.signals ?? [])].slice(0, 5),
@@ -130,7 +131,7 @@ function buildSignalClustersPreview(raw: unknown): Array<{
 function buildSignalDominantPatterns(raw: unknown): string[] {
   const meter = (raw ?? null) as SignalMeterOutput | null;
   const p = meter?.dominant_patterns;
-  return Array.isArray(p) ? p.slice(0, 5).map(s => String(s)) : [];
+  return Array.isArray(p) ? p.slice(0, 5).map((s) => String(s)) : [];
 }
 
 /** GET /api/user/persona?sub=... — fast read from DB, no LLM. */
@@ -284,11 +285,14 @@ export const POST: RequestHandler = async ({ request }) => {
     graphData.inferenceIdentity = priorFullGraph.inferenceIdentity;
   }
   if (snap) graphData.identitySnapshot = snap;
-  else if (priorFullGraph.identitySnapshot != null) graphData.identitySnapshot = priorFullGraph.identitySnapshot;
+  else if (priorFullGraph.identitySnapshot != null)
+    graphData.identitySnapshot = priorFullGraph.identitySnapshot;
   if (intel) graphData.identityIntelligence = intel;
-  else if (priorFullGraph.identityIntelligence != null) graphData.identityIntelligence = priorFullGraph.identityIntelligence;
+  else if (priorFullGraph.identityIntelligence != null)
+    graphData.identityIntelligence = priorFullGraph.identityIntelligence;
   if (hyper) graphData.hyperInference = hyper;
-  else if (priorFullGraph.hyperInference != null) graphData.hyperInference = priorFullGraph.hyperInference;
+  else if (priorFullGraph.hyperInference != null)
+    graphData.hyperInference = priorFullGraph.hyperInference;
 
   graphData.memoryGraph = projectMemoryGraph({
     precalc: behavioralPrecalc,
@@ -322,7 +326,9 @@ export const POST: RequestHandler = async ({ request }) => {
     }
   }
 
-  const priorExprFeedback = priorFullGraph.expressionFeedback as ExpressionFeedbackState | undefined;
+  const priorExprFeedback = priorFullGraph.expressionFeedback as
+    | ExpressionFeedbackState
+    | undefined;
   try {
     const graphForExpression: IdentityGraph = {
       ...graph,
@@ -345,6 +351,19 @@ export const POST: RequestHandler = async ({ request }) => {
   }
   graphData.expressionFeedback = priorExprFeedback ?? { votes: [], atomNudges: {} };
 
+  // Creator intelligence — brand readiness scores + improvement hints
+  try {
+    const { computeCreatorIntelligence } =
+      await import('$lib/server/marketplace/creatorIntelligence');
+    const ci = await computeCreatorIntelligence(graphData, merged as Record<string, unknown>);
+    graphData.creatorIntelligence = ci as unknown as Record<string, unknown>;
+  } catch (e) {
+    console.error('[persona POST] creatorIntelligence:', e instanceof Error ? e.message : e);
+    if (priorFullGraph.creatorIntelligence) {
+      graphData.creatorIntelligence = priorFullGraph.creatorIntelligence as Record<string, unknown>;
+    }
+  }
+
   await upsertIdentityGraph(googleSub, graphData, summaryStr);
   await syncIdentityClaimsFromGraph(googleSub, graph, graphData.inferenceIdentity);
 
@@ -359,7 +378,8 @@ export const POST: RequestHandler = async ({ request }) => {
     ok: true,
     identitySynthesis: identitySynthesisOut,
     identitySnapshot: snap ?? parseIdentitySnapshotWrapper(priorFullGraph.identitySnapshot),
-    identityIntelligence: intel ?? parseIdentityIntelligenceWrapper(priorFullGraph.identityIntelligence),
+    identityIntelligence:
+      intel ?? parseIdentityIntelligenceWrapper(priorFullGraph.identityIntelligence),
     inferenceCompact,
     inference,
     hyperInference,
@@ -368,6 +388,6 @@ export const POST: RequestHandler = async ({ request }) => {
     signalHighlights: buildSignalHighlights(graphData.signalMeter),
     signalClusters: buildSignalClustersPreview(graphData.signalMeter),
     signalDominantPatterns: buildSignalDominantPatterns(graphData.signalMeter),
+    creatorIntelligence: graphData.creatorIntelligence ?? null,
   });
 };
-

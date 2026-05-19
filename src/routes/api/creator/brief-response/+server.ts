@@ -17,12 +17,13 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const action = body.action as string;
 
-  if (action === 'accept' || action === 'decline') {
-    const brief = await respondToBrief(sub, campaignId, action);
+  if (action === 'accept' || action === 'decline' || action === 'request_changes') {
+    const resolvedAction = action === 'request_changes' ? 'decline' : action;
+    const brief = await respondToBrief(sub, campaignId, resolvedAction);
     if (!brief) return json({ ok: false, error: 'response_failed' }, { status: 500 });
 
     let whatsappLink = '';
-    if (action === 'accept' && body.phone) {
+    if (resolvedAction === 'accept' && body.phone) {
       const phone = String(body.phone).replace('+', '');
       const text = encodeURIComponent(
         body.briefText || 'Hi! I accepted your campaign brief on Wagwan.',
@@ -30,7 +31,7 @@ export const POST: RequestHandler = async ({ request }) => {
       whatsappLink = `https://wa.me/${phone}?text=${text}`;
     }
 
-    return json({ ok: true, brief, whatsappLink });
+    return json({ ok: true, brief, whatsappLink, action: resolvedAction });
   }
 
   if (action === 'complete') {

@@ -8,8 +8,18 @@ import Anthropic from '@anthropic-ai/sdk';
 /** Strip markdown code fences from LLM output before JSON.parse */
 function extractJson(raw: string): string {
   let s = raw.trim();
+  // Strip markdown code fences
   if (s.startsWith('```')) {
-    s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+    s = s
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/, '')
+      .trim();
+  }
+  // If there's text before the JSON object, extract just the JSON
+  const firstBrace = s.indexOf('{');
+  const lastBrace = s.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    s = s.slice(firstBrace, lastBrace + 1);
   }
   return s;
 }
@@ -35,20 +45,54 @@ export const POST: RequestHandler = async ({ request }) => {
 
   // Get current snapshot + brand info
   const [snapRes, brandRes] = await Promise.all([
-    sb.from('brand_snapshots')
-      .select('id,intelligence,engagement_rate,reach_7d,avg_saves,avg_shares,posts_per_week,snapshot_date')
+    sb
+      .from('brand_snapshots')
+      .select(
+        'id,intelligence,engagement_rate,reach_7d,avg_saves,avg_shares,posts_per_week,snapshot_date',
+      )
       .eq('brand_ig_id', igUserId)
       .order('snapshot_date', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    sb.from('brand_accounts')
+    sb
+      .from('brand_accounts')
       .select('ig_name,ig_username,ig_followers_count,ig_access_token')
       .eq('ig_user_id', igUserId)
       .maybeSingle(),
   ]);
 
-  if (!snapRes.data) return json({ ok: false, error: 'No snapshot found. Run initial data sync first.' }, { status: 400 });
-  if (!brandRes.data) return json({ ok: false, error: 'Brand account not found.' }, { status: 404 });
+  if (!brandRes.data)
+    return json({ ok: false, error: 'Brand account not found.' }, { status: 404 });
+
+  // Auto-create initial snapshot if none exists (first login / fresh brand)
+  if (!snapRes.data) {
+    console.log(`[os-analyse] No snapshot for ${igUserId} — creating initial brand_snapshots row`);
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: newSnap, error: insertErr } = await sb
+      .from('brand_snapshots')
+      .upsert(
+        {
+          brand_ig_id: igUserId,
+          snapshot_date: today,
+          engagement_rate: 0,
+          reach_7d: 0,
+          avg_saves: 0,
+          avg_shares: 0,
+          posts_per_week: 0,
+          intelligence: {},
+        },
+        { onConflict: 'brand_ig_id,snapshot_date' },
+      )
+      .select(
+        'id,intelligence,engagement_rate,reach_7d,avg_saves,avg_shares,posts_per_week,snapshot_date',
+      )
+      .single();
+    if (insertErr || !newSnap) {
+      console.error('[os-analyse] Failed to create initial snapshot:', insertErr);
+      return json({ ok: false, error: 'Failed to initialise brand snapshot.' }, { status: 500 });
+    }
+    snapRes.data = newSnap;
+  }
 
   const snapshot = snapRes.data;
   const brand = brandRes.data;
@@ -113,7 +157,10 @@ Audience: ${audience.narrative || 'Not yet analysed'}
 Followers: ${brand.ig_followers_count}, Engagement: ${snapshot.engagement_rate}%
 Reach (7d): ${snapshot.reach_7d}, Saves: ${snapshot.avg_saves}/post, Shares: ${snapshot.avg_shares}/post
 Posts/week: ${snapshot.posts_per_week}
-Top hashtags: ${(intel.topHashtags || []).slice(0, 8).map((h: any) => h.tag || h).join(', ')}
+Top hashtags: ${(intel.topHashtags || [])
+        .slice(0, 8)
+        .map((h: any) => h.tag || h)
+        .join(', ')}
 
 Write a strategic brand direction. Be specific, bold, and conversational — like advising a founder you know well.
 
@@ -145,9 +192,7 @@ Respond with ONLY valid JSON:
 
     // ── Save updated intelligence to snapshot ──
     if (results.length > 0) {
-      await sb.from('brand_snapshots')
-        .update({ intelligence: intel })
-        .eq('id', snapshot.id);
+      await sb.from('brand_snapshots').update({ intelligence: intel }).eq('id', snapshot.id);
     }
 
     // ── Phase: Brief (runs generateDailyBrief which uses Claude) ──
@@ -163,15 +208,19 @@ Respond with ONLY valid JSON:
     console.error('[os-analyse] Error:', err);
     // Still save partial results if we got any
     if (results.length > 0) {
-      await sb.from('brand_snapshots')
+      await sb
+        .from('brand_snapshots')
         .update({ intelligence: intel })
         .eq('id', snapshot.id)
         .then(() => {});
     }
-    return json({
-      ok: false,
-      phases: results,
-      error: err instanceof Error ? err.message : 'Analysis failed',
-    }, { status: 500 });
+    return json(
+      {
+        ok: false,
+        phases: results,
+        error: err instanceof Error ? err.message : 'Analysis failed',
+      },
+      { status: 500 },
+    );
   }
 };

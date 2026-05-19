@@ -30,10 +30,24 @@ export const GET: RequestHandler = async ({ request }) => {
   if (brandIgUserId) {
     const { data } = await sb
       .from('brand_accounts')
-      .select('brand_id')
+      .select('brand_id, ig_username, ig_name')
       .eq('ig_user_id', brandIgUserId)
       .maybeSingle();
     brand_id = (data?.brand_id as string | null) ?? null;
+
+    // Auto-link brand_id if missing (e.g. account created before this fix)
+    if (!brand_id && data) {
+      const brandName = (data.ig_name as string) || (data.ig_username as string) || 'Brand';
+      const { data: newBrand } = await sb
+        .from('brands')
+        .insert({ name: brandName })
+        .select('id')
+        .single();
+      if (newBrand?.id) {
+        brand_id = newBrand.id as string;
+        await sb.from('brand_accounts').update({ brand_id }).eq('ig_user_id', brandIgUserId);
+      }
+    }
   }
 
   if (!brand_id) {
@@ -42,7 +56,7 @@ export const GET: RequestHandler = async ({ request }) => {
 
   const { data: campaigns, error: campErr } = await sb
     .from('campaigns')
-    .select('id, title, status, created_at, reward_inr, brand_name')
+    .select('id, title, creative_text, status, created_at, reward_inr, brand_name')
     .eq('brand_id', brand_id)
     .order('created_at', { ascending: false })
     .limit(200);
@@ -65,12 +79,49 @@ export const GET: RequestHandler = async ({ request }) => {
     throw error(500, 'Could not load requests');
   }
 
+  const { data: creativeRows } = await sb
+    .from('brief_assets')
+    .select('id, campaign_id, media_type, url, thumb_url, caption, sort_order')
+    .in('campaign_id', ids)
+    .order('sort_order', { ascending: true });
+
+  const creativesByCampaign = new Map<string, Array<Record<string, unknown>>>();
+  for (const row of creativeRows ?? []) {
+    const campaignId = row.campaign_id as string;
+    const list = creativesByCampaign.get(campaignId) ?? [];
+    list.push({
+      id: row.id,
+      media_type: row.media_type,
+      url: row.url,
+      thumb_url: row.thumb_url,
+      caption: row.caption,
+      sort_order: row.sort_order,
+    });
+    creativesByCampaign.set(campaignId, list);
+  }
+
+  // Resolve creator names
+  const allSubs = [
+    ...new Set((briefs ?? []).map((b) => b.user_google_sub as string).filter(Boolean)),
+  ];
+  const nameMap = new Map<string, string>();
+  if (allSubs.length > 0) {
+    const { data: profiles } = await sb
+      .from('user_profiles')
+      .select('google_sub, name')
+      .in('google_sub', allSubs);
+    for (const p of profiles ?? []) {
+      if (p.name) nameMap.set(p.google_sub as string, p.name as string);
+    }
+  }
+
   const byCampaign = new Map<
     string,
     {
       counts: Record<string, number>;
       members: Array<{
         user_google_sub: string;
+        name: string;
         status: string;
         accepted_at: string | null;
         live_at: string | null;
@@ -92,6 +143,7 @@ export const GET: RequestHandler = async ({ request }) => {
     entry.counts[status] = (entry.counts[status] ?? 0) + 1;
     entry.members.push({
       user_google_sub: b.user_google_sub as string,
+      name: nameMap.get(b.user_google_sub as string) || '',
       status,
       accepted_at: (b.accepted_at as string | null) ?? null,
       live_at: (b.live_at as string | null) ?? null,
@@ -105,11 +157,14 @@ export const GET: RequestHandler = async ({ request }) => {
     return {
       id: c.id as string,
       title: c.title as string,
+      creative_text: (c.creative_text as string) ?? '',
+      brand_name: (c.brand_name as string) ?? 'Brand',
       status: c.status as string,
       created_at: c.created_at as string,
       reward_inr: Number(c.reward_inr ?? 0),
       counts: entry.counts,
       members: entry.members,
+      creatives: creativesByCampaign.get(c.id as string) ?? [],
     };
   });
 
@@ -158,6 +213,21 @@ export const PATCH: RequestHandler = async ({ request }) => {
   if (action === 'mark_live') {
     const n = await markBriefLive(campaignId, userSub ?? undefined);
     return json({ ok: true, updated: n });
+  }
+
+  if (action === 'update') {
+    const updates: Record<string, unknown> = {};
+    if (typeof body?.title === 'string' && body.title.trim()) updates.title = body.title.trim();
+    if (body?.reward_inr != null && Number.isFinite(Number(body.reward_inr)))
+      updates.reward_inr = Number(body.reward_inr);
+    if (Object.keys(updates).length === 0)
+      return json({ ok: false, error: 'nothing_to_update' }, { status: 400 });
+    const { error: updErr } = await sb.from('campaigns').update(updates).eq('id', campaignId);
+    if (updErr) {
+      console.error('[brand/requests] update campaign', updErr.message);
+      return json({ ok: false, error: 'update_failed' }, { status: 500 });
+    }
+    return json({ ok: true });
   }
 
   if (action === 'close') {

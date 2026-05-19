@@ -14,6 +14,16 @@ type CampaignEmbed = {
   created_at: string;
 };
 
+type BriefAsset = {
+  id: string;
+  campaign_id: string;
+  media_type: 'image' | 'video';
+  url: string;
+  thumb_url: string | null;
+  caption: string | null;
+  sort_order: number;
+};
+
 function normalizeCampaignEmbed(raw: unknown): CampaignEmbed | null {
   if (!raw) return null;
   const o = (Array.isArray(raw) ? raw[0] : raw) as CampaignEmbed | null;
@@ -43,7 +53,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
   const statusParam = url.searchParams.get('status')?.trim();
   const requestedStatuses = statusParam
-    ? (statusParam.split(',').map((s) => s.trim()).filter(Boolean) as BriefStatus[])
+    ? (statusParam
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean) as BriefStatus[])
     : null;
 
   const sb = getServiceSupabase();
@@ -79,6 +92,19 @@ export const GET: RequestHandler = async ({ url }) => {
     .select('campaign_id, status, ig_post_url, accepted_at, live_at, completed_at')
     .eq('user_google_sub', sub.trim())
     .in('campaign_id', campaignIds);
+
+  const { data: assetRows } = await sb
+    .from('brief_assets')
+    .select('id, campaign_id, media_type, url, thumb_url, caption, sort_order')
+    .in('campaign_id', campaignIds)
+    .order('sort_order', { ascending: true });
+
+  const assetsByCampaign = new Map<string, BriefAsset[]>();
+  for (const asset of (assetRows ?? []) as BriefAsset[]) {
+    const list = assetsByCampaign.get(asset.campaign_id) ?? [];
+    list.push(asset);
+    assetsByCampaign.set(asset.campaign_id, list);
+  }
 
   const briefByCampaign = new Map<
     string,
@@ -133,6 +159,7 @@ export const GET: RequestHandler = async ({ url }) => {
       accepted_at: brief.accepted_at,
       live_at: brief.live_at,
       completed_at: brief.completed_at,
+      creatives: assetsByCampaign.get(c!.id) ?? [],
     }))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 

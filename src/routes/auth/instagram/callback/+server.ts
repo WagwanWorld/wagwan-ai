@@ -17,6 +17,7 @@ import {
   analyseInstagramIdentity,
 } from '$lib/server/instagram';
 import { storeIdentity } from '$lib/server/igIdentityStore';
+import { verifyOAuthState } from '$lib/server/marketplace/oauthState';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
 const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
@@ -38,17 +39,35 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
   const fromPage = cookies.get('ig_oauth_from') ?? 'onboarding';
   cookies.delete('ig_oauth_from', { path: '/' });
-  const returnBase = fromPage === 'landing' ? '/' : fromPage === 'profile' ? '/profile' : '/onboarding';
+  const returnBase =
+    fromPage === 'join'
+      ? '/'
+      : fromPage === 'landing'
+        ? '/'
+        : fromPage === 'profile'
+          ? '/profile'
+          : '/onboarding';
 
   if (err) {
     console.warn('[IG Callback] User denied or error:', err, errReason, errDesc);
-    throw redirect(302, `${returnBase}?ig_error=` + encodeURIComponent(errDesc || errReason || err));
+    throw redirect(
+      302,
+      `${returnBase}?ig_error=` + encodeURIComponent(errDesc || errReason || err),
+    );
   }
 
-  const savedState = cookies.get('ig_oauth_state');
+  const savedCookieNonce = cookies.get('ig_oauth_state');
   cookies.delete('ig_oauth_state', { path: '/' });
-  if (!state || state !== savedState) {
-    console.error('[IG Callback] State mismatch:', { received: state, expected: savedState });
+
+  // Verify state: prefer the cryptographic signature embedded in the state
+  // param (works even when Safari ITP drops the cookie), fall back to cookie.
+  const signedNonce = state ? verifyOAuthState(state) : null;
+  const cookieMatch = savedCookieNonce && signedNonce === savedCookieNonce;
+  if (!signedNonce && !cookieMatch) {
+    console.error('[IG Callback] State verification failed:', {
+      hasState: !!state,
+      hasCookie: !!savedCookieNonce,
+    });
     throw error(400, 'Invalid OAuth state — possible CSRF. Try connecting again.');
   }
 
@@ -65,9 +84,16 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     ]);
     console.log('[IG Callback] Profile:', igProfile.username, '| Media count:', igMedia.length);
 
-    console.log('[IG Callback] Running full identity pipeline (visual + caption + temporal + engagement + comments)...');
+    console.log(
+      '[IG Callback] Running full identity pipeline (visual + caption + temporal + engagement + comments)...',
+    );
     const identity = await analyseInstagramIdentity(igProfile, igMedia, token);
-    console.log('[IG Callback] Identity complete:', identity.aesthetic, '| visual:', !!identity.visual);
+    console.log(
+      '[IG Callback] Identity complete:',
+      identity.aesthetic,
+      '| visual:',
+      !!identity.visual,
+    );
 
     // Store full identity + access token server-side, give client a redemption token
     const redemptionToken = crypto.randomUUID();
@@ -87,7 +113,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
       302,
       `${returnBase}?ig_connected=1&ig_rt=${encodeURIComponent(redemptionToken)}`,
     );
-
   } catch (e: unknown) {
     if (isRedirect(e)) throw e;
     console.error('[IG Callback] Error:', e instanceof Error ? e.message : e);

@@ -7,6 +7,13 @@
   let campaign: any = null;
   let briefResponse: any = null;
   let match: any = null;
+  let creatives: Array<{
+    id: string;
+    media_type: 'image' | 'video';
+    url: string;
+    thumb_url?: string | null;
+    caption?: string | null;
+  }> = [];
   let personalizedText = '';
   let personalizing = false;
   let loading = true;
@@ -34,6 +41,7 @@
         campaign = data.campaign ?? null;
         briefResponse = data.briefResponse ?? null;
         match = data.match ?? null;
+        creatives = data.creatives ?? [];
       }
 
       if (match) {
@@ -63,7 +71,7 @@
     }
   }
 
-  async function respond(action: 'accept' | 'decline') {
+  async function respond(action: 'accept' | 'decline' | 'request_changes') {
     if (acting) return;
     const sub = $profile?.googleSub;
     if (!sub) return;
@@ -192,6 +200,31 @@
       {/if}
     </div>
 
+    {#if creatives.length > 0}
+      <div class="brief-section">
+        <p class="brief-section-label">Attached Creatives</p>
+        <div class="brief-creative-grid">
+          {#each creatives as creative}
+            <article class="brief-creative-card">
+              {#if creative.media_type === 'video'}
+                <video class="brief-creative-media" src={creative.url} controls preload="metadata"
+                ></video>
+              {:else}
+                <img
+                  class="brief-creative-media"
+                  src={creative.thumb_url || creative.url}
+                  alt={creative.caption || 'Brief creative'}
+                />
+              {/if}
+              {#if creative.caption}
+                <p class="brief-creative-caption">{creative.caption}</p>
+              {/if}
+            </article>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     <!-- Personalized section -->
     {#if match}
       <div class="brief-section">
@@ -232,6 +265,13 @@
             on:click={() => respond('decline')}
           >
             Decline
+          </button>
+          <button
+            class="brief-btn brief-btn--secondary"
+            disabled={acting}
+            on:click={() => respond('request_changes')}
+          >
+            Request changes
           </button>
         </div>
       {:else if briefResponse?.status === 'accepted'}
@@ -637,6 +677,14 @@
     border-color: #e040fb;
     color: #e040fb;
   }
+  .brief-btn--secondary {
+    background: rgba(77, 124, 255, 0.12);
+    color: #9eb8ff;
+    border: 1px solid rgba(77, 124, 255, 0.35);
+  }
+  .brief-btn--secondary:hover:not(:disabled) {
+    background: rgba(77, 124, 255, 0.2);
+  }
 
   /* Info message */
   .brief-info-msg {
@@ -770,6 +818,33 @@
     color: rgba(237, 237, 239, 0.35);
     line-height: 1.5;
     margin: 0;
+  }
+
+  .brief-creative-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 1rem;
+  }
+  .brief-creative-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .brief-creative-media {
+    display: block;
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: rgba(0, 0, 0, 0.3);
+  }
+  .brief-creative-caption {
+    margin: 0;
+    padding: 10px 12px;
+    color: rgba(237, 237, 239, 0.65);
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
 
   /* Mobile */

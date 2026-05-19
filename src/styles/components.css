@@ -424,6 +424,21 @@
     padding: var(--space-6) 0 var(--space-7);
   }
 
+  /* Full-bleed surfaces (Personal OS, chat). Layout passes `os-shell-bypass` on OsPageShell;
+     override must live here — parent layout scoped CSS does not reach child component roots. */
+  .os-page-shell.os-shell-bypass {
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    padding: 0;
+    box-sizing: border-box;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
   @media (max-width: 767px) {
     .os-page-shell {
       width: min(1240px, calc(100% - (var(--space-4) * 2)));

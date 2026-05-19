@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+import WebSocket from 'ws';
 
 let _client: SupabaseClient | null = null;
 
@@ -13,7 +14,10 @@ function getClient(): SupabaseClient {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
     }
-    _client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    _client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      // Node.js 20 (Vercel default for this app) has no global WebSocket; supabase-js Realtime requires one.
+      realtime: { transport: WebSocket },
+    });
   }
   return _client;
 }
@@ -101,7 +105,7 @@ export async function getManualInterestTags(googleSub: string): Promise<string[]
     console.error('[Supabase] getManualInterestTags error:', error.message);
   }
   const raw = data?.manual_interest_tags;
-  return Array.isArray(raw) ? (raw as string[]).map(s => String(s).trim()).filter(Boolean) : [];
+  return Array.isArray(raw) ? (raw as string[]).map((s) => String(s).trim()).filter(Boolean) : [];
 }
 
 export async function getTokens(googleSub: string): Promise<PlatformTokens> {
@@ -239,10 +243,7 @@ export async function getIdentityGraph(
  * Link a wagwan-ai profile to a wagwan main platform user.
  * Sets wagwan_user_id on the user_profiles row identified by google_sub.
  */
-export async function linkWagwanUser(
-  googleSub: string,
-  wagwanUserId: string,
-): Promise<boolean> {
+export async function linkWagwanUser(googleSub: string, wagwanUserId: string): Promise<boolean> {
   const { error } = await getClient()
     .from('user_profiles')
     .update({
@@ -262,9 +263,7 @@ export async function linkWagwanUser(
  * Look up a wagwan-ai profile by wagwan main platform user UUID.
  * Returns null if no profile is linked to this wagwan user.
  */
-export async function getProfileByWagwanId(
-  wagwanUserId: string,
-): Promise<UserProfileRow | null> {
+export async function getProfileByWagwanId(wagwanUserId: string): Promise<UserProfileRow | null> {
   const { data, error } = await getClient()
     .from('user_profiles')
     .select('*')

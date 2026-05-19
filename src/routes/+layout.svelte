@@ -17,7 +17,7 @@
     else if (path.startsWith('/chats') || path.startsWith('/chat')) surface = 'chats';
     else if (path.startsWith('/earn')) surface = 'earn';
     else if (path.startsWith('/brands')) surface = 'brands';
-    else if (path.startsWith('/onboarding')) surface = 'onboarding';
+    else if (path.startsWith('/onboarding') || path.startsWith('/brand/')) surface = 'onboarding';
     if (surface) document.documentElement.setAttribute('data-app-surface', surface);
     else document.documentElement.removeAttribute('data-app-surface');
   }
@@ -27,6 +27,7 @@
   $: useMarketingShell =
     path === '/' ||
     path.startsWith('/onboarding') ||
+    path.startsWith('/brand/') ||
     path.startsWith('/privacy') ||
     path.startsWith('/terms') ||
     path.startsWith('/data-deletion') ||
@@ -44,7 +45,7 @@
   <AmbientGradients />
   <div class="relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden">
     {#if useMarketingShell}
-      <OsPageShell as="div">
+      <OsPageShell as="div" className={path === '/' ? 'os-shell-bypass' : ''}>
         <slot />
       </OsPageShell>
     {:else}

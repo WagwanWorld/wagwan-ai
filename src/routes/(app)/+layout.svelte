@@ -99,6 +99,7 @@
 
   $: path = $page.url.pathname;
   $: pageWrapFill = path === '/home' || path === '/ai' || path.startsWith('/chat/');
+  $: osShellBypass = pageWrapFill;
   $: appContentScrolls = path !== '/home' && path !== '/ai' && !path.startsWith('/chat/');
   $: isDark = $themeMode === 'dark';
   $: syncThemeColor($themeMode);
@@ -118,7 +119,7 @@
       class:page-wrap--in-app-scroll={appContentScrolls}
       class:overflow-hidden={path === '/home'}
     >
-      <OsPageShell as="div" className={path === '/home' ? 'os-shell-bypass' : ''}>
+      <OsPageShell as="div" className={osShellBypass ? 'os-shell-bypass' : ''}>
         <slot />
       </OsPageShell>
     </div>
@@ -134,6 +135,14 @@
     overflow: hidden;
     height: 100%;
     min-height: 100%;
+  }
+
+  .app-shell.ambient-bg {
+    background:
+      radial-gradient(circle at 72% 18%, rgba(153, 36, 96, 0.34), transparent 42%),
+      radial-gradient(circle at 30% 78%, rgba(196, 242, 74, 0.12), transparent 32%),
+      linear-gradient(145deg, #030306 0%, #0b0710 48%, #1b0817 100%);
+    animation: none;
   }
 
   @media (min-width: 768px) {
@@ -152,6 +161,7 @@
   .app-content {
     flex: 1;
     min-height: 0;
+    height: 100%;
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
@@ -177,18 +187,14 @@
   .page-wrap--fill {
     flex: 1;
     min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   /** Routes that scroll inside app-content: let content determine height so it can overflow the scroll container. */
   .page-wrap--in-app-scroll {
     flex: 0 0 auto;
     width: 100%;
-  }
-
-  .os-shell-bypass {
-    width: 100%;
-    max-width: 100%;
-    padding: 0;
-    margin: 0;
   }
 </style>

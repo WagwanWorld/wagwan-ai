@@ -13,6 +13,13 @@
     match_reason?: string;
     brief_status: string;
     created_at: string;
+    creatives?: Array<{
+      id: string;
+      media_type: 'image' | 'video';
+      url: string;
+      thumb_url?: string | null;
+      caption?: string | null;
+    }>;
   };
 
   type DiscoverBrief = {
@@ -22,6 +29,13 @@
     creative_text: string;
     reward_inr: number;
     created_at: string;
+    creatives?: Array<{
+      id: string;
+      media_type: 'image' | 'video';
+      url: string;
+      thumb_url?: string | null;
+      caption?: string | null;
+    }>;
   };
 
   let targeted: Brief[] = [];
@@ -50,7 +64,7 @@
         fetch(`/api/user/campaigns/discover?sub=${sub}`),
       ]);
       const [targData, discData] = await Promise.all([targRes.json(), discRes.json()]);
-      if (targData.ok) targeted = targData.briefs ?? [];
+      if (targData.ok) targeted = targData.campaigns ?? [];
       if (discData.ok) discover = discData.campaigns ?? [];
     } catch (e) {
       console.error('Failed to load briefs', e);
@@ -118,6 +132,18 @@
               <p class="brief-snippet">
                 {brief.creative_text.slice(0, 100)}{brief.creative_text.length > 100 ? '…' : ''}
               </p>
+              {#if brief.creatives?.[0]}
+                <div class="brief-creative-preview">
+                  {#if brief.creatives[0].media_type === 'video'}
+                    <video src={brief.creatives[0].url} muted preload="metadata"></video>
+                  {:else}
+                    <img
+                      src={brief.creatives[0].thumb_url || brief.creatives[0].url}
+                      alt="Brief creative preview"
+                    />
+                  {/if}
+                </div>
+              {/if}
               {#if brief.match_score != null}
                 <div class="brief-match">
                   <Lightning size={12} weight="fill" />
@@ -150,6 +176,18 @@
               <p class="brief-snippet">
                 {brief.creative_text.slice(0, 100)}{brief.creative_text.length > 100 ? '…' : ''}
               </p>
+              {#if brief.creatives?.[0]}
+                <div class="brief-creative-preview">
+                  {#if brief.creatives[0].media_type === 'video'}
+                    <video src={brief.creatives[0].url} muted preload="metadata"></video>
+                  {:else}
+                    <img
+                      src={brief.creatives[0].thumb_url || brief.creatives[0].url}
+                      alt="Brief creative preview"
+                    />
+                  {/if}
+                </div>
+              {/if}
               <div class="brief-cta">Explore →</div>
             </a>
           {/each}
@@ -446,6 +484,22 @@
     border: 1px solid rgba(196, 242, 74, 0.2);
     padding: 0.2rem 0.6rem;
     border-radius: 999px;
+  }
+
+  .brief-creative-preview {
+    margin: 0.6rem 0 0.8rem;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    height: 120px;
+  }
+  .brief-creative-preview img,
+  .brief-creative-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
   .brief-cta {

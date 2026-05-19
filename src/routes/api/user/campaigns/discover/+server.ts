@@ -36,5 +36,28 @@ export const GET: RequestHandler = async ({ url }) => {
     return json({ ok: false, error: 'query_failed' }, { status: 500 });
   }
 
-  return json({ ok: true, campaigns: campaigns ?? [] });
+  const ids = (campaigns ?? []).map((c) => c.id as string);
+  const { data: creatives } = ids.length
+    ? await sb
+        .from('brief_assets')
+        .select('id, campaign_id, media_type, url, thumb_url, caption, sort_order')
+        .in('campaign_id', ids)
+        .order('sort_order', { ascending: true })
+    : { data: [] };
+
+  const creativesByCampaign = new Map<string, unknown[]>();
+  for (const row of creatives ?? []) {
+    const campaignId = row.campaign_id as string;
+    const list = creativesByCampaign.get(campaignId) ?? [];
+    list.push(row);
+    creativesByCampaign.set(campaignId, list);
+  }
+
+  return json({
+    ok: true,
+    campaigns: (campaigns ?? []).map((campaign) => ({
+      ...campaign,
+      creatives: creativesByCampaign.get(campaign.id as string) ?? [],
+    })),
+  });
 };

@@ -8,12 +8,23 @@
   export let onRegenerateSynopsis: () => void = () => {};
   export let onRegenerateBrandKit: () => void = () => {};
   export let onScrapeIdentity: (url?: string) => void = () => {};
+  export let period: '1d' | '7d' | '30d' = '7d';
+  export let onPeriodChange: (p: '1d' | '7d' | '30d') => void = () => {};
+  export let postCount: number = 0;
 
   /* ── Helper: find metric by label (case-insensitive partial match) ── */
   function findMetric(label: string) {
-    return dashboard.executive.metrics.find(
-      (m) => m.label.toLowerCase().includes(label.toLowerCase())
-    ) ?? { label, value: '—', delta: undefined, trend: undefined as 'up' | 'down' | 'flat' | undefined, note: undefined };
+    return (
+      dashboard.executive.metrics.find((m) =>
+        m.label.toLowerCase().includes(label.toLowerCase()),
+      ) ?? {
+        label,
+        value: '—',
+        delta: undefined,
+        trend: undefined as 'up' | 'down' | 'flat' | undefined,
+        note: undefined,
+      }
+    );
   }
 
   /* ── Deterministic sparkline bars (no Math.random) ── */
@@ -75,8 +86,10 @@
   $: saves = findMetric('save');
   $: shares = findMetric('share');
   $: postsWeek = findMetric('post');
-  $: postsWeekVal = postsWeek.value !== '—' ? postsWeek.value :
-    (aud.keyInsights.find(k => k.title.toLowerCase().includes('posts per'))?.value || '—');
+  $: postsWeekVal =
+    postsWeek.value !== '—'
+      ? postsWeek.value
+      : aud.keyInsights.find((k) => k.title.toLowerCase().includes('posts per'))?.value || '—';
 
   $: health = computeHealth();
   $: healthColor = health >= 70 ? '#4ade80' : health >= 40 ? '#E8833A' : '#f87171';
@@ -95,7 +108,7 @@
   $: contentIdeas = (() => {
     const cal = (kit.contentCalendar || []).slice(0, 4);
     // If calendar items are all generic "Ship one X post", they're placeholder
-    const isGeneric = cal.every(c => c.concept?.startsWith('Ship one'));
+    const isGeneric = cal.every((c) => c.concept?.startsWith('Ship one'));
     if (isGeneric && aud.keyInsights.length > 0) {
       // Use key insights as content ideas instead
       return aud.keyInsights.slice(0, 4).map((k, i) => ({
@@ -109,7 +122,9 @@
   })();
   $: personas = aud.personas || [];
 
-  $: bestTime = aud.keyInsights.find((k) => k.title.toLowerCase().includes('best') || k.title.toLowerCase().includes('time'));
+  $: bestTime = aud.keyInsights.find(
+    (k) => k.title.toLowerCase().includes('best') || k.title.toLowerCase().includes('time'),
+  );
 
   /* ── Split a paragraph into bullet points & highlight numbers ── */
   function splitIntoBullets(text: string): { headline: string; points: string[] } {
@@ -118,8 +133,8 @@
     const sentences = text
       .replace(/^[""\u201C\u201D]+|[""\u201C\u201D]+$/g, '') // strip surrounding quotes
       .split(/(?<=[.!?])\s+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     if (sentences.length <= 1) return { headline: sentences[0] || text, points: [] };
     return { headline: sentences[0], points: sentences.slice(1) };
   }
@@ -128,7 +143,7 @@
     // Wrap numbers/percentages/ratios in <strong> tags
     return text.replace(
       /(\d+[\d.,]*%?(?:\/(?:post|week|day))?)/gi,
-      '<strong class="bs-num-hl">$1</strong>'
+      '<strong class="bs-num-hl">$1</strong>',
     );
   }
 
@@ -136,7 +151,11 @@
   $: notWorkingParsed = splitIntoBullets(syn.whyItHappened || '');
 
   $: lastUpdatedDate = exec.lastUpdated
-    ? new Date(exec.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(exec.lastUpdated).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
     : 'N/A';
 
   // Direct analysis runner — bypasses os-sync, calls os-analyse directly
@@ -154,7 +173,11 @@
         body: JSON.stringify({ phase: 'audience' }),
       });
       const j1 = await r1.json().catch(() => ({}));
-      if (!r1.ok) { analyseStatus = `Audience failed: ${j1.error || r1.status}`; analysing = false; return; }
+      if (!r1.ok) {
+        analyseStatus = `Audience failed: ${j1.error || r1.status}`;
+        analysing = false;
+        return;
+      }
       analyseStatus = 'Audience done. Running strategy...';
 
       // Phase 2: Strategy
@@ -165,7 +188,11 @@
         body: JSON.stringify({ phase: 'strategy' }),
       });
       const j2 = await r2.json().catch(() => ({}));
-      if (!r2.ok) { analyseStatus = `Strategy failed: ${j2.error || r2.status}`; analysing = false; return; }
+      if (!r2.ok) {
+        analyseStatus = `Strategy failed: ${j2.error || r2.status}`;
+        analysing = false;
+        return;
+      }
       analyseStatus = 'Strategy done. Generating brief...';
 
       // Phase 3: Brief
@@ -176,7 +203,11 @@
         body: JSON.stringify({ phase: 'brief' }),
       });
       const j3 = await r3.json().catch(() => ({}));
-      if (!r3.ok) { analyseStatus = `Brief failed: ${j3.error || r3.status}`; analysing = false; return; }
+      if (!r3.ok) {
+        analyseStatus = `Brief failed: ${j3.error || r3.status}`;
+        analysing = false;
+        return;
+      }
       analyseStatus = 'All done! Reloading...';
 
       // Reload dashboard
@@ -188,6 +219,53 @@
     }
   }
 </script>
+
+<!-- ACTION BAR: Full-width sync + analysis controls -->
+<div class="bs-action-bar">
+  <div class="bs-action-left">
+    <span class="bs-action-title">Brand Intelligence</span>
+    <div class="bs-period-toggle">
+      <button
+        class="bs-period-btn"
+        class:bs-period-active={period === '1d'}
+        on:click={() => onPeriodChange('1d')}>Daily</button
+      >
+      <button
+        class="bs-period-btn"
+        class:bs-period-active={period === '7d'}
+        on:click={() => onPeriodChange('7d')}>Weekly</button
+      >
+      <button
+        class="bs-period-btn"
+        class:bs-period-active={period === '30d'}
+        on:click={() => onPeriodChange('30d')}>Monthly</button
+      >
+    </div>
+    {#if analyseStatus && analysing}
+      <span class="bs-action-status">{analyseStatus}</span>
+    {:else if analyseStatus && !analysing}
+      <span class="bs-action-status bs-action-status-done">{analyseStatus}</span>
+    {:else if postCount > 0}
+      <span class="bs-action-status bs-action-status-done">{postCount} posts in period</span>
+    {/if}
+  </div>
+  <div class="bs-action-buttons">
+    <button
+      class="bs-action-btn bs-action-refresh"
+      on:click={onRefresh}
+      disabled={syncing || analysing}
+    >
+      {syncing ? 'Syncing...' : 'Refresh Data'}
+    </button>
+    <button
+      class="bs-action-btn bs-action-analyse"
+      on:click={runAnalysis}
+      disabled={analysing || syncing}
+    >
+      {analysing ? 'Analysing...' : 'Run Deep Analysis'}
+    </button>
+  </div>
+</div>
 
 <!-- ROW 1: Brief (span 2) + Brand Health (span 1) -->
 
@@ -209,7 +287,9 @@
     <svg viewBox="0 0 72 72" width="72" height="72">
       <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="5" />
       <circle
-        cx="36" cy="36" r="30"
+        cx="36"
+        cy="36"
+        r="30"
         fill="none"
         stroke={healthColor}
         stroke-width="5"
@@ -228,7 +308,7 @@
 
 <!-- ROW 2: Primary Metrics (3 cards) -->
 
-<div class="bs-card bs-metric">
+<div class="bs-card bs-metric bs-metric-orange bs-metric-hero">
   <span class="bs-label">FOLLOWERS</span>
   <span class="bs-metric-num">{fmt(followers.value)}</span>
   {#if followers.delta}
@@ -241,7 +321,7 @@
   </div>
 </div>
 
-<div class="bs-card bs-metric">
+<div class="bs-card bs-metric bs-metric-green">
   <span class="bs-label">ENG. RATE</span>
   <span class="bs-metric-num">{fmt(engRate.value)}<span class="bs-metric-suffix">%</span></span>
   <div class="bs-spark">
@@ -251,30 +331,40 @@
   </div>
 </div>
 
-<div class="bs-card bs-metric">
+<div class="bs-card bs-metric bs-metric-blue">
   <span class="bs-label">REACH (7D)</span>
   <span class="bs-metric-num">{fmt(reach.value)}</span>
   {#if reach.trend}
-    <span class="bs-metric-delta" class:bs-delta-green={reach.trend === 'up'} class:bs-delta-red={reach.trend === 'down'}>
+    <span
+      class="bs-metric-delta"
+      class:bs-delta-green={reach.trend === 'up'}
+      class:bs-delta-red={reach.trend === 'down'}
+    >
       {reach.trend === 'up' ? '+' : reach.trend === 'down' ? '-' : ''}{reach.delta || ''}
     </span>
   {/if}
   <div class="bs-spark">
     {#each sparkBars(reachSeed, 7) as h}
-      <div class="bs-spark-bar" class:bs-spark-green={reach.trend === 'up'} class:bs-spark-red={reach.trend === 'down'} class:bs-spark-blue={!reach.trend || reach.trend === 'flat'} style="height:{Math.max(12, h * 28)}px"></div>
+      <div
+        class="bs-spark-bar"
+        class:bs-spark-green={reach.trend === 'up'}
+        class:bs-spark-red={reach.trend === 'down'}
+        class:bs-spark-blue={!reach.trend || reach.trend === 'flat'}
+        style="height:{Math.max(12, h * 28)}px"
+      ></div>
     {/each}
   </div>
 </div>
 
 <!-- ROW 3: Secondary Metrics (3 cards) -->
 
-<div class="bs-card bs-metric bs-metric-sm">
+<div class="bs-card bs-metric bs-metric-sm bs-metric-orange">
   <span class="bs-label">AVG. SAVES</span>
   <span class="bs-metric-num bs-num-sm">{fmt(saves.value)}</span>
   <span class="bs-metric-sub">per post</span>
 </div>
 
-<div class="bs-card bs-metric bs-metric-sm">
+<div class="bs-card bs-metric bs-metric-sm bs-metric-pink">
   <span class="bs-label">SHARES</span>
   <span class="bs-metric-num bs-num-sm">{fmt(shares.value)}</span>
   <span class="bs-metric-sub">per post avg</span>
@@ -288,61 +378,19 @@
   {/if}
 </div>
 
-<!-- ROW 4: Insight Cards (3 cards) -->
-
-<div class="bs-card bs-insight bs-insight-green">
-  <span class="bs-label bs-label-green">WHAT'S WORKING</span>
-  {#if workingParsed.headline}
-    <p class="bs-insight-headline">{@html highlightNumbers(workingParsed.headline)}</p>
-    {#if workingParsed.points.length > 0}
-      <ul class="bs-insight-bullets bs-bullets-green">
-        {#each workingParsed.points as point}
-          <li>{@html highlightNumbers(point)}</li>
-        {/each}
-      </ul>
-    {/if}
-  {:else}
-    <p class="bs-insight-body">No data yet.</p>
-  {/if}
-</div>
-
-<div class="bs-card bs-insight bs-insight-red">
-  <span class="bs-label bs-label-red">WHAT'S NOT</span>
-  {#if notWorkingParsed.headline}
-    <p class="bs-insight-headline">{@html highlightNumbers(notWorkingParsed.headline)}</p>
-    {#if notWorkingParsed.points.length > 0}
-      <ul class="bs-insight-bullets bs-bullets-red">
-        {#each notWorkingParsed.points as point}
-          <li>{@html highlightNumbers(point)}</li>
-        {/each}
-      </ul>
-    {/if}
-  {:else}
-    <p class="bs-insight-body">No data yet.</p>
-  {/if}
-</div>
-
-<div class="bs-card bs-insight bs-insight-amber">
-  <span class="bs-label bs-label-amber">DO THIS WEEK</span>
-  {#if syn.whatNext && syn.whatNext.length > 0}
-    <ol class="bs-insight-list">
-      {#each syn.whatNext as item, i}
-        <li>{item}</li>
-      {/each}
-    </ol>
-  {:else}
-    <p class="bs-insight-body">No recommendations yet.</p>
-  {/if}
-</div>
-
-<!-- ROW 5: Instagram Posts (full width) -->
+<!-- ROW 4: Instagram Posts (full width) — moved up so follower analytics renders after -->
 
 <div class="bs-card bs-posts-strip">
   <span class="bs-label">RECENT POSTS</span>
   <div class="bs-posts-scroll">
     {#if posts && posts.length > 0}
       {#each posts as post}
-        <a class="bs-post-thumb" href={post.permalink || '#'} target="_blank" rel="noopener noreferrer">
+        <a
+          class="bs-post-thumb"
+          href={post.permalink || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           {#if post.thumbnail}
             <img src={post.thumbnail} alt="Post" loading="lazy" />
           {:else}
@@ -358,20 +406,14 @@
         </a>
       {/each}
     {:else}
-      <span class="bs-empty">No Instagram posts yet — they'll appear after your first analysis.</span>
+      <span class="bs-empty"
+        >No Instagram posts yet — they'll appear after your first analysis.</span
+      >
     {/if}
   </div>
 </div>
 
-<!-- ROW 6: Brand Scheme & Identity -->
-<BrandSchemeSection
-  brandScheme={dashboard.brandScheme ?? null}
-  brandName={dashboard.executive.brandName}
-  {syncing}
-  onRescan={onScrapeIdentity}
-/>
-
-<!-- ROW 7: Content Ideas (span 1) + Creator Matches (span 1) + Campaign Ops (span 1) -->
+<!-- Content Ideas + Creator Matches + Campaign Ops (bottom) -->
 
 <div class="bs-card bs-ideas">
   <div class="bs-card-header">
@@ -384,7 +426,13 @@
     <ul class="bs-ideas-list">
       {#each contentIdeas as item, i}
         <li class="bs-idea-item" class:bs-idea-divider={i > 0}>
-          <span class="bs-idea-tag" class:bs-tag-amber={i === 0} class:bs-tag-blue={i === 1} class:bs-tag-muted={i > 1}>{(item.pillar || '').split(':')[0].split(' ').slice(0, 3).join(' ')}</span>
+          <span
+            class="bs-idea-tag"
+            class:bs-tag-amber={i === 0}
+            class:bs-tag-blue={i === 1}
+            class:bs-tag-muted={i > 1}
+            >{(item.pillar || '').split(':')[0].split(' ').slice(0, 3).join(' ')}</span
+          >
           <span class="bs-idea-text">{item.concept}</span>
         </li>
       {/each}
@@ -408,16 +456,29 @@
           {#if c.profilePic}
             <img class="bs-creator-avatar-img" src={c.profilePic} alt={c.name} />
           {:else}
-            <span class="bs-creator-avatar" style="background:linear-gradient(135deg, {palette[i % palette.length]}, {palette[(i + 1) % palette.length]})">
+            <span
+              class="bs-creator-avatar"
+              style="background:linear-gradient(135deg, {palette[i % palette.length]}, {palette[
+                (i + 1) % palette.length
+              ]})"
+            >
               {(c.name || c.handle || '?').charAt(0).toUpperCase()}
             </span>
           {/if}
           <div class="bs-creator-info">
             <span class="bs-creator-name">{c.name || c.handle}</span>
             <span class="bs-creator-handle">@{c.handle}</span>
-            <span class="bs-creator-desc">{c.followerCount.toLocaleString()} followers{c.location ? ` · ${c.location}` : ''}</span>
+            <span class="bs-creator-desc"
+              >{c.followerCount.toLocaleString()} followers{c.location
+                ? ` · ${c.location}`
+                : ''}</span
+            >
           </div>
-          <span class="bs-creator-score" style="color:{c.score >= 60 ? '#4ade80' : c.score >= 40 ? '#E8833A' : '#888'}">{c.score}%</span>
+          <span
+            class="bs-creator-score"
+            style="color:{c.score >= 60 ? '#4ade80' : c.score >= 40 ? '#E8833A' : '#888'}"
+            >{c.score}%</span
+          >
         </li>
       {/each}
     </ul>
@@ -464,25 +525,29 @@
     </div>
   {/if}
 
-  <button class="bs-refresh-btn" on:click={onRefresh} disabled={syncing}>
-    {syncing ? 'Refreshing...' : 'Refresh Data'}
-  </button>
-  <button class="bs-refresh-btn bs-analyse-btn" on:click={runAnalysis} disabled={analysing || syncing}>
-    {analysing ? analyseStatus : 'Run Deep Analysis'}
-  </button>
-  {#if analyseStatus && !analysing}
-    <span class="bs-analyse-status">{analyseStatus}</span>
+  {#if !bestTime && !ops.activeCount}
+    <span class="bs-empty">Generate timing insights</span>
   {/if}
 </div>
 
+<!-- Brand Scheme & Identity (bottom) -->
+<BrandSchemeSection
+  brandScheme={dashboard.brandScheme ?? null}
+  brandName={dashboard.executive.brandName}
+  {syncing}
+  onRescan={onScrapeIdentity}
+/>
+
 <style>
   /* ── Host: display contents so cards flow into parent grid ── */
-  :host { display: contents; }
+  :host {
+    display: contents;
+  }
 
   /* ── Base card ── */
   .bs-card {
-    background: rgba(255,255,255,0.035);
-    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 14px;
     padding: 18px 16px;
     position: relative;
@@ -490,7 +555,35 @@
     transition: border-color 0.2s ease;
   }
   .bs-card:hover {
-    border-color: rgba(255,255,255,0.12);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .bs-metric-orange {
+    background: linear-gradient(145deg, rgba(232, 131, 58, 0.15), rgba(232, 131, 58, 0.03));
+    border-color: rgba(232, 131, 58, 0.2);
+  }
+  .bs-metric-orange .bs-label {
+    color: #e8833a;
+  }
+  .bs-metric-green {
+    background: linear-gradient(145deg, rgba(74, 222, 128, 0.1), rgba(74, 222, 128, 0.03));
+    border-color: rgba(74, 222, 128, 0.15);
+  }
+  .bs-metric-green .bs-label {
+    color: #4ade80;
+  }
+  .bs-metric-blue {
+    background: linear-gradient(145deg, rgba(77, 124, 255, 0.1), rgba(77, 124, 255, 0.03));
+    border-color: rgba(77, 124, 255, 0.12);
+  }
+  .bs-metric-blue .bs-label {
+    color: #4d7cff;
+  }
+  .bs-metric-pink {
+    background: linear-gradient(145deg, rgba(232, 127, 168, 0.08), rgba(232, 127, 168, 0.02));
+    border-color: rgba(232, 127, 168, 0.12);
+  }
+  .bs-metric-pink .bs-label {
+    color: #e87fa8;
   }
 
   /* ── Labels ── */
@@ -500,7 +593,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #4A4A50;
+    color: #4a4a50;
     display: block;
     margin-bottom: 8px;
   }
@@ -509,20 +602,28 @@
     top: 18px;
     right: 16px;
     margin-bottom: 0;
-    color: #3A3A40;
+    color: #3a3a40;
   }
   .bs-label-inline {
     display: inline;
     margin-right: 8px;
     margin-bottom: 0;
   }
-  .bs-label-green { color: #4ade80; }
-  .bs-label-red { color: #f87171; }
-  .bs-label-amber { color: #E8833A; }
+  .bs-label-green {
+    color: #4ade80;
+  }
+  .bs-label-red {
+    color: #f87171;
+  }
+  .bs-label-amber {
+    color: #e8833a;
+  }
 
   /* ── ROW 1: Brief ── */
   .bs-brief {
     grid-column: span 2;
+    background: linear-gradient(145deg, rgba(232, 131, 58, 0.1), rgba(232, 131, 58, 0.03));
+    border-color: rgba(232, 131, 58, 0.15);
   }
   .bs-brief-glow {
     position: absolute;
@@ -530,30 +631,40 @@
     right: -30px;
     width: 120px;
     height: 120px;
-    background: radial-gradient(circle, rgba(232,131,58,0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(232, 131, 58, 0.12) 0%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
   }
   .bs-brief-headline {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: clamp(22px, 2.5vw, 28px);
     font-weight: 700;
-    color: #EDEDEF;
+    color: #ededef;
     margin: 8px 0 10px;
     line-height: 1.3;
     letter-spacing: -0.02em;
   }
   .bs-brief-body {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 14px;
     line-height: 1.7;
-    color: #9A9AA0;
+    color: #9a9aa0;
     margin: 0;
   }
   .bs-syncing-badge {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 8px;
-    color: #E8833A;
+    color: #e8833a;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-top: 10px;
@@ -571,7 +682,7 @@
   .bs-health-radial {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(255,255,255,0.02) 0%, transparent 70%);
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
     pointer-events: none;
   }
   .bs-health .bs-label {
@@ -591,9 +702,13 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-family: 'Bodoni Moda', Georgia, serif;
+    font-family:
+      'Inter',
+      'Geist Variable',
+      -apple-system,
+      sans-serif;
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 800;
   }
   .bs-health-label {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
@@ -610,37 +725,54 @@
     gap: 4px;
   }
   .bs-metric-num {
-    font-family: 'Bodoni Moda', Georgia, serif;
-    font-size: 24px;
-    font-weight: 700;
-    color: #EDEDEF;
+    font-family:
+      'Inter',
+      'Geist Variable',
+      -apple-system,
+      sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #ededef;
     line-height: 1.1;
+  }
+  .bs-metric-hero .bs-metric-num {
+    font-size: 36px;
+    letter-spacing: -0.03em;
   }
   .bs-num-sm {
     font-size: 20px;
   }
   .bs-metric-suffix {
     font-size: 14px;
-    color: #8A8A92;
+    color: #8a8a92;
     margin-left: 1px;
   }
   .bs-metric-delta {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
   }
-  .bs-delta-green { color: #4ade80; }
-  .bs-delta-red { color: #f87171; }
+  .bs-delta-green {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+  }
+  .bs-delta-red {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+  }
   .bs-metric-sub {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 8px;
-    color: #3A3A40;
+    color: #3a3a40;
     text-transform: lowercase;
   }
   .bs-metric-note-amber {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 8px;
-    color: #E8833A;
+    color: #e8833a;
     text-transform: lowercase;
     margin-top: 2px;
   }
@@ -660,9 +792,15 @@
     min-height: 4px;
     transition: height 0.3s ease;
   }
-  .bs-spark-green { background: rgba(74,222,128,0.35); }
-  .bs-spark-blue { background: rgba(77,124,255,0.3); }
-  .bs-spark-red { background: rgba(248,113,113,0.35); }
+  .bs-spark-green {
+    background: rgba(74, 222, 128, 0.35);
+  }
+  .bs-spark-blue {
+    background: rgba(77, 124, 255, 0.3);
+  }
+  .bs-spark-red {
+    background: rgba(248, 113, 113, 0.35);
+  }
 
   /* ── ROW 4: Insight cards ── */
   .bs-insight {
@@ -677,23 +815,33 @@
     border-left: 3px solid #f87171;
   }
   .bs-insight-amber {
-    border-left: 3px solid #E8833A;
-    background: rgba(232,131,58,0.06);
+    border-left: 3px solid #e8833a;
+    background: rgba(232, 131, 58, 0.06);
   }
   .bs-insight-headline {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 13px;
     line-height: 1.6;
-    color: #EDEDEF;
+    color: #ededef;
     font-weight: 500;
     margin: 0;
     letter-spacing: -0.01em;
   }
   .bs-insight-body {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 13px;
     line-height: 1.6;
-    color: #6A6A72;
+    color: #6a6a72;
     margin: 0;
   }
   .bs-insight-bullets {
@@ -705,10 +853,15 @@
     gap: 6px;
   }
   .bs-insight-bullets li {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 12px;
     line-height: 1.6;
-    color: #9A9AA0;
+    color: #9a9aa0;
     padding-left: 14px;
     position: relative;
   }
@@ -728,22 +881,27 @@
     background: #f87171;
   }
   :global(.bs-num-hl) {
-    color: #EDEDEF;
+    color: #ededef;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   .bs-insight-list {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 14px;
     line-height: 1.8;
-    color: #EDEDEF;
+    color: #ededef;
     margin: 0;
     padding-left: 18px;
     list-style: decimal;
   }
   .bs-insight-list li {
     margin-bottom: 6px;
-    color: #9A9AA0;
+    color: #9a9aa0;
   }
 
   /* ── ROW 5: Instagram Posts strip ── */
@@ -756,13 +914,13 @@
     overflow-x: auto;
     padding-bottom: 4px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
   }
   .bs-posts-scroll::-webkit-scrollbar {
     height: 4px;
   }
   .bs-posts-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 2px;
   }
   .bs-post-thumb {
@@ -784,7 +942,7 @@
   .bs-post-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #E8833A, #E87FA8, #4d7cff);
+    background: linear-gradient(135deg, #e8833a, #e87fa8, #4d7cff);
   }
   .bs-post-badge {
     position: absolute;
@@ -795,8 +953,8 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #EDEDEF;
-    background: rgba(0,0,0,0.55);
+    color: #ededef;
+    background: rgba(0, 0, 0, 0.55);
     padding: 2px 5px;
     border-radius: 4px;
   }
@@ -806,7 +964,7 @@
     left: 0;
     right: 0;
     padding: 18px 6px 5px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
     display: flex;
     gap: 8px;
   }
@@ -836,8 +994,8 @@
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 8px;
     font-weight: 700;
-    color: #EDEDEF;
-    background: rgba(255,255,255,0.08);
+    color: #ededef;
+    background: rgba(255, 255, 255, 0.08);
     padding: 2px 6px;
     border-radius: 6px;
   }
@@ -856,14 +1014,19 @@
     padding-bottom: 10px;
   }
   .bs-idea-divider {
-    border-top: 1px solid rgba(255,255,255,0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
     padding-top: 10px;
   }
   .bs-idea-text {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 12px;
     line-height: 1.55;
-    color: #8A8A92;
+    color: #8a8a92;
   }
   .bs-idea-tag {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
@@ -880,16 +1043,16 @@
     white-space: nowrap;
   }
   .bs-tag-amber {
-    color: #E8833A;
-    background: rgba(232,131,58,0.1);
+    color: #e8833a;
+    background: rgba(232, 131, 58, 0.1);
   }
   .bs-tag-blue {
     color: #4d7cff;
-    background: rgba(77,124,255,0.1);
+    background: rgba(77, 124, 255, 0.1);
   }
   .bs-tag-muted {
-    color: #4A4A50;
-    background: rgba(255,255,255,0.04);
+    color: #4a4a50;
+    background: rgba(255, 255, 255, 0.04);
   }
 
   /* ── ROW 7: Creator Matches ── */
@@ -921,7 +1084,7 @@
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 13px;
     font-weight: 700;
-    color: #EDEDEF;
+    color: #ededef;
     flex-shrink: 0;
   }
   .bs-creator-info {
@@ -932,21 +1095,31 @@
     min-width: 0;
   }
   .bs-creator-name {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 13px;
     font-weight: 600;
-    color: #EDEDEF;
+    color: #ededef;
   }
   .bs-creator-handle {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
     font-size: 10px;
-    color: #E8833A;
+    color: #e8833a;
     line-height: 1.2;
   }
   .bs-creator-desc {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 10px;
-    color: #4A4A50;
+    color: #4a4a50;
     line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -973,15 +1146,24 @@
     gap: 6px;
   }
   .bs-campops-active {
-    font-family: 'Bodoni Moda', Georgia, serif;
+    font-family:
+      'Inter',
+      'Geist Variable',
+      -apple-system,
+      sans-serif;
     font-size: 18px;
-    font-weight: 700;
+    font-weight: 800;
     color: #4ade80;
   }
   .bs-campops-none {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 13px;
-    color: #4A4A50;
+    color: #4a4a50;
     font-style: italic;
   }
   .bs-pipeline {
@@ -1000,10 +1182,14 @@
     gap: 2px;
   }
   .bs-pipeline-num {
-    font-family: 'Bodoni Moda', Georgia, serif;
+    font-family:
+      'Inter',
+      'Geist Variable',
+      -apple-system,
+      sans-serif;
     font-size: 18px;
-    font-weight: 700;
-    color: #EDEDEF;
+    font-weight: 800;
+    color: #ededef;
   }
   .bs-pipeline-label {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
@@ -1011,7 +1197,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #4A4A50;
+    color: #4a4a50;
   }
   .bs-best-time {
     display: flex;
@@ -1020,55 +1206,149 @@
     margin-top: 6px;
   }
   .bs-best-time-val {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 13px;
-    color: #8A8A92;
+    color: #8a8a92;
   }
-  .bs-refresh-btn {
-    margin-top: auto;
+
+  /* ── Action Bar ── */
+  .bs-action-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    background: rgba(232, 131, 58, 0.06);
+    border: 1px solid rgba(232, 131, 58, 0.15);
+    border-radius: 14px;
+  }
+  .bs-action-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .bs-action-title {
     font-family: 'Geist Mono Variable', 'SF Mono', monospace;
-    font-size: 8px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #EDEDEF;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
+    color: #ededef;
+  }
+  .bs-period-toggle {
+    display: flex;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.04);
     border-radius: 8px;
-    padding: 6px 12px;
+    padding: 2px;
+    width: fit-content;
+  }
+  .bs-period-btn {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6a6a72;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
     cursor: pointer;
-    width: 100%;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: all 0.15s ease;
   }
-  .bs-refresh-btn:hover:not(:disabled) {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.18);
+  .bs-period-btn:hover {
+    color: #9a9aa0;
   }
-  .bs-refresh-btn:disabled {
+  .bs-period-active {
+    color: #ededef;
+    background: rgba(232, 131, 58, 0.2);
+  }
+  .bs-period-active:hover {
+    color: #ededef;
+  }
+  .bs-action-status {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    color: #e8833a;
+    letter-spacing: 0.02em;
+  }
+  .bs-action-status-done {
+    color: #4ade80;
+  }
+  .bs-action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .bs-action-btn {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.1s ease;
+    white-space: nowrap;
+  }
+  .bs-action-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .bs-action-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
   }
-  .bs-analyse-btn {
-    background: rgba(232, 131, 58, 0.1);
-    border-color: rgba(232, 131, 58, 0.3);
-    color: #E8833A;
+  .bs-action-refresh {
+    color: #ededef;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
-  .bs-analyse-btn:hover:not(:disabled) {
-    background: rgba(232, 131, 58, 0.2);
-    border-color: rgba(232, 131, 58, 0.5);
+  .bs-action-refresh:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
   }
-  .bs-analyse-status {
-    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
-    font-size: 10px;
-    color: #4ade80;
-    margin-top: 6px;
+  .bs-action-analyse {
+    color: #1a1a2e;
+    background: #e8833a;
+    border: 1px solid #e8833a;
+    font-weight: 700;
+  }
+  .bs-action-analyse:hover:not(:disabled) {
+    background: #f09348;
+    border-color: #f09348;
+  }
+  @media (max-width: 640px) {
+    .bs-action-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+    .bs-action-buttons {
+      flex-direction: column;
+    }
   }
 
   /* ── Shared ── */
   .bs-empty {
-    font-family: 'PP Mori', 'Geist Variable', 'Inter', -apple-system, sans-serif;
+    font-family:
+      'PP Mori',
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
     font-size: 13px;
-    color: #3A3A40;
+    color: #3a3a40;
     font-style: italic;
   }
 

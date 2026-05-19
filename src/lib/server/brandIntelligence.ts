@@ -12,6 +12,7 @@ import {
   type InstagramProfile,
   type InstagramMedia,
 } from './instagram';
+import { buildFingerprint, upsertFingerprints } from '$lib/server/brand/brandOsEngine';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -40,20 +41,23 @@ export interface PostInsight {
 }
 
 export interface AudienceDemographics {
-  ageBuckets: Record<string, number>;   // e.g. "18-24": 0.22
+  ageBuckets: Record<string, number>; // e.g. "18-24": 0.22
   genderSplit: { male: number; female: number; unknown: number };
   topCities: Array<{ city: string; pct: number }>;
   topCountries: Array<{ country: string; pct: number }>;
 }
 
 export interface ContentPerformance {
-  formatBreakdown: Record<string, {
-    count: number;
-    avgReach: number;
-    avgSaves: number;
-    avgShares: number;
-    avgEngagement: number;
-  }>;
+  formatBreakdown: Record<
+    string,
+    {
+      count: number;
+      avgReach: number;
+      avgSaves: number;
+      avgShares: number;
+      avgEngagement: number;
+    }
+  >;
   topPostIds: string[];
   bottomPostIds: string[];
   contentArchetypes: Array<{
@@ -222,27 +226,34 @@ export async function fetchDemographics(
     }
   }
 
-    // Normalize demographics to percentages
-    const totalAge = Object.values(result.ageBuckets).reduce((s, v) => s + v, 0);
-    if (totalAge > 0) {
-      for (const key of Object.keys(result.ageBuckets)) {
-        result.ageBuckets[key] = +(result.ageBuckets[key] / totalAge * 100).toFixed(1);
-      }
+  // Normalize demographics to percentages
+  const totalAge = Object.values(result.ageBuckets).reduce((s, v) => s + v, 0);
+  if (totalAge > 0) {
+    for (const key of Object.keys(result.ageBuckets)) {
+      result.ageBuckets[key] = +((result.ageBuckets[key] / totalAge) * 100).toFixed(1);
     }
-    const totalGender = result.genderSplit.male + result.genderSplit.female + result.genderSplit.unknown;
-    if (totalGender > 0) {
-      result.genderSplit.male = +(result.genderSplit.male / totalGender * 100).toFixed(1);
-      result.genderSplit.female = +(result.genderSplit.female / totalGender * 100).toFixed(1);
-      result.genderSplit.unknown = +(result.genderSplit.unknown / totalGender * 100).toFixed(1);
-    }
-    const totalCities = result.topCities.reduce((s, c) => s + c.pct, 0);
-    if (totalCities > 0) {
-      result.topCities = result.topCities.map(c => ({ ...c, pct: +(c.pct / totalCities * 100).toFixed(1) }));
-    }
-    const totalCountries = result.topCountries.reduce((s, c) => s + c.pct, 0);
-    if (totalCountries > 0) {
-      result.topCountries = result.topCountries.map(c => ({ ...c, pct: +(c.pct / totalCountries * 100).toFixed(1) }));
-    }
+  }
+  const totalGender =
+    result.genderSplit.male + result.genderSplit.female + result.genderSplit.unknown;
+  if (totalGender > 0) {
+    result.genderSplit.male = +((result.genderSplit.male / totalGender) * 100).toFixed(1);
+    result.genderSplit.female = +((result.genderSplit.female / totalGender) * 100).toFixed(1);
+    result.genderSplit.unknown = +((result.genderSplit.unknown / totalGender) * 100).toFixed(1);
+  }
+  const totalCities = result.topCities.reduce((s, c) => s + c.pct, 0);
+  if (totalCities > 0) {
+    result.topCities = result.topCities.map((c) => ({
+      ...c,
+      pct: +((c.pct / totalCities) * 100).toFixed(1),
+    }));
+  }
+  const totalCountries = result.topCountries.reduce((s, c) => s + c.pct, 0);
+  if (totalCountries > 0) {
+    result.topCountries = result.topCountries.map((c) => ({
+      ...c,
+      pct: +((c.pct / totalCountries) * 100).toFixed(1),
+    }));
+  }
 
   return result;
 }
@@ -255,8 +266,13 @@ export async function fetchPostInsights(
   const insights: PostInsight[] = [];
 
   // Only fetch insights for top 5 posts by engagement to avoid rate limiting
-  const sorted = [...posts].sort((a, b) => ((b.like_count || 0) + (b.comments_count || 0)) - ((a.like_count || 0) + (a.comments_count || 0)));
-  const insightPosts = new Set(sorted.slice(0, 5).map(p => p.id));
+  const sorted = [...posts].sort(
+    (a, b) =>
+      (b.like_count || 0) +
+      (b.comments_count || 0) -
+      ((a.like_count || 0) + (a.comments_count || 0)),
+  );
+  const insightPosts = new Set(sorted.slice(0, 5).map((p) => p.id));
 
   for (const post of posts.slice(0, 25)) {
     const base: PostInsight = {
@@ -374,9 +390,19 @@ export function computeHashtags(posts: InstagramMedia[]) {
 }
 
 export function computeFormatBreakdown(posts: PostInsight[]) {
-  const breakdown: Record<string, { count: number; totalReach: number; totalSaves: number; totalShares: number; totalEng: number }> = {};
+  const breakdown: Record<
+    string,
+    { count: number; totalReach: number; totalSaves: number; totalShares: number; totalEng: number }
+  > = {};
   for (const p of posts) {
-    if (!breakdown[p.mediaType]) breakdown[p.mediaType] = { count: 0, totalReach: 0, totalSaves: 0, totalShares: 0, totalEng: 0 };
+    if (!breakdown[p.mediaType])
+      breakdown[p.mediaType] = {
+        count: 0,
+        totalReach: 0,
+        totalSaves: 0,
+        totalShares: 0,
+        totalEng: 0,
+      };
     breakdown[p.mediaType].count += 1;
     breakdown[p.mediaType].totalReach += p.reach;
     breakdown[p.mediaType].totalSaves += p.saved;
@@ -421,9 +447,17 @@ export async function analyseAudiencePortrait(
   const hasDemo = Object.keys(demographics?.ageBuckets || {}).length > 0;
 
   // Build context from whatever data we have
-  const avgLikes = Math.round(postInsights.reduce((s, p) => s + p.likes, 0) / (postInsights.length || 1));
-  const avgComments = Math.round(postInsights.reduce((s, p) => s + p.comments, 0) / (postInsights.length || 1));
-  const captionSample = postInsights.slice(0, 5).map(p => p.caption).filter(Boolean).join(' | ');
+  const avgLikes = Math.round(
+    postInsights.reduce((s, p) => s + p.likes, 0) / (postInsights.length || 1),
+  );
+  const avgComments = Math.round(
+    postInsights.reduce((s, p) => s + p.comments, 0) / (postInsights.length || 1),
+  );
+  const captionSample = postInsights
+    .slice(0, 5)
+    .map((p) => p.caption)
+    .filter(Boolean)
+    .join(' | ');
 
   try {
     const client = new Anthropic({ apiKey });
@@ -437,19 +471,21 @@ Top countries: ${(demographics?.topCountries || []).map((c: any) => `${c.country
       : `No Instagram demographic API data — infer the audience from the brand's identity, content themes, bio, and engagement patterns below.`;
 
     // Pull identity signals for richer context
-    const id = (profile as any);
-    const identityContext = postInsights.length > 0
-      ? `Content themes from recent posts: ${captionSample.slice(0, 400)}
+    const id = profile as any;
+    const identityContext =
+      postInsights.length > 0
+        ? `Content themes from recent posts: ${captionSample.slice(0, 400)}
 Avg likes/post: ${avgLikes}, Avg comments/post: ${avgComments}
 Engagement pattern: ${avgLikes > 50 ? 'strong' : avgLikes > 20 ? 'moderate' : 'growing'} engagement`
-      : '';
+        : '';
 
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 800,
-      messages: [{
-        role: 'user',
-        content: `You are a brand strategist. Analyse this Instagram account and describe who their audience is. Be specific and insightful — don't give generic answers. Return ONLY valid JSON, no markdown wrapping.
+      messages: [
+        {
+          role: 'user',
+          content: `You are a brand strategist. Analyse this Instagram account and describe who their audience is. Be specific and insightful — don't give generic answers. Return ONLY valid JSON, no markdown wrapping.
 
 Account: @${profile.username} — ${profile.name || ''} (${profile.followers_count || 0} followers)
 Bio: ${profile.biography || 'none'}
@@ -466,11 +502,15 @@ Return:
     { "name": "a descriptive persona name", "description": "1-2 sentence behavioral description of this audience segment" },
     { "name": "a descriptive persona name", "description": "1-2 sentence behavioral description of this audience segment" }
   ]
-}`
-      }],
+}`,
+        },
+      ],
     });
     const text = msg.content[0].type === 'text' ? msg.content[0].text : '';
-    const cleaned = text.replace(/^```json?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const cleaned = text
+      .replace(/^```json?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
     return JSON.parse(cleaned);
   } catch {
     return fallback;
@@ -484,14 +524,16 @@ export async function analyseContentMatrix(
   profile: InstagramProfile,
   formatBreakdown: ContentPerformance['formatBreakdown'],
   apiKey: string,
-): Promise<Pick<ContentPerformance, 'contentArchetypes' | 'reachDrivers' | 'saveDrivers' | 'shareDrivers'>> {
+): Promise<
+  Pick<ContentPerformance, 'contentArchetypes' | 'reachDrivers' | 'saveDrivers' | 'shareDrivers'>
+> {
   const fallback = { contentArchetypes: [], reachDrivers: '', saveDrivers: '', shareDrivers: '' };
   if (postInsights.length < 3) return fallback;
 
   try {
     const client = new Anthropic({ apiKey });
     // Use reach/saves if available, fall back to likes/comments
-    const hasInsights = postInsights.some(p => p.reach > 0 || p.saved > 0);
+    const hasInsights = postInsights.some((p) => p.reach > 0 || p.saved > 0);
     const postSummary = postInsights
       .slice(0, 15)
       .map((p, i) => {
@@ -509,9 +551,10 @@ export async function analyseContentMatrix(
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: `Analyse this brand's content performance. ${metricsNote} Return ONLY valid JSON.
+      messages: [
+        {
+          role: 'user',
+          content: `Analyse this brand's content performance. ${metricsNote} Return ONLY valid JSON.
 
 @${profile.username} — ${profile.followers_count} followers
 Format breakdown: ${JSON.stringify(formatBreakdown)}
@@ -527,11 +570,15 @@ Return:
   "reachDrivers": "1-2 sentences on what content likely drives discovery",
   "saveDrivers": "1-2 sentences on what content people would bookmark",
   "shareDrivers": "1-2 sentences on what content is most shareable"
-}`
-      }],
+}`,
+        },
+      ],
     });
     const text = msg.content[0].type === 'text' ? msg.content[0].text : '';
-    const cleaned = text.replace(/^```json?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const cleaned = text
+      .replace(/^```json?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
     return JSON.parse(cleaned);
   } catch {
     return fallback;
@@ -544,7 +591,10 @@ export async function analyseStrategicPositioning(
   profile: InstagramProfile,
   identity: Record<string, unknown>,
   audiencePortrait: AudiencePortrait,
-  contentMatrix: Pick<ContentPerformance, 'contentArchetypes' | 'reachDrivers' | 'saveDrivers' | 'shareDrivers'>,
+  contentMatrix: Pick<
+    ContentPerformance,
+    'contentArchetypes' | 'reachDrivers' | 'saveDrivers' | 'shareDrivers'
+  >,
   competitorSummary: string,
   engagementRate: number,
   growthTrend: number,
@@ -574,7 +624,10 @@ export async function analyseStrategicPositioning(
     if (id.musicVibe) identityLines.push(`Music vibe: ${id.musicVibe}`);
     if (id.foodVibe) identityLines.push(`Food vibe: ${id.foodVibe}`);
     if (id.travelStyle) identityLines.push(`Travel style: ${id.travelStyle}`);
-    if (id.personality) identityLines.push(`Personality: expressive=${id.personality.expressive}, humor=${id.personality.humor}, introspective=${id.personality.introspective}`);
+    if (id.personality)
+      identityLines.push(
+        `Personality: expressive=${id.personality.expressive}, humor=${id.personality.humor}, introspective=${id.personality.introspective}`,
+      );
     if (id.igPostingCadence) identityLines.push(`Posting cadence: ${id.igPostingCadence}`);
     if (id.igCreatorTier) identityLines.push(`Creator tier: ${id.igCreatorTier}`);
     if (id.rawSummary) identityLines.push(`AI summary: ${id.rawSummary.slice(0, 400)}`);
@@ -582,9 +635,17 @@ export async function analyseStrategicPositioning(
     // Visual identity
     if (id.visual) {
       const v = id.visual;
-      if (v.aesthetic) identityLines.push(`Visual: brightness=${v.aesthetic.brightness}, tone=${v.aesthetic.tone}, composition=${v.aesthetic.composition}`);
+      if (v.aesthetic)
+        identityLines.push(
+          `Visual: brightness=${v.aesthetic.brightness}, tone=${v.aesthetic.tone}, composition=${v.aesthetic.composition}`,
+        );
       if (v.colorPalette?.length) identityLines.push(`Color palette: ${v.colorPalette.join(', ')}`);
-      if (v.sceneCategories) identityLines.push(`Scene categories: ${Object.entries(v.sceneCategories).map(([k,v]) => `${k}(${v})`).join(', ')}`);
+      if (v.sceneCategories)
+        identityLines.push(
+          `Scene categories: ${Object.entries(v.sceneCategories)
+            .map(([k, v]) => `${k}(${v})`)
+            .join(', ')}`,
+        );
       if (v.indoorOutdoorRatio) identityLines.push(`Indoor/outdoor: ${v.indoorOutdoorRatio}`);
     }
 
@@ -594,18 +655,25 @@ export async function analyseStrategicPositioning(
 
     // Temporal
     if (id.temporal) {
-      identityLines.push(`Activity pattern: ${id.temporal.activityPattern}, peak days: ${id.temporal.peakDays?.join(', ')}, consistency: ${id.temporal.consistency}`);
+      identityLines.push(
+        `Activity pattern: ${id.temporal.activityPattern}, peak days: ${id.temporal.peakDays?.join(', ')}, consistency: ${id.temporal.consistency}`,
+      );
     }
 
     // Engagement
     if (id.engagement) {
-      identityLines.push(`Engagement tier: ${id.engagement.engagementTier}, top content type: ${id.engagement.topContentType}, visibility: ${id.engagement.socialVisibility}`);
+      identityLines.push(
+        `Engagement tier: ${id.engagement.engagementTier}, top content type: ${id.engagement.topContentType}, visibility: ${id.engagement.socialVisibility}`,
+      );
     }
 
     // Comment graph
     if (id.commentGraph) {
-      identityLines.push(`Community: density=${id.commentGraph.circleDensity}, tone=${id.commentGraph.communityTone}`);
-      if (id.commentGraph.externalPerception?.length) identityLines.push(`External perception: ${id.commentGraph.externalPerception.join(', ')}`);
+      identityLines.push(
+        `Community: density=${id.commentGraph.circleDensity}, tone=${id.commentGraph.communityTone}`,
+      );
+      if (id.commentGraph.externalPerception?.length)
+        identityLines.push(`External perception: ${id.commentGraph.externalPerception.join(', ')}`);
     }
 
     const identityBlock = identityLines.join('\n');
@@ -614,16 +682,18 @@ export async function analyseStrategicPositioning(
       ? `Content performance insights:\n- Reach drivers: ${contentMatrix.reachDrivers}\n- Save drivers: ${contentMatrix.saveDrivers}\n- Share drivers: ${contentMatrix.shareDrivers}`
       : '';
 
-    const audienceStr = audiencePortrait.narrative && !audiencePortrait.narrative.includes('not yet available')
-      ? `Audience portrait: ${audiencePortrait.narrative}`
-      : '';
+    const audienceStr =
+      audiencePortrait.narrative && !audiencePortrait.narrative.includes('not yet available')
+        ? `Audience portrait: ${audiencePortrait.narrative}`
+        : '';
 
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
-      messages: [{
-        role: 'user',
-        content: `You are a senior brand strategist with deep experience in Instagram growth and positioning. You have complete access to this brand's identity graph. Synthesise ALL signals below into a sharp, actionable strategic direction. Be specific and bold — no generic advice. Return ONLY valid JSON, no markdown wrapping.
+      messages: [
+        {
+          role: 'user',
+          content: `You are a senior brand strategist with deep experience in Instagram growth and positioning. You have complete access to this brand's identity graph. Synthesise ALL signals below into a sharp, actionable strategic direction. Be specific and bold — no generic advice. Return ONLY valid JSON, no markdown wrapping.
 
 === BRAND PROFILE ===
 Account: @${profile.username} — ${profile.name || ''} (${profile.followers_count} followers)
@@ -640,7 +710,12 @@ ${audienceStr || 'Infer audience from identity signals, content themes, and enga
 
 === CONTENT PERFORMANCE ===
 ${contentDrivers || 'Use the identity graph and engagement data to infer what content works.'}
-Top hashtags: ${topHashtags.slice(0, 10).map(h => `${h.tag}(${h.count}x)`).join(', ') || 'none found'}
+Top hashtags: ${
+            topHashtags
+              .slice(0, 10)
+              .map((h) => `${h.tag}(${h.count}x)`)
+              .join(', ') || 'none found'
+          }
 
 === COMPETITIVE LANDSCAPE ===
 ${competitorSummary || 'No competitors tracked yet — provide general positioning advice for this niche.'}
@@ -653,11 +728,15 @@ Return this exact JSON structure with detailed, specific answers:
   "competitiveGaps": "1-2 sentences: What opportunities exist in their niche that they could own?",
   "bigBet": "2-3 sentences: One bold, specific strategic recommendation that could 10x their growth. Not generic advice — something unique to THIS brand.",
   "quickWins": ["3 specific, actionable things they can do THIS WEEK to improve"]
-}`
-      }],
+}`,
+        },
+      ],
     });
     const text = msg.content[0].type === 'text' ? msg.content[0].text : '';
-    const cleaned = text.replace(/^```json?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const cleaned = text
+      .replace(/^```json?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
     return JSON.parse(cleaned);
   } catch (e) {
     console.error('[Brand Intelligence] Strategic positioning failed:', e);
@@ -699,7 +778,7 @@ export async function runBrandIntelligence(
   const totalEng = postInsights.reduce((s, p) => s + p.engagement, 0);
   const avgPerPost = postInsights.length ? Math.round(totalEng / postInsights.length) : 0;
   const engagementRate = profile.followers_count
-    ? +((totalEng / postInsights.length) / profile.followers_count * 100).toFixed(2)
+    ? +((totalEng / postInsights.length / profile.followers_count) * 100).toFixed(2)
     : 0;
 
   let postsPerWeek = 0;
@@ -711,14 +790,30 @@ export async function runBrandIntelligence(
   }
 
   // Phases 6-8: Claude analyses (sequential — each builds on previous)
-  const audiencePortrait = await analyseAudiencePortrait(demographics, profile, postInsights, apiKey);
+  const audiencePortrait = await analyseAudiencePortrait(
+    demographics,
+    profile,
+    postInsights,
+    apiKey,
+  );
 
-  const contentMatrixResult = await analyseContentMatrix(postInsights, profile, formatBreakdown, apiKey);
+  const contentMatrixResult = await analyseContentMatrix(
+    postInsights,
+    profile,
+    formatBreakdown,
+    apiKey,
+  );
 
   const contentPerformance: ContentPerformance = {
     formatBreakdown,
-    topPostIds: [...postInsights].sort((a, b) => b.engagement - a.engagement).slice(0, 3).map(p => p.mediaId),
-    bottomPostIds: [...postInsights].sort((a, b) => a.engagement - b.engagement).slice(0, 3).map(p => p.mediaId),
+    topPostIds: [...postInsights]
+      .sort((a, b) => b.engagement - a.engagement)
+      .slice(0, 3)
+      .map((p) => p.mediaId),
+    bottomPostIds: [...postInsights]
+      .sort((a, b) => a.engagement - b.engagement)
+      .slice(0, 3)
+      .map((p) => p.mediaId),
     ...contentMatrixResult,
   };
 
@@ -735,6 +830,27 @@ export async function runBrandIntelligence(
   );
 
   console.log(`[Brand Intelligence] Analysis complete for @${profile.username}`);
+
+  try {
+    const fingerprintRows = postInsights.map((p) =>
+      buildFingerprint({
+        brandIgId: igUserId,
+        postId: p.mediaId,
+        mediaType: p.mediaType,
+        caption: p.caption,
+        postedAt: p.timestamp,
+        likes: p.likes,
+        comments: p.comments,
+        saves: p.saved,
+        shares: p.shares,
+        reach: p.reach,
+        followers: profile.followers_count || 0,
+      }),
+    );
+    await upsertFingerprints(fingerprintRows);
+  } catch (fpError) {
+    console.error('[Brand Intelligence] fingerprint upsert failed:', fpError);
+  }
 
   return {
     profile,

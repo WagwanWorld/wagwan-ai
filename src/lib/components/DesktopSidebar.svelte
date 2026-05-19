@@ -69,6 +69,25 @@
     <p class="sidebar-footer">
       <a href="/brands" class="sidebar-footer-link">For brands</a>
     </p>
+    <div class="sidebar-contact">
+      <img src="/wagwan-logo-white.svg" alt="Wagwan" class="sidebar-contact-logo" />
+      <a href="mailto:madhvik@wagwanworld.in" class="sidebar-contact-link">madhvik@wagwanworld.in</a
+      >
+      <div class="sidebar-contact-socials">
+        <a
+          href="https://instagram.com/wagwan.world"
+          target="_blank"
+          rel="noopener"
+          class="sidebar-contact-social">Instagram</a
+        >
+        <a
+          href="https://linkedin.com/company/wagwan-world"
+          target="_blank"
+          rel="noopener"
+          class="sidebar-contact-social">LinkedIn</a
+        >
+      </div>
+    </div>
   </div>
 </aside>
 
@@ -293,5 +312,71 @@
 
   .sidebar--light .sidebar-footer-link:hover {
     color: #888;
+  }
+
+  .sidebar-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    margin-top: 8px;
+  }
+
+  .sidebar-contact-logo {
+    height: 11px;
+    width: auto;
+    opacity: 0.25;
+  }
+
+  .sidebar-contact-link {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 8px;
+    color: rgba(255, 248, 232, 0.25);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .sidebar-contact-link:hover {
+    color: rgba(255, 248, 232, 0.5);
+  }
+
+  .sidebar-contact-socials {
+    display: flex;
+    gap: 8px;
+  }
+  .sidebar-contact-social {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 8px;
+    color: rgba(255, 248, 232, 0.2);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .sidebar-contact-social:hover {
+    color: #c4f24a;
+  }
+
+  .sidebar--light .sidebar-contact {
+    border-top-color: rgba(0, 0, 0, 0.04);
+  }
+  .sidebar--light .sidebar-contact-logo {
+    opacity: 0.15;
+  }
+  .sidebar--light .sidebar-contact-link {
+    color: rgba(0, 0, 0, 0.25);
+  }
+  .sidebar--light .sidebar-contact-link:hover {
+    color: rgba(0, 0, 0, 0.5);
+  }
+  .sidebar--light .sidebar-contact-social {
+    color: rgba(0, 0, 0, 0.2);
+  }
+  .sidebar--light .sidebar-contact-social:hover {
+    color: #c4f24a;
+  }
+
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .sidebar-contact {
+      display: none;
+    }
   }
 </style>

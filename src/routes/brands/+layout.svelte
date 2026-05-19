@@ -18,13 +18,25 @@
 
   const sections = [
     { num: '01', label: 'Content Studio', href: '/brands/portal?tab=content' },
-    { num: '02', label: 'Find Creators', href: '/brands/creators' },
-    { num: '03', label: 'Content Automation', href: '/brands/portal?tab=automation' },
-    { num: '04', label: 'Profile & Insights', href: '/brands/portal?tab=profile' },
+    { num: '02', label: 'Briefs', href: '/brands/briefs' },
+    { num: '03', label: 'Find Creators', href: '/brands/creators' },
+    { num: '04', label: 'Content Automation', href: '/brands/portal?tab=automation' },
+    { num: '05', label: 'Profile & Insights', href: '/brands/portal?tab=profile' },
   ] as const;
 
   $: portalTabParam = $page.url.searchParams.get('tab');
-  $: activeSection = onCreators ? '02' : onPortal ? (portalTabParam === 'automation' ? '03' : portalTabParam === 'profile' ? '04' : '01') : null;
+  $: onBriefs = pathname.startsWith('/brands/briefs');
+  $: activeSection = onBriefs
+    ? '02'
+    : onCreators
+      ? '03'
+      : onPortal
+        ? portalTabParam === 'automation'
+          ? '04'
+          : portalTabParam === 'profile'
+            ? '05'
+            : '01'
+        : null;
 
   const now = new Date();
   const monthNames = [
@@ -56,93 +68,89 @@
 
   async function handleSignOut() {
     await fetch('/api/brands/logout', { method: 'POST' });
-    window.location.href = '/brands/login';
+    window.location.href = '/';
   }
 </script>
 
-<!-- ═══ Brand OS Shell ═══ -->
+<!-- ═══ Brand OS Shell — Sidebar Layout ═══ -->
 <div class="bos-shell">
+  <!-- ── Left Sidebar ── -->
+  <aside class="bos-sidebar">
+    <div class="bos-sidebar-brand">
+      <img src="/wagwan-logo-white.svg" alt="Wagwan" class="bos-sidebar-logo" />
+    </div>
 
-  <!-- ── Top Bar ── -->
-  <header class="bos-topbar">
-    <div class="bos-topbar__left">
-      {#if brand}
-        <div class="bos-avatar">
+    {#if brand}
+      <div class="bos-sidebar-profile">
+        <div class="bos-sidebar-avatar">
           {#if brand.ig_profile_picture}
             <img src={brand.ig_profile_picture} alt={brand.ig_name} />
           {:else}
-            <span class="bos-avatar__initials">
-              {brand.ig_name?.charAt(0)?.toUpperCase() || 'B'}
-            </span>
+            <span>{brand.ig_name?.charAt(0)?.toUpperCase() || 'B'}</span>
           {/if}
         </div>
-        <div class="bos-identity">
-          <span class="bos-identity__name">{brand.ig_name}</span>
-          <span class="bos-identity__handle">@{brand.ig_username}</span>
-        </div>
-      {:else}
-        <div class="bos-avatar">
-          <span class="bos-avatar__initials">B</span>
-        </div>
-        <div class="bos-identity">
-          <span class="bos-identity__name">Brand OS</span>
-          <span class="bos-identity__handle">{issueDate} &middot; {issueVol}</span>
-        </div>
-      {/if}
-    </div>
+        <span class="bos-sidebar-name">{brand.ig_name}</span>
+        <span class="bos-sidebar-handle">@{brand.ig_username}</span>
+      </div>
+    {/if}
 
-    <!-- Center: Nav pills -->
-    <nav class="bos-topbar__nav">
+    <nav class="bos-sidebar-nav">
       {#each sections as sec}
         <a
           href={sec.href}
-          class="bos-pill"
-          class:bos-pill--active={activeSection === sec.num}
+          class="bos-sidebar-link"
+          class:bos-sidebar-link--active={activeSection === sec.num}
         >
-          <span class="bos-pill__num">{sec.num}</span>
-          <span class="bos-pill__label">{sec.label}</span>
+          {sec.label}
         </a>
       {/each}
     </nav>
 
-    <!-- Right: Actions -->
-    <div class="bos-topbar__right">
+    <div class="bos-sidebar-footer">
       {#if authed}
-        <button class="bos-icon-btn" on:click={toggleTheme} title="Toggle theme">
-          {#if deepMode}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          {:else}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          {/if}
-        </button>
-        <button class="bos-sign-out" on:click={handleSignOut}>
-          <span class="bos-sign-out__label">Sign Out</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14 5-5-5-5m5 5H9"/></svg>
-        </button>
+        <button class="bos-sidebar-signout" on:click={handleSignOut}>Sign Out</button>
       {:else if !onLogin}
-        <a href="/brands/login" class="bos-connect-cta">
-          <span>Connect Instagram</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
-        </a>
+        <a href="/" class="bos-sidebar-signout">Connect Instagram</a>
       {/if}
 
-      <!-- Mobile hamburger -->
-      <button
-        class="bos-hamburger"
-        on:click={() => (mobileMenuOpen = !mobileMenuOpen)}
-        aria-label="Toggle menu"
-      >
-        <span class="bos-hamburger__line" class:open={mobileMenuOpen}></span>
-        <span class="bos-hamburger__line" class:open={mobileMenuOpen}></span>
-      </button>
+      <div class="bos-footer-info">
+        <img src="/wagwan-logo-white.svg" alt="Wagwan" class="bos-footer-logo" />
+        <a href="mailto:madhvik@wagwanworld.in" class="bos-footer-link">madhvik@wagwanworld.in</a>
+        <div class="bos-footer-socials">
+          <a
+            href="https://instagram.com/wagwan.world"
+            target="_blank"
+            rel="noopener"
+            class="bos-footer-social">Instagram</a
+          >
+          <a
+            href="https://linkedin.com/company/wagwan-world"
+            target="_blank"
+            rel="noopener"
+            class="bos-footer-social">LinkedIn</a
+          >
+        </div>
+      </div>
     </div>
+  </aside>
+
+  <!-- ── Mobile top bar ── -->
+  <header class="bos-mobile-bar">
+    <img src="/wagwan-logo-white.svg" alt="Wagwan" class="bos-mobile-logo" />
+    <button
+      class="bos-hamburger"
+      on:click={() => (mobileMenuOpen = !mobileMenuOpen)}
+      aria-label="Toggle menu"
+    >
+      <span class="bos-hamburger__line" class:open={mobileMenuOpen}></span>
+      <span class="bos-hamburger__line" class:open={mobileMenuOpen}></span>
+    </button>
   </header>
 
   <!-- ── Session out-of-sync banner ── -->
   {#if data.sessionOutOfSync}
     <div class="bos-sync-banner">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8833A" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span>Session out of sync. Please <a href="/brands/login">re-authenticate</a> to refresh your data.</span>
+      <span>Session out of sync. <a href="/">Re-authenticate</a>.</span>
     </div>
   {/if}
 
@@ -157,12 +165,6 @@
   {#if mobileMenuOpen}
     <div class="bos-mobile-overlay" on:click={() => (mobileMenuOpen = false)} on:keydown={() => {}}>
       <nav class="bos-mobile-nav" on:click|stopPropagation on:keydown|stopPropagation>
-        <div class="bos-mobile-nav__header">
-          <span class="bos-mono-label">NAVIGATION</span>
-          <button class="bos-icon-btn" on:click={() => (mobileMenuOpen = false)} aria-label="Close menu">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
         {#each sections as sec}
           <a
             href={sec.href}
@@ -170,14 +172,11 @@
             class:bos-mobile-link--active={activeSection === sec.num}
             on:click={() => (mobileMenuOpen = false)}
           >
-            <span class="bos-mobile-link__num">{sec.num}</span>
-            <span class="bos-mobile-link__label">{sec.label}</span>
+            {sec.label}
           </a>
         {/each}
         {#if authed}
-          <div class="bos-mobile-nav__footer">
-            <button class="bos-mobile-signout" on:click={handleSignOut}>Sign Out</button>
-          </div>
+          <button class="bos-mobile-signout" on:click={handleSignOut}>Sign Out</button>
         {/if}
       </nav>
     </div>
@@ -185,291 +184,293 @@
 </div>
 
 <style>
-  /* ═══════════════════════════════════════════
-     Brand OS Shell — Dark Surface Design
-     ═══════════════════════════════════════════ */
-
-  :root {
-    --bos-bg: #0A0A0C;
-    --bos-surface: rgba(255, 255, 255, 0.02);
-    --bos-border: rgba(255, 255, 255, 0.06);
-    --bos-text: #EDEDEF;
-    --bos-text-secondary: #4A4A50;
-    --bos-text-muted: #3A3A40;
-    --bos-accent: #E8833A;
-    --bos-font: 'Geist Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --bos-mono: 'Geist Mono Variable', 'SF Mono', 'Fira Code', monospace;
-  }
-
-  /* ── Shell ── */
   .bos-shell {
     display: flex;
-    flex-direction: column;
-    width: 100%;
     min-height: 100vh;
-    min-height: 100dvh;
-    background: var(--bos-bg);
-    color: var(--bos-text);
-    font-family: var(--bos-font);
-    overflow: visible;
+    color: #ededef;
+    font-family:
+      'Geist Variable',
+      'Inter',
+      -apple-system,
+      sans-serif;
+    background:
+      radial-gradient(circle at 72% 18%, rgba(153, 36, 96, 0.34), transparent 42%),
+      radial-gradient(circle at 30% 78%, rgba(196, 242, 74, 0.12), transparent 32%),
+      linear-gradient(145deg, #030306 0%, #0b0710 48%, #1b0817 100%);
+    background-attachment: fixed;
   }
 
-  /* ── Top Bar ── */
-  .bos-topbar {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    padding: 0 24px;
-    height: 56px;
-    min-height: 56px;
-    background: var(--bos-surface);
-    border-bottom: 1px solid var(--bos-border);
-    position: relative;
-    z-index: 100;
+  /* ── Sidebar ── */
+  .bos-sidebar {
+    display: none;
+    flex-direction: column;
+    width: 200px;
+    flex-shrink: 0;
+    padding: 24px 16px 20px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(3, 3, 6, 0.6);
+    backdrop-filter: blur(12px);
   }
 
-  .bos-topbar__left {
+  @media (min-width: 768px) {
+    .bos-sidebar {
+      display: flex;
+    }
+    .bos-mobile-bar {
+      display: none !important;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .bos-sidebar {
+      width: 60px;
+      padding: 20px 8px 16px;
+      align-items: center;
+    }
+    .bos-sidebar-logo {
+      display: none;
+    }
+    .bos-sidebar-name,
+    .bos-sidebar-handle {
+      display: none;
+    }
+    .bos-sidebar-link {
+      font-size: 10px;
+      padding: 8px;
+      justify-content: center;
+      text-align: center;
+    }
+    .bos-footer-info {
+      display: none;
+    }
+  }
+
+  .bos-sidebar-brand {
+    margin-bottom: 28px;
+  }
+
+  .bos-sidebar-logo {
+    height: 14px;
+    width: auto;
+    opacity: 0.5;
+  }
+
+  .bos-sidebar-profile {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  .bos-topbar__right {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  /* ── Avatar ── */
-  .bos-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+  .bos-sidebar-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(196, 242, 74, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    background: rgba(196, 242, 74, 0.1);
+    color: #c4f24a;
+    font-weight: 700;
+    font-size: 16px;
   }
-
-  .bos-avatar img {
+  .bos-sidebar-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
 
-  .bos-avatar__initials {
-    font-family: var(--bos-mono);
+  .bos-sidebar-name {
     font-size: 13px;
-    font-weight: 500;
-    color: var(--bos-accent);
+    font-weight: 600;
+    text-align: center;
   }
 
-  /* ── Identity ── */
-  .bos-identity {
+  .bos-sidebar-handle {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 248, 232, 0.4);
+  }
+
+  .bos-sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
+    flex: 1;
   }
 
-  .bos-identity__name {
+  .bos-sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 9px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: rgba(255, 248, 232, 0.5);
     font-size: 13px;
     font-weight: 500;
-    color: var(--bos-text);
-    line-height: 1.2;
+    border: 1px solid transparent;
+    transition:
+      color 150ms ease,
+      background 150ms ease;
   }
-
-  .bos-identity__handle {
-    font-family: var(--bos-mono);
-    font-size: 10px;
-    color: var(--bos-text-secondary);
-    letter-spacing: 0.02em;
-    line-height: 1.2;
-  }
-
-  /* ── Nav Pills ── */
-  .bos-topbar__nav {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .bos-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 6px;
-    text-decoration: none;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-
-  .bos-pill__num {
-    font-family: var(--bos-mono);
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--bos-text-muted);
-    transition: color 0.15s ease;
-  }
-
-  .bos-pill__label {
-    font-family: var(--bos-mono);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    color: var(--bos-text-secondary);
-    transition: color 0.15s ease;
-  }
-
-  .bos-pill:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .bos-pill:hover .bos-pill__label {
-    color: var(--bos-text);
-  }
-
-  .bos-pill--active {
-    background: rgba(232, 131, 58, 0.08);
-  }
-
-  .bos-pill--active .bos-pill__num {
-    color: var(--bos-accent);
-  }
-
-  .bos-pill--active .bos-pill__label {
-    color: var(--bos-text);
-  }
-
-  /* ── Action Buttons ── */
-  .bos-icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--bos-text-secondary);
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-
-  .bos-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--bos-text);
-  }
-
-  .bos-sign-out {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border: 1px solid var(--bos-border);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--bos-text-secondary);
-    cursor: pointer;
-    font-family: var(--bos-mono);
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    transition: all 0.15s ease;
-  }
-
-  .bos-sign-out:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    color: var(--bos-text);
+  .bos-sidebar-link:hover {
+    color: rgba(255, 248, 232, 0.8);
     background: rgba(255, 255, 255, 0.03);
   }
-
-  .bos-sign-out__label {
-    display: inline;
+  .bos-sidebar-link--active {
+    color: #c4f24a;
+    background: rgba(196, 242, 74, 0.08);
+    border-color: rgba(196, 242, 74, 0.14);
   }
 
-  .bos-connect-cta {
+  .bos-sidebar-footer {
+    margin-top: auto;
     display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 6px;
-    background: var(--bos-accent);
-    color: #0A0A0C;
-    text-decoration: none;
-    font-family: var(--bos-mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    transition: opacity 0.15s ease;
-  }
-
-  .bos-connect-cta:hover {
-    opacity: 0.88;
-  }
-
-  /* ── Sync Banner ── */
-  .bos-sync-banner {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 24px;
-    background: rgba(232, 131, 58, 0.06);
-    border-bottom: 1px solid rgba(232, 131, 58, 0.12);
-    font-family: var(--bos-mono);
-    font-size: 12px;
-    color: var(--bos-text-secondary);
-  }
-
-  .bos-sync-banner a {
-    color: var(--bos-accent);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  /* ── Main Content ── */
-  .bos-main {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: clip;
-  }
-
-  /* ── Mobile Hamburger ── */
-  .bos-hamburger {
-    display: none;
     flex-direction: column;
-    gap: 5px;
+    gap: 12px;
+  }
+
+  .bos-sidebar-signout {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: transparent;
+    color: rgba(255, 248, 232, 0.5);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+  .bos-sidebar-signout:hover {
+    color: #ff4d97;
+    border-color: rgba(255, 77, 151, 0.2);
+  }
+
+  /* ── Footer ── */
+  .bos-footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .bos-footer-logo {
+    height: 12px;
+    width: auto;
+    opacity: 0.3;
+  }
+
+  .bos-footer-link {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px;
+    color: rgba(255, 248, 232, 0.3);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .bos-footer-link:hover {
+    color: rgba(255, 248, 232, 0.6);
+  }
+
+  .bos-footer-socials {
+    display: flex;
+    gap: 10px;
+  }
+  .bos-footer-social {
+    font-family: 'Geist Mono Variable', 'SF Mono', monospace;
+    font-size: 9px;
+    color: rgba(255, 248, 232, 0.25);
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .bos-footer-social:hover {
+    color: #c4f24a;
+  }
+
+  /* ── Mobile bar ── */
+  .bos-mobile-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(3, 3, 6, 0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .bos-mobile-logo {
+    height: 14px;
+    width: auto;
+    opacity: 0.7;
+  }
+
+  .bos-hamburger {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     padding: 8px;
     border: none;
-    background: transparent;
+    background: none;
     cursor: pointer;
   }
-
   .bos-hamburger__line {
-    display: block;
     width: 18px;
     height: 1.5px;
-    background: var(--bos-text-secondary);
+    background: rgba(255, 248, 232, 0.6);
     border-radius: 1px;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition:
+      transform 200ms ease,
+      opacity 200ms ease;
   }
-
   .bos-hamburger__line.open:first-child {
     transform: rotate(45deg) translate(2px, 2px);
   }
-
   .bos-hamburger__line.open:last-child {
     transform: rotate(-45deg) translate(2px, -2px);
   }
 
-  /* ── Mobile Overlay ── */
+  /* ── Sync banner ── */
+  .bos-sync-banner {
+    padding: 8px 16px;
+    background: rgba(255, 77, 151, 0.06);
+    border-bottom: 1px solid rgba(255, 77, 151, 0.1);
+    font-size: 12px;
+    color: #ff4d97;
+    text-align: center;
+  }
+  .bos-sync-banner a {
+    color: #c4f24a;
+    text-decoration: underline;
+  }
+
+  /* ── Main ── */
+  .bos-main {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* ── Mobile overlay ── */
   .bos-mobile-overlay {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    z-index: 100;
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(4px);
   }
@@ -478,135 +479,51 @@
     position: absolute;
     top: 0;
     right: 0;
-    width: 280px;
+    width: min(280px, 80vw);
     height: 100%;
-    background: #111114;
-    border-left: 1px solid var(--bos-border);
+    background: rgba(10, 10, 14, 0.95);
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 24px 16px;
     display: flex;
     flex-direction: column;
-    padding: 20px;
-  }
-
-  .bos-mobile-nav__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--bos-border);
-  }
-
-  .bos-mono-label {
-    font-family: var(--bos-mono);
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--bos-text-muted);
+    gap: 4px;
+    backdrop-filter: blur(20px);
   }
 
   .bos-mobile-link {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 8px;
-    border-radius: 6px;
+    display: block;
+    padding: 12px 14px;
+    border-radius: 10px;
     text-decoration: none;
-    transition: background 0.15s ease;
+    color: rgba(255, 248, 232, 0.6);
+    font-size: 14px;
+    font-weight: 500;
+    transition:
+      color 150ms ease,
+      background 150ms ease;
   }
-
   .bos-mobile-link:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.03);
   }
-
-  .bos-mobile-link__num {
-    font-family: var(--bos-mono);
-    font-size: 10px;
-    color: var(--bos-text-muted);
-    letter-spacing: 0.1em;
-  }
-
-  .bos-mobile-link__label {
-    font-family: var(--bos-mono);
-    font-size: 13px;
-    color: var(--bos-text-secondary);
-  }
-
-  .bos-mobile-link--active .bos-mobile-link__num {
-    color: var(--bos-accent);
-  }
-
-  .bos-mobile-link--active .bos-mobile-link__label {
-    color: var(--bos-text);
-  }
-
-  .bos-mobile-nav__footer {
-    margin-top: auto;
-    padding-top: 16px;
-    border-top: 1px solid var(--bos-border);
+  .bos-mobile-link--active {
+    color: #c4f24a;
+    background: rgba(196, 242, 74, 0.08);
   }
 
   .bos-mobile-signout {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--bos-border);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--bos-text-secondary);
-    font-family: var(--bos-mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    margin-top: auto;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    background: none;
+    color: rgba(255, 248, 232, 0.5);
+    font-size: 13px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    font-family: inherit;
   }
 
-  .bos-mobile-signout:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    color: var(--bos-text);
-  }
-
-  /* ── Responsive ── */
-  @media (max-width: 768px) {
-    .bos-topbar {
-      grid-template-columns: 1fr auto;
-      padding: 0 16px;
-    }
-
-    .bos-topbar__nav {
-      display: none;
-    }
-
-    .bos-hamburger {
-      display: flex;
-    }
-
-    .bos-sign-out {
-      display: none;
-    }
-
-    .bos-identity__name {
-      font-size: 12px;
-    }
-
-    .bos-identity__handle {
-      font-size: 9px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .bos-topbar {
-      height: 48px;
-      min-height: 48px;
-      padding: 0 12px;
-    }
-
-    .bos-avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-    }
-
-    .bos-connect-cta span {
+  @media (max-width: 767px) {
+    .bos-sidebar {
       display: none;
     }
   }

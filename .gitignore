@@ -5,6 +5,9 @@ node_modules
 .env
 .env.*
 !.env.example
+wagwanai.env.txt
+*.env.txt
+run-brand-analysis.mjs
 
 # Vendored OrioSearch clone (use `npm run orio` to fetch + start)
 orio-search/

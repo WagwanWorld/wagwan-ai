@@ -18,7 +18,10 @@ export function assertBrandAccess(request: Request, bodyGoogleSub?: string | nul
   const secret = (env.BRAND_PORTAL_SECRET ?? '').trim();
   const allowRaw = (env.BRAND_ALLOWLIST_GOOGLE_SUBS ?? '').trim();
   const allow = allowRaw
-    ? allowRaw.split(',').map(s => s.trim()).filter(Boolean)
+    ? allowRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
 
   // Check IG session cookie (v2 with ig_user_id)
@@ -49,4 +52,42 @@ export function assertBrandAccess(request: Request, bodyGoogleSub?: string | nul
   }
 
   throw error(401, 'Brand access denied');
+}
+
+/**
+ * Non-throwing version of assertBrandAccess.
+ * Returns { igUserId, error } instead of throwing SvelteKit HttpError.
+ */
+export function tryBrandAccess(request: Request): {
+  igUserId: string | null;
+  error: string | null;
+} {
+  const secret = (env.BRAND_PORTAL_SECRET ?? '').trim();
+  const allowRaw = (env.BRAND_ALLOWLIST_GOOGLE_SUBS ?? '').trim();
+  const allow = allowRaw
+    ? allowRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
+  const sessionRaw = getBrandSessionFromRequest(request);
+  const igUserId = verifyBrandSessionCookieValue(sessionRaw);
+  if (igUserId && igUserId !== '__legacy__') {
+    return { igUserId, error: null };
+  }
+  if (igUserId === '__legacy__') {
+    return { igUserId: null, error: null };
+  }
+
+  const headerKey = request.headers.get('x-brand-key')?.trim() ?? '';
+  if (secret && headerKey && safeEqual(headerKey, secret)) {
+    return { igUserId: null, error: null };
+  }
+
+  if (!secret && !allow.length) {
+    return { igUserId: null, error: 'Brand portal not configured' };
+  }
+
+  return { igUserId: null, error: `Brand access denied (no valid session cookie found)` };
 }

@@ -1,7 +1,11 @@
 import { getServiceSupabase } from '$lib/server/supabase';
 import Anthropic from '@anthropic-ai/sdk';
 import { ANTHROPIC_API_KEY } from '$env/static/private';
-import { DAILY_BRIEF_SYSTEM, buildDailyBriefUserPrompt, BRAND_OS_PROMPT_VERSIONS } from '$lib/server/prompts/brand-os';
+import {
+  DAILY_BRIEF_SYSTEM,
+  buildDailyBriefUserPrompt,
+  BRAND_OS_PROMPT_VERSIONS,
+} from '$lib/server/prompts/brand-os';
 
 type FingerprintInput = {
   brandIgId: string;
@@ -138,9 +142,12 @@ export async function computePillars(brandIgId: string) {
       description: `Cluster of posts with ${key.replace(':', ' + ')} pattern.`,
       post_ids: list.map((r) => r.post_id),
       avg_quality_engagement:
-        list.reduce((s, r) => s + Number(r.quality_weighted_engagement || 0), 0) / Math.max(1, list.length),
-      avg_save_rate: list.reduce((s, r) => s + Number(r.save_rate || 0), 0) / Math.max(1, list.length),
-      avg_share_rate: list.reduce((s, r) => s + Number(r.share_rate || 0), 0) / Math.max(1, list.length),
+        list.reduce((s, r) => s + Number(r.quality_weighted_engagement || 0), 0) /
+        Math.max(1, list.length),
+      avg_save_rate:
+        list.reduce((s, r) => s + Number(r.save_rate || 0), 0) / Math.max(1, list.length),
+      avg_share_rate:
+        list.reduce((s, r) => s + Number(r.share_rate || 0), 0) / Math.max(1, list.length),
       sample_size: list.length,
       computed_at: new Date().toISOString(),
     }));
@@ -233,8 +240,11 @@ export async function runInsightDetectors(brandIgId: string) {
   const posts = fp ?? [];
   const findings: Array<Record<string, unknown>> = [];
   if (posts.length >= 6) {
-    const latest = posts.slice(0, 6).reduce((s, p) => s + Number(p.quality_weighted_engagement || 0), 0) / 6;
-    const prior = posts.slice(6, 12).reduce((s, p) => s + Number(p.quality_weighted_engagement || 0), 0) / Math.max(1, posts.slice(6, 12).length);
+    const latest =
+      posts.slice(0, 6).reduce((s, p) => s + Number(p.quality_weighted_engagement || 0), 0) / 6;
+    const prior =
+      posts.slice(6, 12).reduce((s, p) => s + Number(p.quality_weighted_engagement || 0), 0) /
+      Math.max(1, posts.slice(6, 12).length);
     const drift = prior ? ((latest - prior) / prior) * 100 : 0;
     if (drift <= -15) {
       findings.push({
@@ -242,7 +252,8 @@ export async function runInsightDetectors(brandIgId: string) {
         severity: 'p1',
         title: 'Quality engagement is drifting down',
         summary: `Last 6 posts are ${drift.toFixed(1)}% below previous baseline.`,
-        suggested_action: 'Rotate top-performing pillar and refresh opening hooks for next 3 posts.',
+        suggested_action:
+          'Rotate top-performing pillar and refresh opening hooks for next 3 posts.',
         evidence_post_ids: posts.slice(0, 6).map((p) => p.post_id),
         evidence_metrics: { latest_avg: latest, previous_avg: prior, drift_pct: drift },
       });
@@ -252,7 +263,10 @@ export async function runInsightDetectors(brandIgId: string) {
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
     }, {});
-    const [topHook, topCount] = Object.entries(hookCounts).sort((a, b) => b[1] - a[1])[0] || ['generic', 0];
+    const [topHook, topCount] = Object.entries(hookCounts).sort((a, b) => b[1] - a[1])[0] || [
+      'generic',
+      0,
+    ];
     if (topCount >= 8) {
       findings.push({
         finding_type: 'SATURATION',
@@ -317,23 +331,27 @@ export async function generateDailyBrief(brandIgId: string) {
   const today = new Date().toISOString().slice(0, 10);
 
   const [findingsRes, snapshotsRes, pillarsRes, brandRes] = await Promise.all([
-    sb.from('insight_findings')
+    sb
+      .from('insight_findings')
       .select('finding_type,title,summary,suggested_action,evidence_metrics')
       .eq('brand_ig_id', brandIgId)
       .order('created_at', { ascending: false })
       .limit(6),
-    sb.from('brand_snapshots')
+    sb
+      .from('brand_snapshots')
       .select('engagement_rate,reach_7d,avg_saves,avg_shares,posts_per_week')
       .eq('brand_ig_id', brandIgId)
       .order('snapshot_date', { ascending: false })
       .limit(2),
-    sb.from('content_pillars')
+    sb
+      .from('content_pillars')
       .select('label,avg_quality_engagement')
       .eq('brand_ig_id', brandIgId)
       .order('avg_quality_engagement', { ascending: false })
       .limit(4),
-    sb.from('brand_accounts')
-      .select('ig_name,ig_username')
+    sb
+      .from('brand_accounts')
+      .select('ig_name,ig_username,ig_followers_count')
       .eq('ig_user_id', brandIgId)
       .maybeSingle(),
   ]);
@@ -345,15 +363,83 @@ export async function generateDailyBrief(brandIgId: string) {
   const pillars = pillarsRes.data ?? [];
   const brand = brandRes.data;
 
-  const engNow = Number(latest?.engagement_rate ?? 0);
+  // Pull real metrics from post_fingerprints (last 30 days) instead of relying on snapshot zeros
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const [fp30Res, fp7Res] = await Promise.all([
+    sb
+      .from('post_fingerprints')
+      .select(
+        'likes,comments,saves,shares,reach,posted_at,caption_text,hook_archetype,quality_weighted_engagement',
+      )
+      .eq('brand_ig_id', brandIgId)
+      .gte('posted_at', thirtyDaysAgo)
+      .order('quality_weighted_engagement', { ascending: false })
+      .limit(50),
+    sb
+      .from('post_fingerprints')
+      .select('likes,comments,saves,shares,reach,posted_at')
+      .eq('brand_ig_id', brandIgId)
+      .gte('posted_at', sevenDaysAgo)
+      .limit(50),
+  ]);
+  const fp30 = fp30Res.data ?? [];
+  const fp7 = fp7Res.data ?? [];
+  const followers = Number(brand?.ig_followers_count ?? latest?.followers_count ?? 0) || 1;
+
+  // Compute real metrics from fingerprints
+  const computeMetrics = (fps: typeof fp30) => {
+    if (!fps.length)
+      return {
+        engRate: 0,
+        reach: 0,
+        avgSaves: 0,
+        avgShares: 0,
+        postsPerWeek: 0,
+        totalLikes: 0,
+        totalComments: 0,
+        count: 0,
+      };
+    const n = fps.length;
+    const totalLikes = fps.reduce((s, p) => s + (p.likes || 0), 0);
+    const totalComments = fps.reduce((s, p) => s + (p.comments || 0), 0);
+    const totalSaves = fps.reduce((s, p) => s + (p.saves || 0), 0);
+    const totalShares = fps.reduce((s, p) => s + (p.shares || 0), 0);
+    const totalReach = fps.reduce((s, p) => s + (p.reach || 0), 0);
+    return {
+      engRate: ((totalLikes + totalComments) / n / followers) * 100,
+      reach: totalReach || (totalLikes + totalComments) * 5,
+      avgSaves: totalSaves / n,
+      avgShares: totalShares / n,
+      postsPerWeek: n / 4.3,
+      totalLikes,
+      totalComments,
+      count: n,
+    };
+  };
+
+  const metrics30 = computeMetrics(fp30);
+  const metrics7 = computeMetrics(fp7);
+
+  // Use real fingerprint data, fall back to snapshot only if no fingerprints
+  const engNow = metrics30.engRate || Number(latest?.engagement_rate ?? 0);
   const engPrev = Number(previous?.engagement_rate ?? 0);
-  const reachNow = Number(latest?.reach_7d ?? 0);
+  const reachNow = metrics30.reach || Number(latest?.reach_7d ?? 0);
   const reachPrev = Number(previous?.reach_7d ?? 0);
   const engDelta = engPrev ? ((engNow - engPrev) / engPrev) * 100 : 0;
   const reachDelta = reachPrev ? ((reachNow - reachPrev) / reachPrev) * 100 : 0;
 
+  // Best performing posts for positive framing
+  const bestPosts = fp30.slice(0, 3).map((p) => ({
+    likes: p.likes,
+    comments: p.comments,
+    hook: p.hook_archetype,
+    caption: (p.caption_text || '').slice(0, 80),
+  }));
+
   let headline: string;
   let synopsis: string;
+  let whyItHappened: string = '';
   let actions: Array<{ title: string; action: string; type: string }>;
 
   try {
@@ -365,9 +451,9 @@ export async function generateDailyBrief(brandIgId: string) {
       engagementDelta: engDelta,
       reach7d: reachNow,
       reachDelta: reachDelta,
-      avgSaves: Number(latest?.avg_saves ?? 0),
-      avgShares: Number(latest?.avg_shares ?? 0),
-      postsPerWeek: Number(latest?.posts_per_week ?? 0),
+      avgSaves: metrics30.avgSaves,
+      avgShares: metrics30.avgShares,
+      postsPerWeek: metrics7.count > 0 ? metrics7.count : metrics30.postsPerWeek,
       findings: findings.map((f) => ({
         type: f.finding_type,
         title: f.title,
@@ -377,6 +463,8 @@ export async function generateDailyBrief(brandIgId: string) {
         label: p.label,
         avgEngagement: Number(p.avg_quality_engagement ?? 0),
       })),
+      bestPosts,
+      totalPostsAnalysed: fp30.length,
     });
 
     const response = await anthropic.messages.create({
@@ -386,12 +474,20 @@ export async function generateDailyBrief(brandIgId: string) {
       messages: [{ role: 'user', content: userPrompt }],
     });
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
-    const parsed = JSON.parse(text.trim());
+    const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
+    // Strip markdown code fences if present
+    const cleanText = rawText.trim().startsWith('```')
+      ? rawText
+          .trim()
+          .replace(/^```(?:json)?\s*/i, '')
+          .replace(/```\s*$/, '')
+          .trim()
+      : rawText.trim();
+    const parsed = JSON.parse(cleanText);
 
     headline = parsed.headline || 'Weekly brand check-in';
-    const fullSynopsis = `${parsed.whatHappened || ''} ${parsed.whyItHappened || ''}`.trim();
-    synopsis = fullSynopsis || 'Analysis complete.';
+    synopsis = parsed.whatHappened || 'Analysis complete.';
+    whyItHappened = parsed.whyItHappened || '';
     const whatNext: string[] = Array.isArray(parsed.whatNext) ? parsed.whatNext.slice(0, 3) : [];
     actions = whatNext.map((a: string) => ({ title: a, action: a, type: 'recommendation' }));
   } catch (err) {
@@ -410,11 +506,14 @@ export async function generateDailyBrief(brandIgId: string) {
     }));
   }
 
-  const evidence = findings.map((f) => ({
-    type: f.finding_type,
-    summary: f.summary,
-    metrics: f.evidence_metrics,
-  }));
+  const evidence = {
+    whyItHappened,
+    findings: findings.map((f) => ({
+      type: f.finding_type,
+      summary: f.summary,
+      metrics: f.evidence_metrics,
+    })),
+  };
 
   await sb.from('daily_briefs').upsert(
     {
@@ -460,14 +559,19 @@ export async function predictPerformance(
     }
     return { row: r, score };
   });
-  const nearest = scored.sort((a, b) => b.score - a.score).slice(0, 5).filter((x) => x.score > 0);
+  const nearest = scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .filter((x) => x.score > 0);
   const prediction =
     nearest.reduce((s, n) => s + Number(n.row.quality_weighted_engagement || 0), 0) /
     Math.max(1, nearest.length);
   const confidence = Math.min(0.95, Math.max(0.2, nearest.length / 5));
   const riskFactors = [
     nearest.length < 3 ? 'Low similar history for this concept.' : null,
-    input.caption_length && input.caption_length > 260 ? 'Caption is longer than recent winners.' : null,
+    input.caption_length && input.caption_length > 260
+      ? 'Caption is longer than recent winners.'
+      : null,
   ].filter(Boolean);
 
   const record = {
@@ -509,4 +613,3 @@ export async function snapshotPostMetrics(brandIgId: string, bucketLabel: string
   }
   return rows.length;
 }
-

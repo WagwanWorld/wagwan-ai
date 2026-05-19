@@ -9,6 +9,7 @@ import {
   BRAND_SESSION_MAX_AGE_SEC,
   mintBrandSessionCookieValue,
 } from '$lib/server/marketplace/brandSession';
+import { verifyOAuthState } from '$lib/server/marketplace/oauthState';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 import { env } from '$env/dynamic/private';
 
@@ -19,11 +20,19 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   const state = url.searchParams.get('state');
   const err = url.searchParams.get('error');
 
-  const savedState = cookies.get('brand_ig_oauth_state');
+  const savedCookieNonce = cookies.get('brand_ig_oauth_state');
   cookies.delete('brand_ig_oauth_state', { path: '/' });
 
-  if (err) throw redirect(302, `/brands/login?error=${encodeURIComponent(err)}`);
-  if (!code || !state || state !== savedState) {
+  if (err) throw redirect(302, `/?error=${encodeURIComponent(err)}`);
+  if (!code || !state) {
+    throw error(400, 'Invalid OAuth state');
+  }
+
+  // Verify state: prefer the cryptographic signature (works even when Safari
+  // ITP drops the cookie), fall back to cookie nonce comparison.
+  const signedNonce = verifyOAuthState(state);
+  const cookieMatch = savedCookieNonce && signedNonce === savedCookieNonce;
+  if (!signedNonce && !cookieMatch) {
     throw error(400, 'Invalid OAuth state');
   }
 
@@ -63,6 +72,53 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
       throw new Error(`DB upsert failed: ${upsertRes.status}`);
     }
 
+    // Ensure a brands row exists and brand_accounts.brand_id is linked.
+    // Without this, the brand portal can't find campaigns for this account.
+    const checkRes = await fetch(
+      `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${encodeURIComponent(profile.id)}&select=brand_id`,
+      {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+      },
+    );
+    const checkRows = checkRes.ok ? await checkRes.json() : [];
+    const existingBrandId = checkRows[0]?.brand_id;
+
+    if (!existingBrandId) {
+      // Create a brands row using the IG username as the brand name
+      const brandName = profile.name || profile.username || 'Brand';
+      const brandInsertRes = await fetch(`${supabaseUrl}/rest/v1/brands`, {
+        method: 'POST',
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({ name: brandName }),
+      });
+      if (brandInsertRes.ok) {
+        const brandRows = await brandInsertRes.json();
+        const newBrandId = brandRows[0]?.id;
+        if (newBrandId) {
+          await fetch(
+            `${supabaseUrl}/rest/v1/brand_accounts?ig_user_id=eq.${encodeURIComponent(profile.id)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                apikey: supabaseKey,
+                Authorization: `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ brand_id: newBrandId }),
+            },
+          );
+        }
+      }
+    }
+
     // Set session cookie with ig_user_id
     const sessionValue = mintBrandSessionCookieValue(profile.id);
     cookies.set(BRAND_SESSION_COOKIE, sessionValue, {
@@ -77,6 +133,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'location' in e) throw e;
     console.error('[Brand IG Callback]', e);
-    throw redirect(302, `/brands/login?error=auth_failed`);
+    throw redirect(302, `/?error=auth_failed`);
   }
 };

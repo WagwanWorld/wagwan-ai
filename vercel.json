@@ -40,6 +40,22 @@
     {
       "path": "/api/cron/brand-os-daily",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/snapshot-followers",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/snapshot-demographics",
+      "schedule": "0 4 * * 1"
+    },
+    {
+      "path": "/api/cron/snapshot-online-activity",
+      "schedule": "30 4 * * 1"
+    },
+    {
+      "path": "/api/cron/sync-post-insights",
+      "schedule": "0 5 * * *"
     }
   ]
 }

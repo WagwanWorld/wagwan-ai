@@ -41,5 +41,11 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
   const match = matchRows?.[0] ?? null;
 
-  return json({ ok: true, campaign, briefResponse, match });
+  const { data: creatives } = await sb
+    .from('brief_assets')
+    .select('id, campaign_id, media_type, url, thumb_url, caption, sort_order')
+    .eq('campaign_id', campaignId)
+    .order('sort_order', { ascending: true });
+
+  return json({ ok: true, campaign, briefResponse, match, creatives: creatives ?? [] });
 };
