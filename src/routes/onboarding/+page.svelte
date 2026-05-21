@@ -697,9 +697,9 @@
     const invRoster = localStorage.getItem('wagwan_invite_id');
     if (invBrand && invRoster && accountSub) {
       profileSave
-        .then((saved) => {
+        .then(async (saved) => {
           if (!saved) return false;
-          return fetch('/api/creator/link-invite', {
+          const res = await fetch('/api/creator/link-invite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -708,9 +708,7 @@
               rosterId: invRoster,
             }),
           });
-        })
-        .then(async (res) => {
-          if (!res || !res.ok) return;
+          if (!res.ok) return;
           const data = await res.json().catch(() => null);
           if (data?.ok !== true) return;
           localStorage.removeItem('wagwan_invite_brand');
