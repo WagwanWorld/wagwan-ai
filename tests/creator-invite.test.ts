@@ -6,6 +6,10 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import {
+  instagramHandleFromProfileData,
+  profileMatchesRosterInstagram,
+} from '../src/lib/server/creatorLinkInvite';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -28,6 +32,29 @@ describe('parseFollowerCount', () => {
   it('parses K and M suffixes', () => {
     expect(parseFollowerCount('12.5K')).toBe(12500);
     expect(parseFollowerCount('1.2M')).toBe(1200000);
+  });
+});
+
+describe('profileMatchesRosterInstagram', () => {
+  it('matches normalized saved Instagram handles', () => {
+    const profileData = {
+      instagramIdentity: {
+        username: '@Creator.Name',
+      },
+    };
+
+    expect(instagramHandleFromProfileData(profileData)).toBe('creator.name');
+    expect(profileMatchesRosterInstagram(profileData, 'creator.name')).toBe(true);
+  });
+
+  it('rejects mismatched or missing Instagram handles', () => {
+    expect(
+      profileMatchesRosterInstagram(
+        { instagramIdentity: { username: 'real.creator' } },
+        'other.creator',
+      ),
+    ).toBe(false);
+    expect(profileMatchesRosterInstagram({}, 'real.creator')).toBe(false);
   });
 });
 
