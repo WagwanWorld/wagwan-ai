@@ -255,22 +255,31 @@ export async function upsertBrandCreatorRoster(
   const now = new Date().toISOString();
   const { data: existing } = await sb
     .from('brand_creator_roster')
-    .select('id')
+    .select('id, user_google_sub, status')
     .eq('brand_id', row.brand_id)
     .eq('ig_username', row.ig_username)
     .maybeSingle();
 
   if (existing?.id) {
+    const linkedSub =
+      typeof existing.user_google_sub === 'string' && existing.user_google_sub.trim()
+        ? existing.user_google_sub
+        : null;
+    const preserveExistingLink = Boolean(linkedSub && linkedSub !== row.user_google_sub);
+    const nextUserGoogleSub = preserveExistingLink ? linkedSub : row.user_google_sub;
+    const nextStatus =
+      existing.status === 'on_platform' && preserveExistingLink ? 'on_platform' : row.status;
+
     const { data: updated, error } = await sb
       .from('brand_creator_roster')
       .update({
         display_name: row.display_name,
         profile_snapshot: row.profile_snapshot,
-        user_google_sub: row.user_google_sub,
+        user_google_sub: nextUserGoogleSub,
         invite_message: row.invite_message,
         onboarding_url: row.onboarding_url,
         analysis_snapshot: row.analysis_snapshot,
-        status: row.status,
+        status: nextStatus,
         updated_at: now,
       })
       .eq('id', existing.id)

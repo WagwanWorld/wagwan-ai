@@ -6,6 +6,7 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import { validateCreatorInviteLink } from '../src/lib/server/creatorLinkInvite';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -28,6 +29,41 @@ describe('parseFollowerCount', () => {
   it('parses K and M suffixes', () => {
     expect(parseFollowerCount('12.5K')).toBe(12500);
     expect(parseFollowerCount('1.2M')).toBe(1200000);
+  });
+});
+
+describe('validateCreatorInviteLink', () => {
+  it('accepts a creator whose saved Instagram handle matches the roster invite', () => {
+    expect(
+      validateCreatorInviteLink({
+        creatorGoogleSub: 'sub-1',
+        creatorProfileData: { instagramIdentity: { username: '@Creator_Name' } },
+        rosterIgUsername: 'creator_name',
+        rosterUserGoogleSub: null,
+      }),
+    ).toEqual({ ok: true, normalizedHandle: 'creator_name' });
+  });
+
+  it('rejects a creator trying to claim another handle invite', () => {
+    expect(
+      validateCreatorInviteLink({
+        creatorGoogleSub: 'sub-bob',
+        creatorProfileData: { instagramIdentity: { username: 'bob' } },
+        rosterIgUsername: 'alice',
+        rosterUserGoogleSub: null,
+      }),
+    ).toEqual({ ok: false, error: 'instagram_mismatch' });
+  });
+
+  it('rejects relinking a roster row already claimed by another creator', () => {
+    expect(
+      validateCreatorInviteLink({
+        creatorGoogleSub: 'sub-bob',
+        creatorProfileData: { instagramIdentity: { username: 'alice' } },
+        rosterIgUsername: 'alice',
+        rosterUserGoogleSub: 'sub-alice',
+      }),
+    ).toEqual({ ok: false, error: 'roster_already_linked' });
   });
 });
 
