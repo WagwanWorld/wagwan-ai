@@ -1,4 +1,4 @@
-import { normalizeIgHandle } from '$lib/server/marketplace/creatorInvite';
+import { normalizeIgHandle } from '$lib/server/marketplace/creatorInviteUtils';
 
 type RosterLinkValidation =
   | { ok: true; alreadyLinked: boolean }
