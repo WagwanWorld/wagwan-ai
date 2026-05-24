@@ -52,6 +52,22 @@ export interface BriefResponse {
   updated_at: string;
 }
 
+async function isCampaignAudienceMember(sub: string, campaignId: string): Promise<boolean> {
+  const { data, error } = await getServiceSupabase()
+    .from('campaign_audience')
+    .select('campaign_id')
+    .eq('campaign_id', campaignId)
+    .eq('user_google_sub', sub)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[creatorMarketplace] campaign audience lookup:', error.message);
+    return false;
+  }
+  return Boolean(data);
+}
+
 export async function getRates(sub: string): Promise<CreatorRates | null> {
   const { data, error } = await getServiceSupabase()
     .from('creator_rates')
@@ -125,22 +141,24 @@ export async function respondToBrief(
   campaignId: string,
   action: 'accept' | 'decline',
 ): Promise<BriefResponse | null> {
+  if (!(await isCampaignAudienceMember(sub, campaignId))) return null;
+
   const now = new Date().toISOString();
   const status: BriefStatus = action === 'accept' ? 'accepted' : 'declined';
+  const allowedCurrentStatuses: BriefStatus[] =
+    action === 'accept' ? ['sent', 'accepted'] : ['sent', 'declined'];
   const { data, error } = await getServiceSupabase()
     .from('brief_responses')
-    .upsert(
-      {
-        campaign_id: campaignId,
-        user_google_sub: sub,
-        status,
-        accepted_at: action === 'accept' ? now : null,
-        updated_at: now,
-      },
-      { onConflict: 'campaign_id,user_google_sub' },
-    )
+    .update({
+      status,
+      accepted_at: action === 'accept' ? now : null,
+      updated_at: now,
+    })
+    .eq('campaign_id', campaignId)
+    .eq('user_google_sub', sub)
+    .in('status', allowedCurrentStatuses)
     .select()
-    .single();
+    .maybeSingle();
   if (error) console.error('[creatorMarketplace] respondToBrief:', error.message);
   return (data as BriefResponse | null) ?? null;
 }
@@ -167,7 +185,7 @@ export async function markBriefLive(campaignId: string, userSub?: string): Promi
 
 /**
  * Creator-side transition: brief delivered (IG post URL submitted).
- * Returns true if a row moved from live/accepted to completed, and credits a
+ * Returns true if a targeted row moved from live to completed, and credits a
  * pending earnings row for the campaign reward.
  */
 export async function completeBrief(
@@ -175,6 +193,8 @@ export async function completeBrief(
   campaignId: string,
   igPostUrl: string,
 ): Promise<boolean> {
+  if (!(await isCampaignAudienceMember(sub, campaignId))) return false;
+
   const sb = getServiceSupabase();
   const now = new Date().toISOString();
   const { data: updated, error } = await sb
@@ -187,7 +207,7 @@ export async function completeBrief(
     })
     .eq('campaign_id', campaignId)
     .eq('user_google_sub', sub)
-    .in('status', ['accepted', 'live'])
+    .eq('status', 'live')
     .select('id')
     .maybeSingle();
 

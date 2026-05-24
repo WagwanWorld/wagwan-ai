@@ -644,6 +644,7 @@
           googleSub: accountSub,
           brandId: invBrand,
           rosterId: invRoster || undefined,
+          instagramAccessToken: igToken || undefined,
         }),
       })
         .then(() => {
