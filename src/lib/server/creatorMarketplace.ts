@@ -125,22 +125,45 @@ export async function respondToBrief(
   campaignId: string,
   action: 'accept' | 'decline',
 ): Promise<BriefResponse | null> {
+  const sb = getServiceSupabase();
   const now = new Date().toISOString();
   const status: BriefStatus = action === 'accept' ? 'accepted' : 'declined';
-  const { data, error } = await getServiceSupabase()
+
+  const { data: audience, error: audienceErr } = await sb
+    .from('campaign_audience')
+    .select('campaign_id')
+    .eq('campaign_id', campaignId)
+    .eq('user_google_sub', sub)
+    .maybeSingle();
+  if (audienceErr) {
+    console.error('[creatorMarketplace] respondToBrief audience:', audienceErr.message);
+    return null;
+  }
+  if (!audience) return null;
+
+  const { data: campaign, error: campaignErr } = await sb
+    .from('campaigns')
+    .select('status')
+    .eq('id', campaignId)
+    .maybeSingle();
+  if (campaignErr) {
+    console.error('[creatorMarketplace] respondToBrief campaign:', campaignErr.message);
+    return null;
+  }
+  if (campaign?.status !== 'active') return null;
+
+  const { data, error } = await sb
     .from('brief_responses')
-    .upsert(
-      {
-        campaign_id: campaignId,
-        user_google_sub: sub,
-        status,
-        accepted_at: action === 'accept' ? now : null,
-        updated_at: now,
-      },
-      { onConflict: 'campaign_id,user_google_sub' },
-    )
+    .update({
+      status,
+      accepted_at: action === 'accept' ? now : null,
+      updated_at: now,
+    })
+    .eq('campaign_id', campaignId)
+    .eq('user_google_sub', sub)
+    .eq('status', 'sent')
     .select()
-    .single();
+    .maybeSingle();
   if (error) console.error('[creatorMarketplace] respondToBrief:', error.message);
   return (data as BriefResponse | null) ?? null;
 }
@@ -167,8 +190,8 @@ export async function markBriefLive(campaignId: string, userSub?: string): Promi
 
 /**
  * Creator-side transition: brief delivered (IG post URL submitted).
- * Returns true if a row moved from live/accepted to completed, and credits a
- * pending earnings row for the campaign reward.
+ * Returns true if a row moved from live to completed, and credits a pending
+ * earnings row for the campaign reward.
  */
 export async function completeBrief(
   sub: string,
@@ -187,7 +210,7 @@ export async function completeBrief(
     })
     .eq('campaign_id', campaignId)
     .eq('user_google_sub', sub)
-    .in('status', ['accepted', 'live'])
+    .eq('status', 'live')
     .select('id')
     .maybeSingle();
 
