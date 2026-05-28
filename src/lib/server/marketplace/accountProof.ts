@@ -60,7 +60,9 @@ export function verifyInstagramAccountProof(
   if (!safeEqual(sig, expected)) return null;
 
   try {
-    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Partial<InstagramAccountProof>;
+    const decoded = JSON.parse(
+      Buffer.from(payload, 'base64url').toString('utf8'),
+    ) as Partial<InstagramAccountProof>;
     const exp = Number(decoded.exp);
     const igUserId = typeof decoded.igUserId === 'string' ? decoded.igUserId.trim() : '';
     const username = normalizeInstagramUsername(decoded.username);

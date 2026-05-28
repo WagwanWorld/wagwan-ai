@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { COOKIE_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
 import {
@@ -23,7 +23,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
   if (!brandId) throw error(400, 'brandId is required');
   if (!rosterId) throw error(400, 'rosterId is required');
 
-  const proof = verifyInstagramAccountProof(cookies.get(IG_ACCOUNT_PROOF_COOKIE), COOKIE_SECRET);
+  const cookieSecret = env.COOKIE_SECRET?.trim();
+  if (!cookieSecret) throw error(503, 'Creator authentication not configured');
+
+  const proof = verifyInstagramAccountProof(cookies.get(IG_ACCOUNT_PROOF_COOKIE), cookieSecret);
   if (!proof) throw error(401, 'Instagram account proof is required');
 
   const sb = getServiceSupabase();
@@ -46,7 +49,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     throw error(403, 'Invite does not match connected Instagram account');
   }
 
-  const existingSub = typeof rosterRow.user_google_sub === 'string' ? rosterRow.user_google_sub : '';
+  const existingSub =
+    typeof rosterRow.user_google_sub === 'string' ? rosterRow.user_google_sub : '';
   if (existingSub && existingSub !== googleSub) {
     throw error(409, 'Invite has already been linked');
   }
@@ -62,7 +66,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     .eq('id', rosterId)
     .eq('brand_id', brandId);
 
-  updateQuery = existingSub ? updateQuery.eq('user_google_sub', googleSub) : updateQuery.is('user_google_sub', null);
+  updateQuery = existingSub
+    ? updateQuery.eq('user_google_sub', googleSub)
+    : updateQuery.is('user_google_sub', null);
 
   const { data: updatedRow, error: updateErr } = await updateQuery
     .select('analysis_snapshot, invite_message')

@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { COOKIE_SECRET } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import { getProfile, getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { listCreatorBrandSignals, markSignalsSeen } from '$lib/server/creatorSignals';
 import {
@@ -10,8 +10,14 @@ import {
 } from '$lib/server/marketplace/accountProof';
 import type { SignalType } from '$lib/types/creator-signals';
 
-async function assertCreatorAccess(googleSub: string, proofCookie: string | undefined): Promise<void> {
-  const proof = verifyInstagramAccountProof(proofCookie, COOKIE_SECRET);
+async function assertCreatorAccess(
+  googleSub: string,
+  proofCookie: string | undefined,
+): Promise<void> {
+  const cookieSecret = env.COOKIE_SECRET?.trim();
+  if (!cookieSecret) throw error(503, 'Creator authentication not configured');
+
+  const proof = verifyInstagramAccountProof(proofCookie, cookieSecret);
   if (!proof) throw error(401, 'Instagram account proof is required');
 
   if (googleSub === `ig:${proof.igUserId}` || googleSub === `ig:user:${proof.username}`) {
@@ -29,7 +35,10 @@ async function assertCreatorAccess(googleSub: string, proofCookie: string | unde
       ? normalizeInstagramUsername(instagramIdentity.username)
       : '';
 
-  if (profileIgUserId === proof.igUserId || (profileUsername && profileUsername === proof.username)) {
+  if (
+    profileIgUserId === proof.igUserId ||
+    (profileUsername && profileUsername === proof.username)
+  ) {
     return;
   }
 
