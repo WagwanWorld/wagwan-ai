@@ -646,7 +646,8 @@
           rosterId: invRoster || undefined,
         }),
       })
-        .then(() => {
+        .then((res) => {
+          if (!res.ok) throw new Error('invite_link_failed');
           localStorage.removeItem('wagwan_invite_brand');
           localStorage.removeItem('wagwan_invite_id');
           localStorage.removeItem('wagwan_invite_from');
