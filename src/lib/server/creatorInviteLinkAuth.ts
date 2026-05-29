@@ -50,6 +50,6 @@ export async function profileMatchesInstagram(
 
   return Boolean(
     (savedIgId && tokenIgId && savedIgId === tokenIgId) ||
-      (savedUsername && tokenUsername && savedUsername === tokenUsername),
+    (savedUsername && tokenUsername && savedUsername === tokenUsername),
   );
 }
