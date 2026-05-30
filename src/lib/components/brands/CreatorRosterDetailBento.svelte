@@ -163,6 +163,48 @@
         </div>
       {/if}
     </div>
+
+    <!-- Sheet data (custom fields from bulk upload) -->
+    {#if snap.custom_fields && Object.keys(snap.custom_fields).length > 0}
+      <div class="rdb-tile rdb-tile--half" style="grid-column: span 3;">
+        <span class="rdb-kicker">Sheet Data</span>
+        <div class="rdb-custom-fields">
+          {#each Object.entries(snap.custom_fields) as [key, value]}
+            <div class="rdb-custom-field">
+              <span class="rdb-custom-key">{key}</span>
+              <span class="rdb-custom-val">{value}</span>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
+    <!-- Contact info from sheet -->
+    {#if snap.email || snap.phone || snap.rates}
+      <div class="rdb-tile rdb-tile--half" style="grid-column: span 3;">
+        <span class="rdb-kicker">Contact</span>
+        <div class="rdb-custom-fields">
+          {#if snap.email}
+            <div class="rdb-custom-field">
+              <span class="rdb-custom-key">Email</span>
+              <span class="rdb-custom-val">{snap.email}</span>
+            </div>
+          {/if}
+          {#if snap.phone}
+            <div class="rdb-custom-field">
+              <span class="rdb-custom-key">Phone</span>
+              <span class="rdb-custom-val">{snap.phone}</span>
+            </div>
+          {/if}
+          {#if snap.rates}
+            <div class="rdb-custom-field">
+              <span class="rdb-custom-key">Rates</span>
+              <span class="rdb-custom-val">{snap.rates}</span>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/if}
   </div>
 </article>
 
@@ -437,5 +479,33 @@
   .rdb-chip b {
     color: #4a4a50;
     font-weight: 600;
+  }
+
+  .rdb-custom-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .rdb-custom-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .rdb-custom-key {
+    font-size: 10px;
+    color: rgba(255, 248, 232, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .rdb-custom-val {
+    font-size: 12px;
+    color: rgba(255, 248, 232, 0.7);
+    text-align: right;
+    word-break: break-word;
   }
 </style>
