@@ -13,8 +13,12 @@ describe('manual reset SQL safety', () => {
 
     for (const file of resetMigrationFiles) {
       const sql = readFileSync(join(root, file), 'utf8');
-      expect(sql).not.toMatch(/\bdrop\s+table\b/i);
-      expect(sql).not.toMatch(/\btruncate\s+table\b/i);
+      const executableSql = sql
+        .split('\n')
+        .filter((line) => !line.trimStart().startsWith('--'))
+        .join('\n');
+      expect(executableSql).not.toMatch(/\bdrop\s+table\b/i);
+      expect(executableSql).not.toMatch(/\btruncate\s+table\b/i);
     }
   });
 });
