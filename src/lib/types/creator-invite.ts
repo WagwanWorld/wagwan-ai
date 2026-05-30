@@ -40,6 +40,13 @@ export type RosterProfileSnapshot = {
   feedSummary?: string;
   recentCaptions?: string[];
   scrapedAt: string;
+  // Optional fields from bulk sheet upload
+  email?: string;
+  phone?: string;
+  rates?: string;
+  notes?: string;
+  tags?: string;
+  custom_fields?: Record<string, string>;
 };
 
 export type BrandCreatorRosterEntry = {
