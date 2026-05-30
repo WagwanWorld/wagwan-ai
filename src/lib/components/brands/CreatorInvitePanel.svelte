@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import CreatorFeaturedCard from '$lib/components/brands/CreatorFeaturedCard.svelte';
+  import CreatorBulkUpload from './CreatorBulkUpload.svelte';
   import { rosterEntryToView } from '$lib/utils/creatorCardView';
   import type { BrandCreatorRosterEntry } from '$lib/types/creator-invite';
   import type {
@@ -19,6 +20,7 @@
 
   const dispatch = createEventDispatcher<{ rosterUpdated: void; goRoster: void }>();
 
+  let showBulkUpload = false;
   let handleInput = '';
   let busy = false;
   let error = '';
@@ -164,6 +166,20 @@
       <button class="ci-invite-btn" type="button" disabled={busy} on:click={generateInvite}>
         {busy ? 'Working…' : 'Generate invite'}
       </button>
+    </div>
+
+    <!-- Bulk upload toggle -->
+    <div class="bulk-toggle">
+      {#if showBulkUpload}
+        <button type="button" class="bulk-toggle-link" on:click={() => (showBulkUpload = false)}>
+          back to single add
+        </button>
+        <CreatorBulkUpload {brandAuthenticated} on:rosterUpdated on:goRoster />
+      {:else}
+        <button type="button" class="bulk-toggle-link" on:click={() => (showBulkUpload = true)}>
+          or upload a sheet
+        </button>
+      {/if}
     </div>
 
     {#if error}
@@ -437,5 +453,23 @@
     font-size: 13px;
     z-index: 100;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .bulk-toggle {
+    text-align: center;
+    margin-top: 8px;
+  }
+  .bulk-toggle-link {
+    background: none;
+    border: none;
+    color: #c4f24a;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: opacity 150ms ease;
+  }
+  .bulk-toggle-link:hover {
+    opacity: 0.7;
   }
 </style>
