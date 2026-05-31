@@ -2,6 +2,7 @@
   import { enhance } from '$app/forms';
   import { onMount, onDestroy } from 'svelte';
   import SignaturePad from '$lib/components/SignaturePad.svelte';
+  import { generateAgreementPdf } from '$lib/utils/agreementPdf';
 
   let { form } = $props();
 
@@ -103,7 +104,16 @@
           <div><span>Company</span><strong>{form.company}</strong></div>
           <div><span>Date</span><strong>{today}</strong></div>
         </div>
-        <button class="ag-download" onclick={() => window.print()}>
+        <button
+          class="ag-download"
+          onclick={() =>
+            generateAgreementPdf({
+              signerName: form.name,
+              companyName: form.company,
+              signatureDataUrl: form.signature ?? null,
+              date: today,
+            })}
+        >
           <svg
             width="16"
             height="16"

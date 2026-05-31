@@ -37,7 +37,7 @@ export const actions = {
         return fail(500, { error: 'Failed to save agreement. Please try again.' });
       }
 
-      return { success: true, name, company };
+      return { success: true, name, company, signature };
     } catch (err) {
       console.error('Agreement submission error:', err);
       return fail(500, { error: 'An unexpected error occurred. Please try again.' });
