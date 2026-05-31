@@ -2,15 +2,15 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { listCreatorBrandSignals, markSignalsSeen } from '$lib/server/creatorSignals';
+import { requireCreatorProfileSub } from '$lib/server/creatorAuth';
 import type { SignalType } from '$lib/types/creator-signals';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ request, url }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
   }
 
-  const googleSub = url.searchParams.get('googleSub')?.trim();
-  if (!googleSub) throw error(400, 'googleSub is required');
+  const requestedGoogleSub = url.searchParams.get('googleSub')?.trim();
 
   const seenParam = url.searchParams.get('seen');
   const signalType = url.searchParams.get('signal_type') as SignalType | null;
@@ -18,6 +18,7 @@ export const GET: RequestHandler = async ({ url }) => {
   const seen = seenParam === 'true' ? true : seenParam === 'false' ? false : undefined;
 
   const sb = getServiceSupabase();
+  const googleSub = await requireCreatorProfileSub(request, sb, requestedGoogleSub);
   const { signals, unseenCount } = await listCreatorBrandSignals(sb, googleSub, {
     seen,
     signalType: signalType ?? undefined,
@@ -35,8 +36,7 @@ export const PATCH: RequestHandler = async ({ request }) => {
   }
 
   const body = await request.json();
-  const googleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
-  if (!googleSub) throw error(400, 'googleSub is required');
+  const requestedGoogleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
 
   const id = typeof body.id === 'string' ? body.id.trim() : undefined;
   const markAllSeen = body.markAllSeen === true;
@@ -46,6 +46,7 @@ export const PATCH: RequestHandler = async ({ request }) => {
   }
 
   const sb = getServiceSupabase();
+  const googleSub = await requireCreatorProfileSub(request, sb, requestedGoogleSub);
   const ok = await markSignalsSeen(sb, googleSub, { id, markAllSeen });
 
   return json({ ok });
