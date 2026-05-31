@@ -103,6 +103,23 @@
           <div><span>Company</span><strong>{form.company}</strong></div>
           <div><span>Date</span><strong>{today}</strong></div>
         </div>
+        <button class="ag-download" onclick={() => window.print()}>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
+              points="7 10 12 15 17 10"
+            /><line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Download PDF
+        </button>
       </div>
     </main>
   {:else}
@@ -264,8 +281,8 @@
               <li>
                 <strong class="ag-client">{clientName}</strong> shall have the right to
                 <strong>reconcile and review all transaction data</strong>
-                generated through the Platform on a monthly basis. Upon written request, the Service
-                Provider shall provide detailed transaction reports within
+                generated through the Platform on a monthly basis. Upon written request, the Service Provider
+                shall provide detailed transaction reports within
                 <strong>five (5) business days</strong>.
               </li>
               <li>
@@ -287,8 +304,8 @@
               This Agreement shall remain in full force and effect for a period of <strong
                 >three (3) years</strong
               >
-              from the Effective Date, unless terminated earlier. Upon expiry, the Agreement may be
-              renewed by <strong>mutual written consent</strong>.
+              from the Effective Date, unless terminated earlier. Upon expiry, the Agreement may be renewed
+              by <strong>mutual written consent</strong>.
             </p>
           </section>
 
@@ -1111,6 +1128,101 @@
   .ag-success-meta span {
     color: #4a4a50;
     font-size: 0.75rem;
+  }
+
+  /* ═══ DOWNLOAD BTN ═══ */
+  .ag-download {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 11px 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #ededef;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 200ms;
+  }
+  .ag-download:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* ═══ PRINT ═══ */
+  @media print {
+    .ag-page {
+      background: #fff !important;
+      color: #000 !important;
+    }
+    .ag-header,
+    .ag-form-toggle,
+    .ag-download,
+    .ag-footer {
+      display: none !important;
+    }
+    .ag-success-wrap {
+      padding: 20px !important;
+    }
+    .ag-success-card {
+      background: #fff !important;
+      border: 1px solid #ddd !important;
+      color: #000 !important;
+    }
+    .ag-success-card h1,
+    .ag-success-card p,
+    .ag-success-meta div,
+    .ag-success-meta strong {
+      color: #000 !important;
+    }
+    .ag-success-meta {
+      background: #f9f9f9 !important;
+      border: 1px solid #ddd !important;
+    }
+    .ag-success-meta span {
+      color: #666 !important;
+    }
+    .ag-success-icon {
+      filter: none;
+    }
+
+    /* If contract is visible behind success, also style it for print */
+    .ag-doc {
+      background: #fff !important;
+      border: 1px solid #ddd !important;
+      color: #000 !important;
+    }
+    .ag-sec h2 {
+      color: #000 !important;
+    }
+    .ag-sec p,
+    .ag-sec ol li {
+      color: #333 !important;
+    }
+    .ag-client {
+      color: #c05000 !important;
+    }
+    .ag-sign-party h3 {
+      color: #000 !important;
+      border-color: #ddd !important;
+    }
+    .ag-field span {
+      color: #666 !important;
+    }
+    .ag-field strong,
+    .ag-sig-text {
+      color: #000 !important;
+    }
+    .ag-sig-img {
+      filter: none !important;
+    }
+    .ag-form-panel {
+      display: none !important;
+    }
   }
 
   /* ═══ FOOTER ═══ */
