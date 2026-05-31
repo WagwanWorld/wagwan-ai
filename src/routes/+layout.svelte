@@ -31,7 +31,8 @@
     path.startsWith('/privacy') ||
     path.startsWith('/terms') ||
     path.startsWith('/data-deletion') ||
-    path.startsWith('/auth/applemusic/connect');
+    path.startsWith('/auth/applemusic/connect') ||
+    path.startsWith('/agreement');
 
   onMount(() => {
     applyThemeToDocument();
