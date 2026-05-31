@@ -31,7 +31,7 @@
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
-    ctx.strokeStyle = '#1C1917';
+    ctx.strokeStyle = '#ededef';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -112,9 +112,9 @@
     position: relative;
     width: 100%;
     height: 160px;
-    border: 1.5px solid #d4d4d4;
-    border-radius: 10px;
-    background: #fafaf9;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
     overflow: hidden;
   }
 
@@ -130,7 +130,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #a3a3a3;
+    color: #4a4a50;
     font-family: 'EB Garamond', Georgia, serif;
     font-style: italic;
     font-size: 1.125rem;

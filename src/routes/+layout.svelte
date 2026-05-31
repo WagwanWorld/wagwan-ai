@@ -39,18 +39,22 @@
   });
 </script>
 
-<div
-  class="root-shell relative flex w-full h-svh flex-col overflow-hidden"
-  style="background:var(--bg); color:var(--text);"
->
-  <AmbientGradients />
-  <div class="relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden">
-    {#if useMarketingShell}
-      <OsPageShell as="div" className={path === '/' ? 'os-shell-bypass' : ''}>
+{#if path.startsWith('/agreement')}
+  <slot />
+{:else}
+  <div
+    class="root-shell relative flex w-full h-svh flex-col overflow-hidden"
+    style="background:var(--bg); color:var(--text);"
+  >
+    <AmbientGradients />
+    <div class="relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden">
+      {#if useMarketingShell}
+        <OsPageShell as="div" className={path === '/' ? 'os-shell-bypass' : ''}>
+          <slot />
+        </OsPageShell>
+      {:else}
         <slot />
-      </OsPageShell>
-    {:else}
-      <slot />
-    {/if}
+      {/if}
+    </div>
   </div>
-</div>
+{/if}

@@ -11,6 +11,9 @@
   let submitting = $state(false);
   let agreed = $state(false);
 
+  /** Display name for the client throughout the contract */
+  let clientName = $derived(company.trim() || 'the Client');
+
   function handleSignatureChange(dataUrl: string | null) {
     signatureData = dataUrl;
   }
@@ -34,6 +37,12 @@
     content="Digital Service Agreement between Wagwan World LLP and Client"
   />
   <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
 </svelte:head>
 
 <div class="agreement-page">
@@ -55,7 +64,7 @@
             height="48"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#16a34a"
+            stroke="#4ade80"
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -86,6 +95,105 @@
       </div>
     </main>
   {:else}
+    <!-- Sticky Form Bar -->
+    <div class="form-sidebar">
+      <div class="form-card">
+        <h3>Sign this Agreement</h3>
+        <p class="form-desc">
+          Fill in your details and sign below. Your company name will appear throughout the
+          contract.
+        </p>
+
+        {#if form?.error}
+          <div class="error-banner">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line
+                x1="9"
+                y1="9"
+                x2="15"
+                y2="15"
+              />
+            </svg>
+            {form.error}
+          </div>
+        {/if}
+
+        <form
+          method="POST"
+          use:enhance={() => {
+            submitting = true;
+            return async ({ update }) => {
+              submitting = false;
+              await update();
+            };
+          }}
+        >
+          <div class="form-field">
+            <label for="name">Your Full Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              bind:value={name}
+              placeholder="e.g. John Doe"
+              required
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="company">Company Name</label>
+            <input
+              id="company"
+              name="company"
+              type="text"
+              bind:value={company}
+              placeholder="e.g. Fuzone Bengaluru Pvt Ltd"
+              required
+            />
+            {#if company.trim()}
+              <span class="field-hint"
+                >This name will replace "the Client" throughout the agreement.</span
+              >
+            {/if}
+          </div>
+
+          <div class="form-field">
+            <label>Digital Signature</label>
+            <SignaturePad bind:this={signaturePad} onSignatureChange={handleSignatureChange} />
+            <div class="signature-actions">
+              <button type="button" class="btn-clear" onclick={clearSignature}>Clear</button>
+            </div>
+            <input type="hidden" name="signature" value={signatureData ?? ''} />
+          </div>
+
+          <label class="checkbox-label">
+            <input type="checkbox" bind:checked={agreed} required />
+            <span>I have read and agree to the terms of this Service Agreement.</span>
+          </label>
+
+          <button
+            type="submit"
+            class="btn-submit"
+            disabled={submitting || !name || !company || !signatureData || !agreed}
+          >
+            {#if submitting}
+              <span class="spinner"></span>
+              Signing...
+            {:else}
+              Sign Agreement
+            {/if}
+          </button>
+        </form>
+      </div>
+    </div>
+
     <!-- Agreement Content -->
     <main class="agreement-container">
       <div class="agreement-document">
@@ -113,10 +221,9 @@
           </p>
           <p class="and-divider">AND</p>
           <p>
-            <strong>Fuzone Bengaluru Private</strong>, (hereinafter referred to as the "<strong
-              >Client</strong
-            >" or "<strong>Fuzone</strong>", which expression shall, unless repugnant to the context
-            or meaning thereof, be deemed to mean and include its proprietors, partners, successors,
+            <strong class="client-highlight">{clientName}</strong>, (hereinafter referred to as the
+            "<strong>Client</strong>", which expression shall, unless repugnant to the context or
+            meaning thereof, be deemed to mean and include its proprietors, partners, successors,
             and permitted assigns) of the <strong>SECOND PART</strong>.
           </p>
           <p class="party-note">
@@ -137,14 +244,17 @@
               web-based event and community management software platform (the "Platform").
             </li>
             <li>
-              The Client is engaged in the business of operating a premium nightlife and
-              entertainment venue and wishes to utilize the Service Provider's Platform for its
-              operational needs.
+              <strong class="client-highlight">{clientName}</strong> is engaged in the business of operating
+              a premium nightlife and entertainment venue and wishes to utilize the Service Provider's
+              Platform for its operational needs.
             </li>
             <li>
-              The Service Provider has agreed to grant the Client a non-exclusive, non-transferable
-              license to access and use the Platform, and the Client has agreed to avail the
-              services in accordance with the terms and conditions set forth in this Agreement.
+              The Service Provider has agreed to grant <strong class="client-highlight"
+                >{clientName}</strong
+              >
+              a non-exclusive, non-transferable license to access and use the Platform, and
+              <strong class="client-highlight">{clientName}</strong> has agreed to avail the services
+              in accordance with the terms and conditions set forth in this Agreement.
             </li>
           </ol>
         </section>
@@ -179,7 +289,8 @@
               <dt>1.3. "Customer"</dt>
               <dd>
                 means any individual who purchases tickets, pays cover charges, or otherwise engages
-                with the Client's services through the Platform.
+                with <strong class="client-highlight">{clientName}</strong>'s services through the
+                Platform.
               </dd>
             </div>
             <div class="def-item">
@@ -198,8 +309,8 @@
             <div class="def-item">
               <dt>1.6. "Service Fees"</dt>
               <dd>
-                means the fees payable by the Client to the Service Provider as detailed in Clause
-                4.
+                means the fees payable by <strong class="client-highlight">{clientName}</strong> to the
+                Service Provider as detailed in Clause 4.
               </dd>
             </div>
           </dl>
@@ -209,8 +320,9 @@
         <section class="doc-section">
           <h2>2. SCOPE OF SERVICES</h2>
           <p>
-            2.1. The Service Provider shall provide the Client with access to its Platform, which
-            includes the following features and services:
+            2.1. The Service Provider shall provide <strong class="client-highlight"
+              >{clientName}</strong
+            > with access to its Platform, which includes the following features and services:
           </p>
           <ol class="clause-list" type="a">
             <li>
@@ -229,8 +341,9 @@
               <strong>On Spot Entry:</strong> Ticket QR system for seamless entry for increasing efficiency.
             </li>
             <li>
-              <strong>Community Management Tools:</strong> Features designed to build, engage, and maintain
-              digital communities of the Client's patrons.
+              <strong>Community Management Tools:</strong> Features designed to build, engage, and
+              maintain digital communities of
+              <strong class="client-highlight">{clientName}</strong>'s patrons.
             </li>
             <li>
               <strong>Admin Dashboard:</strong> A centralized administrative panel for managing events,
@@ -247,9 +360,11 @@
             </li>
             <li>
               In the event that Platform uptime falls below the guaranteed threshold for reasons
-              attributable to the Service Provider, the Client (Fuzone) shall be entitled to
-              <strong>service credits or monetary adjustments</strong> in accordance with the provisions
-              set forth in Clause 10.2.
+              attributable to the Service Provider, <strong class="client-highlight"
+                >{clientName}</strong
+              >
+              shall be entitled to <strong>service credits or monetary adjustments</strong> in accordance
+              with Clause 10.2.
             </li>
             <li>
               The uptime performance shall be measured monthly, and all claims for service credits
@@ -257,64 +372,71 @@
               10.2.
             </li>
             <li>
-              The Client (Fuzone) shall have the right to <strong
-                >reconcile and review all transaction data</strong
-              >
+              <strong class="client-highlight">{clientName}</strong> shall have the right to
+              <strong>reconcile and review all transaction data</strong>
               generated through the Platform on a monthly basis. Upon written request, the Service
               Provider shall provide detailed transaction reports within
               <strong>five (5) business days</strong>.
             </li>
             <li>
-              The Client may verify the accuracy of Platform-reported data against its internal
-              records, and both Parties shall cooperate in good faith to resolve any discrepancies.
+              <strong class="client-highlight">{clientName}</strong> may verify the accuracy of Platform-reported
+              data against its internal records, and both Parties shall cooperate in good faith to resolve
+              any discrepancies.
             </li>
             <li>
-              The Client's review rights under this clause shall be limited to
-              <strong>financial and transactional data</strong> relevant to its own account.
+              <strong class="client-highlight">{clientName}</strong>'s review rights under this
+              clause shall be limited to <strong>financial and transactional data</strong> relevant to
+              its own account.
             </li>
           </ol>
         </section>
 
-        <!-- Clause 2 (Term) -->
+        <!-- Term of Agreement -->
         <section class="doc-section">
-          <h2>2. TERM OF AGREEMENT</h2>
+          <h2>3. TERM OF AGREEMENT</h2>
           <p>
-            a) This Agreement shall remain in full force and effect for a period of
-            <strong>three (3) years</strong> from the Effective Date, unless terminated earlier in
-            accordance with the terms herein. Upon expiry of the initial term, the Agreement may be
-            renewed or extended by <strong>mutual written consent</strong> of both Parties.
+            a) This Agreement shall remain in full force and effect for a period of <strong
+              >three (3) years</strong
+            >
+            from the Effective Date, unless terminated earlier in accordance with the terms herein.
+            Upon expiry of the initial term, the Agreement may be renewed or extended by
+            <strong>mutual written consent</strong> of both Parties.
           </p>
         </section>
 
-        <!-- Clause 3: Obligations -->
+        <!-- Obligations -->
         <section class="doc-section">
-          <h2>3. OBLIGATIONS OF THE CLIENT</h2>
+          <h2>4. OBLIGATIONS OF THE CLIENT</h2>
           <p>
-            3.1. The Client shall be solely responsible for the accuracy, quality, and legality of
-            all content, data, and information related to its events and services.
+            4.1. <strong class="client-highlight">{clientName}</strong> shall be solely responsible for
+            the accuracy, quality, and legality of all content, data, and information related to its events
+            and services.
           </p>
           <p>
-            3.2. The Client shall be the "seller of record" for all transactions processed through
-            the Platform. The Service Provider acts merely as a technology facilitator.
+            4.2. <strong class="client-highlight">{clientName}</strong> shall be the "seller of record"
+            for all transactions processed through the Platform. The Service Provider acts merely as a
+            technology facilitator.
           </p>
           <p>
-            3.3. The Client shall ensure timely payment of all fees and charges as stipulated in
-            this Agreement.
+            4.3. <strong class="client-highlight">{clientName}</strong> shall ensure timely payment of
+            all fees and charges as stipulated in this Agreement.
           </p>
           <p>
-            3.4. The Client shall be solely responsible for all customer service, inquiries,
-            disputes, and communications related to its events and offerings.
+            4.4. <strong class="client-highlight">{clientName}</strong> shall be solely responsible for
+            all customer service, inquiries, disputes, and communications related to its events and offerings.
           </p>
         </section>
 
-        <!-- Clause 4: Financial Terms -->
+        <!-- Financial Terms -->
         <section class="doc-section">
-          <h2>4. FINANCIAL TERMS AND PAYMENT</h2>
+          <h2>5. FINANCIAL TERMS AND PAYMENT</h2>
           <p>
-            4.1. <strong>Product Fee:</strong> The Client shall pay a yearly minimum fee of
-            <strong>INR 10,000</strong> for the continued use of the Platform.
+            5.1. <strong>Product Fee:</strong>
+            <strong class="client-highlight">{clientName}</strong>
+            shall pay a yearly minimum fee of <strong>INR 10,000</strong> for the continued use of the
+            Platform.
           </p>
-          <p>4.2. <strong>Service Charges:</strong></p>
+          <p>5.2. <strong>Service Charges:</strong></p>
           <ol class="clause-list">
             <li>
               The Service Provider shall levy a <strong>5% service charge</strong> on the value of all
@@ -326,8 +448,9 @@
             </li>
             <li>
               After an initial period of six (6) months from the Effective Date, the Parties may
-              review the commission structure. Any revision shall be effected only through
-              <strong>mutual written agreement</strong>.
+              review the commission structure. Any revision shall be effected only through <strong
+                >mutual written agreement</strong
+              >.
               <ol class="clause-sublist" type="a">
                 <li>
                   The total commission chargeable shall <strong
@@ -342,96 +465,104 @@
             </li>
           </ol>
           <p>
-            4.3. <strong>Pass-Through Costs:</strong> All service charges, applicable payment gateway
+            5.3. <strong>Pass-Through Costs:</strong> All service charges, applicable payment gateway
             fees, and GST shall be offloaded to the Customer at the point of sale.
           </p>
           <p>
-            4.4. <strong>Payouts:</strong> All funds collected on behalf of the Client, net of fees,
-            shall be remitted within <strong>1 to 5 business days</strong>.
+            5.4. <strong>Payouts:</strong> All funds collected on behalf of
+            <strong class="client-highlight">{clientName}</strong>, net of fees, shall be remitted
+            within <strong>1 to 5 business days</strong>.
           </p>
           <p>
-            4.5. In the event of any delay or default in payment, the Service Provider shall provide
-            a written notice granting a <strong>seven (7) day grace period</strong>.
+            5.5. In the event of any delay or default in payment by <strong class="client-highlight"
+              >{clientName}</strong
+            >, the Service Provider shall provide a written notice granting a
+            <strong>seven (7) day grace period</strong>.
           </p>
           <p>
-            4.6. If the Client fails to make payment within the grace period, the Service Provider
-            shall have the right to <strong>suspend access</strong> to the Platform.
+            5.6. If <strong class="client-highlight">{clientName}</strong> fails to make payment
+            within the grace period, the Service Provider shall have the right to
+            <strong>suspend access</strong> to the Platform.
           </p>
-          <p>4.7. During the grace period, services shall continue uninterrupted.</p>
+          <p>5.7. During the grace period, services shall continue uninterrupted.</p>
           <p>
-            4.8. Upon receipt of all outstanding payments, the Service Provider shall
-            <strong>promptly reinstate</strong> access within
-            <strong>two (2) business days</strong>.
+            5.8. Upon receipt of all outstanding payments, the Service Provider shall <strong
+              >promptly reinstate</strong
+            >
+            access within <strong>two (2) business days</strong>.
           </p>
           <p>
-            4.9. Reinstatement shall not waive the Service Provider's right to claim interest or
+            5.9. Reinstatement shall not waive the Service Provider's right to claim interest or
             penalties from prior non-payment.
           </p>
         </section>
 
-        <!-- Clause 5: Refunds -->
+        <!-- Refunds -->
         <section class="doc-section">
-          <h2>5. REFUNDS, CHARGEBACKS, AND LIABILITY</h2>
+          <h2>6. REFUNDS, CHARGEBACKS, AND LIABILITY</h2>
           <p>
-            5.1. <strong>Facilitation of Refunds.</strong> The Service Provider shall facilitate
+            6.1. <strong>Facilitation of Refunds.</strong> The Service Provider shall facilitate
             refund requests through the Platform's integrated payment system. Such facilitation is a
             <strong>technical and operational function only</strong>.
           </p>
           <p>
-            5.2. <strong>Sole Financial Responsibility.</strong> The Client shall remain
-            <strong>solely and exclusively responsible</strong> for funding and approving all customer
-            refunds.
+            6.2. <strong>Sole Financial Responsibility.</strong>
+            <strong class="client-highlight">{clientName}</strong>
+            shall remain <strong>solely and exclusively responsible</strong> for funding and approving
+            all customer refunds.
           </p>
           <p>
-            5.3. <strong>Refund Liability for Technical Errors.</strong> If a refund arises solely
+            6.3. <strong>Refund Liability for Technical Errors.</strong> If a refund arises solely
             due to a technical error attributable to the Service Provider's Platform, the Service
             Provider shall bear only the associated
             <strong>refund processing fees, penalty fees, or chargeback fees</strong>.
           </p>
           <p>
-            5.4. The Service Provider's liability is limited to <strong>refund fees only</strong> and
+            6.4. The Service Provider's liability is limited to <strong>refund fees only</strong> and
             does not extend to the ticket price or transaction amount.
           </p>
           <p>
-            5.5. <strong>Chargebacks.</strong> The Client shall bear full financial responsibility
-            for chargebacks. If a chargeback arises solely from a verified technical error, Wagwan
-            shall reimburse the corresponding chargeback fees within
-            <strong>fifteen (15) business days</strong>.
+            6.5. <strong>Chargebacks.</strong>
+            <strong class="client-highlight">{clientName}</strong>
+            shall bear full financial responsibility for chargebacks. If a chargeback arises solely
+            from a verified technical error, Wagwan shall reimburse the corresponding chargeback
+            fees within <strong>fifteen (15) business days</strong>.
           </p>
           <p>
-            5.6. <strong>Non-Refundable Fees.</strong> All service fees, subscription fees, and
+            6.6. <strong>Non-Refundable Fees.</strong> All service fees, subscription fees, and
             platform charges are <strong>non-refundable</strong>.
           </p>
           <p>
-            5.7. <strong>No Liability for Non-Technical Disputes.</strong> The Service Provider shall
+            6.7. <strong>No Liability for Non-Technical Disputes.</strong> The Service Provider shall
             not be liable for disputes arising from non-technical issues.
           </p>
           <p>
-            5.8. <strong>Cooperation.</strong> Both Parties shall cooperate in good faith to investigate
+            6.8. <strong>Cooperation.</strong> Both Parties shall cooperate in good faith to investigate
             and resolve refund or chargeback matters.
           </p>
         </section>
 
-        <!-- Clause 6: Term and Termination -->
+        <!-- Term and Termination -->
         <section class="doc-section">
-          <h2>6. TERM AND TERMINATION</h2>
+          <h2>7. TERM AND TERMINATION</h2>
           <p>
-            6.1. <strong>Term:</strong> This Agreement shall commence on the Effective Date and
+            7.1. <strong>Term:</strong> This Agreement shall commence on the Effective Date and
             remain in effect for <strong>12 months</strong>, unless terminated earlier.
           </p>
           <p>
-            6.2. <strong>Termination for Convenience:</strong> Either Party may terminate with
+            7.2. <strong>Termination for Convenience:</strong> Either Party may terminate with
             <strong>30 days' prior written notice</strong>.
           </p>
-          <p>6.3. <strong>Obligations upon Termination:</strong></p>
+          <p>7.3. <strong>Obligations upon Termination:</strong></p>
           <ol class="clause-list" type="a">
             <li>
-              The Client shall immediately cease all use of the Platform and clear all outstanding
-              dues.
+              <strong class="client-highlight">{clientName}</strong> shall immediately cease all use of
+              the Platform and clear all outstanding dues.
             </li>
             <li>
               The Service Provider shall, within <strong>fifteen (15) business days</strong>,
-              provide the Client with all <strong>raw Client Data</strong>.
+              provide <strong class="client-highlight">{clientName}</strong> with all
+              <strong>raw Client Data</strong>.
             </li>
             <li>
               Either Party may terminate immediately if Platform services are discontinued or fees
@@ -440,79 +571,89 @@
           </ol>
         </section>
 
-        <!-- Clause 7: IP -->
+        <!-- IP -->
         <section class="doc-section">
-          <h2>7. INTELLECTUAL PROPERTY RIGHTS</h2>
+          <h2>8. INTELLECTUAL PROPERTY RIGHTS</h2>
           <p>
-            7.1. The Service Provider retains all right, title, and interest in its proprietary
+            8.1. The Service Provider retains all right, title, and interest in its proprietary
             Platform.
           </p>
           <p>
-            7.2. The Client retains full ownership of its brand identity, logos, trademarks, event
-            content, and all customer data collected through the Platform.
+            8.2. <strong class="client-highlight">{clientName}</strong> retains full ownership of its
+            brand identity, logos, trademarks, event content, and all customer data collected through
+            the Platform.
           </p>
         </section>
 
-        <!-- Clause 8: Data -->
+        <!-- Data -->
         <section class="doc-section">
-          <h2>8. DATA OWNERSHIP AND COMMON DATA</h2>
+          <h2>9. DATA OWNERSHIP AND COMMON DATA</h2>
           <p>
-            8.1. <strong>Data Ownership.</strong> All data collected exclusively under the Client's
-            brand "Fuzone" shall constitute "<strong>Fuzone Exclusive Data</strong>" and shall be
-            the sole and exclusive property of Fuzone.
+            9.1. <strong>Data Ownership.</strong> All data collected exclusively under
+            <strong class="client-highlight">{clientName}</strong>'s brand shall be the sole and
+            exclusive property of <strong class="client-highlight">{clientName}</strong>.
           </p>
           <p>
-            8.2. <strong>Common Data.</strong> Data from users interacting through the Wagwan
-            Ecosystem shall constitute "<strong>Common Data</strong>" jointly owned by both Parties.
+            9.2. <strong>Common Data.</strong> Data from users interacting through the Wagwan Ecosystem
+            shall constitute "Common Data" jointly owned by both Parties.
           </p>
           <p>
-            8.3. <strong>Confidentiality.</strong> Both Parties agree to maintain confidentiality of
+            9.3. <strong>Confidentiality.</strong> Both Parties agree to maintain confidentiality of
             all Confidential Information for a period of <strong>two (2) years</strong> from termination.
           </p>
           <p>
-            8.4. <strong>Data Security.</strong> The Service Provider shall implement appropriate technical
+            9.4. <strong>Data Security.</strong> The Service Provider shall implement appropriate technical
             and organizational security measures.
           </p>
           <p>
-            8.5. <strong>Aggregated Data.</strong> The Service Provider may use anonymized and aggregated
+            9.5. <strong>Aggregated Data.</strong> The Service Provider may use anonymized and aggregated
             forms of Client Data for research and product improvement.
           </p>
           <p>
-            8.6. <strong>Onboarding and Support.</strong> The Service Provider shall provide onboarding
+            9.6. <strong>Onboarding and Support.</strong> The Service Provider shall provide onboarding
             assistance and reasonable technical support.
           </p>
         </section>
 
-        <!-- Clause 9: GST -->
+        <!-- GST -->
         <section class="doc-section">
-          <h2>9. GST AND INVOICING</h2>
+          <h2>10. GST AND INVOICING</h2>
           <p>
-            9.1. The Service Provider shall issue a <strong>tax invoice</strong> on a monthly/yearly basis
-            with applicable GST.
+            10.1. The Service Provider shall issue a <strong>tax invoice</strong> on a
+            monthly/yearly basis to <strong class="client-highlight">{clientName}</strong> with applicable
+            GST.
           </p>
           <p>
-            9.2. All amounts are <strong>exclusive of GST</strong> unless expressly stated otherwise.
+            10.2. All amounts are <strong>exclusive of GST</strong> unless expressly stated otherwise.
           </p>
+          <p>10.3. Both Parties shall comply with the <strong>GST Act, 2017</strong>.</p>
           <p>
-            9.3. Both Parties shall comply with the <strong>GST Act, 2017</strong>.
-          </p>
-          <p>
-            9.4. The Client shall be entitled to claim <strong>input tax credit</strong> on GST paid.
+            10.4. <strong class="client-highlight">{clientName}</strong> shall be entitled to claim
+            <strong>input tax credit</strong> on GST paid.
           </p>
         </section>
 
-        <!-- Clause 10: Indemnification -->
+        <!-- Indemnification -->
         <section class="doc-section">
-          <h2>10. INDEMNIFICATION</h2>
+          <h2>11. INDEMNIFICATION</h2>
           <p>
-            10.1. The Client agrees to indemnify, defend, and hold harmless the Service Provider
-            from claims arising out of:
+            11.1. <strong class="client-highlight">{clientName}</strong> agrees to indemnify, defend,
+            and hold harmless the Service Provider from claims arising out of:
           </p>
           <ol class="clause-list" type="a">
-            <li>Any breach of this Agreement by the Client.</li>
-            <li>Any negligence by the Client in connection with Platform use.</li>
+            <li>
+              Any breach of this Agreement by <strong class="client-highlight">{clientName}</strong
+              >.
+            </li>
+            <li>
+              Any negligence by <strong class="client-highlight">{clientName}</strong> in connection with
+              Platform use.
+            </li>
             <li>Any claims from Customers, including refunds or event cancellations.</li>
-            <li>The Client's failure to comply with applicable tax or regulatory obligations.</li>
+            <li>
+              <strong class="client-highlight">{clientName}</strong>'s failure to comply with
+              applicable tax or regulatory obligations.
+            </li>
           </ol>
           <p>
             e) This indemnity shall <strong>not extend</strong> to liability arising from the Service
@@ -524,88 +665,93 @@
           </p>
         </section>
 
-        <!-- Clause 11: Limitation of Liability -->
+        <!-- Limitation of Liability -->
         <section class="doc-section">
-          <h2>11. LIMITATION OF LIABILITY</h2>
+          <h2>12. LIMITATION OF LIABILITY</h2>
           <p>
-            11.1. Total aggregate liability shall not exceed the <strong
+            12.1. Total aggregate liability shall not exceed the <strong
               >total revenue generated in the preceding three (3) calendar months</strong
             >.
           </p>
-          <p>11.2. The liability cap is based on actual commissions and subscription revenues.</p>
           <p>
-            11.3. The Service Provider shall not be liable for any indirect, consequential,
+            12.2. The liability cap is based on actual commissions and subscription revenues
+            received from <strong class="client-highlight">{clientName}</strong>'s use of the
+            Platform.
+          </p>
+          <p>
+            12.3. The Service Provider shall not be liable for any indirect, consequential,
             incidental, punitive, or special damages.
           </p>
-          <p>11.4. This limitation applies to all claims under this Agreement.</p>
+          <p>12.4. This limitation applies to all claims under this Agreement.</p>
           <p>
-            11.5. In the event of gross negligence or fraud, the Client shall provide written notice
-            within <strong>two (2) months</strong>. The Service Provider shall be granted a
-            <strong>one (1) month rectification period</strong>.
+            12.5. In the event of gross negligence or fraud, <strong class="client-highlight"
+              >{clientName}</strong
+            >
+            shall provide written notice within <strong>two (2) months</strong>. The Service
+            Provider shall be granted a <strong>one (1) month rectification period</strong>.
           </p>
         </section>
 
-        <!-- Clause 12: Force Majeure -->
+        <!-- Force Majeure -->
         <section class="doc-section">
-          <h2>12. FORCE MAJEURE</h2>
+          <h2>13. FORCE MAJEURE</h2>
           <p>
-            12.1. Neither Party shall be liable for failure due to events beyond reasonable control.
+            13.1. Neither Party shall be liable for failure due to events beyond reasonable control.
           </p>
-          <p>12.2. The affected Party shall promptly notify the other in writing.</p>
+          <p>13.2. The affected Party shall promptly notify the other in writing.</p>
           <p>
-            12.3. If the Force Majeure Event continues for <strong
+            13.3. If the Force Majeure Event continues for <strong
               >sixty (60) consecutive days</strong
             >, either Party may terminate upon written notice.
           </p>
         </section>
 
-        <!-- Clause 13: Governing Law -->
+        <!-- Governing Law -->
         <section class="doc-section">
-          <h2>13. GOVERNING LAW AND JURISDICTION</h2>
+          <h2>14. GOVERNING LAW AND JURISDICTION</h2>
           <p>
-            13.1. This Agreement shall be governed by the <strong>laws of India</strong>. The courts
-            in
-            <strong>Bangalore, Karnataka</strong> shall have exclusive jurisdiction.
+            14.1. This Agreement shall be governed by the <strong>laws of India</strong>. The courts
+            in <strong>Bangalore, Karnataka</strong> shall have exclusive jurisdiction.
           </p>
         </section>
 
-        <!-- Clause 14: Dispute Resolution -->
+        <!-- Dispute Resolution -->
         <section class="doc-section">
-          <h2>14. DISPUTE RESOLUTION</h2>
+          <h2>15. DISPUTE RESOLUTION</h2>
           <p>
-            14.1. Disputes shall be resolved by <strong>arbitration</strong> under the Arbitration and
+            15.1. Disputes shall be resolved by <strong>arbitration</strong> under the Arbitration and
             Conciliation Act, 1996.
           </p>
           <p>
-            14.2. The arbitration shall be conducted by a <strong>sole arbitrator</strong> mutually appointed
+            15.2. The arbitration shall be conducted by a <strong>sole arbitrator</strong> mutually appointed
             within fifteen (15) days.
           </p>
           <p>
-            14.3. If parties cannot agree on an arbitrator, appointment shall follow Section 11 of
+            15.3. If parties cannot agree on an arbitrator, appointment shall follow Section 11 of
             the Act.
           </p>
           <p>
-            14.4. Seat and venue: <strong>Bengaluru, Karnataka</strong>. Proceedings in
+            15.4. Seat and venue: <strong>Bengaluru, Karnataka</strong>. Proceedings in
             <strong>English</strong>. Award shall be final and binding.
           </p>
         </section>
 
-        <!-- Clause 15: Miscellaneous -->
+        <!-- Miscellaneous -->
         <section class="doc-section">
-          <h2>15. MISCELLANEOUS</h2>
+          <h2>16. MISCELLANEOUS</h2>
           <p>
-            15.1. <strong>Entire Agreement:</strong> This Agreement constitutes the entire understanding
+            16.1. <strong>Entire Agreement:</strong> This Agreement constitutes the entire understanding
             between the Parties.
           </p>
           <p>
-            15.2. <strong>Severability:</strong> If any provision is held invalid, the remaining provisions
+            16.2. <strong>Severability:</strong> If any provision is held invalid, the remaining provisions
             remain in full force.
           </p>
           <p>
-            15.3. <strong>Waiver:</strong> No waiver of any term shall be deemed a continuing waiver.
+            16.3. <strong>Waiver:</strong> No waiver of any term shall be deemed a continuing waiver.
           </p>
           <p>
-            15.4. <strong>Notices:</strong> Any notice shall be in writing and sent to the registered
+            16.4. <strong>Notices:</strong> Any notice shall be in writing and sent to the registered
             office addresses.
           </p>
         </section>
@@ -616,119 +762,45 @@
           <p>The Parties have executed this Agreement as of the date of digital signature below.</p>
 
           <div class="signing-grid">
-            <!-- Wagwan Side (Pre-filled) -->
             <div class="signing-party">
               <h3>Wagwan World LLP</h3>
               <div class="prefilled-field">
-                <span class="field-label">Name</span>
-                <span class="field-value">Madhvik Nemani</span>
+                <span class="field-label">Name</span><span class="field-value">Madhvik Nemani</span>
               </div>
               <div class="prefilled-field">
-                <span class="field-label">Title</span>
-                <span class="field-value">Founder, CEO</span>
+                <span class="field-label">Title</span><span class="field-value">Founder, CEO</span>
               </div>
               <div class="prefilled-field">
-                <span class="field-label">Date</span>
-                <span class="field-value">{today}</span>
+                <span class="field-label">Date</span><span class="field-value">{today}</span>
               </div>
               <div class="prefilled-field">
-                <span class="field-label">Signature</span>
-                <span class="field-value signature-text">Madhvik Nemani</span>
+                <span class="field-label">Signature</span><span class="field-value signature-text"
+                  >Madhvik Nemani</span
+                >
               </div>
             </div>
 
-            <!-- Client Side (Form) -->
-            <div class="signing-party client-side">
-              <h3>For Fuzone</h3>
-
-              {#if form?.error}
-                <div class="error-banner">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="15" y1="9" x2="9" y2="15" />
-                    <line x1="9" y1="9" x2="15" y2="15" />
-                  </svg>
-                  {form.error}
-                </div>
-              {/if}
-
-              <form
-                method="POST"
-                use:enhance={() => {
-                  submitting = true;
-                  return async ({ update }) => {
-                    submitting = false;
-                    await update();
-                  };
-                }}
-              >
-                <div class="form-field">
-                  <label for="name">Full Name <span class="required">*</span></label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    bind:value={name}
-                    placeholder="Enter your full name"
-                    required
-                  />
-                </div>
-
-                <div class="form-field">
-                  <label for="company">Company Name <span class="required">*</span></label>
-                  <input
-                    id="company"
-                    name="company"
-                    type="text"
-                    bind:value={company}
-                    placeholder="Enter your company name"
-                    required
-                  />
-                </div>
-
-                <div class="form-field">
-                  <label>Digital Signature <span class="required">*</span></label>
-                  <SignaturePad
-                    bind:this={signaturePad}
-                    onSignatureChange={handleSignatureChange}
-                  />
-                  <div class="signature-actions">
-                    <button type="button" class="btn-clear" onclick={clearSignature}>
-                      Clear signature
-                    </button>
-                  </div>
-                  <input type="hidden" name="signature" value={signatureData ?? ''} />
-                </div>
-
-                <div class="form-field">
-                  <label class="checkbox-label">
-                    <input type="checkbox" bind:checked={agreed} required />
-                    <span>
-                      I have read and agree to the terms and conditions of this Service Agreement.
-                    </span>
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  class="btn-submit"
-                  disabled={submitting || !name || !company || !signatureData || !agreed}
+            <div class="signing-party">
+              <h3>For {clientName}</h3>
+              <div class="prefilled-field">
+                <span class="field-label">Name</span><span class="field-value">{name || '—'}</span>
+              </div>
+              <div class="prefilled-field">
+                <span class="field-label">Company</span><span class="field-value"
+                  >{company || '—'}</span
                 >
-                  {#if submitting}
-                    <span class="spinner"></span>
-                    Signing Agreement...
-                  {:else}
-                    Sign Agreement
-                  {/if}
-                </button>
-              </form>
+              </div>
+              <div class="prefilled-field">
+                <span class="field-label">Date</span><span class="field-value">{today}</span>
+              </div>
+              <div class="prefilled-field">
+                <span class="field-label">Signature</span>
+                {#if signatureData}
+                  <img src={signatureData} alt="Digital signature" class="signature-preview" />
+                {:else}
+                  <span class="field-value">—</span>
+                {/if}
+              </div>
             </div>
           </div>
         </section>
@@ -749,31 +821,34 @@
 </div>
 
 <style>
-  /* Base */
+  /* ── Base ── */
   .agreement-page {
     font-family:
-      'Lato',
+      'Inter',
       -apple-system,
       BlinkMacSystemFont,
       sans-serif;
-    background: #f5f5f0;
+    background: #0f0f11;
+    color: #ededef;
     min-height: 100vh;
-    color: #1c1917;
+    overflow-y: auto;
   }
 
-  /* Header */
+  /* ── Header ── */
   .agreement-header {
     position: sticky;
     top: 0;
-    z-index: 50;
-    background: #1c1917;
-    border-bottom: 1px solid #292524;
+    z-index: 100;
+    background: rgba(15, 15, 17, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .header-inner {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 16px 24px;
+    padding: 14px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -783,281 +858,114 @@
     font-family: 'EB Garamond', Georgia, serif;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #fafaf9;
+    color: #ededef;
     letter-spacing: -0.02em;
   }
 
   .header-tag {
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.6875rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #ca8a04;
-    background: rgba(202, 138, 4, 0.1);
+    color: #e8833a;
+    background: rgba(232, 131, 58, 0.1);
     padding: 4px 12px;
     border-radius: 100px;
-    border: 1px solid rgba(202, 138, 4, 0.2);
+    border: 1px solid rgba(232, 131, 58, 0.2);
   }
 
-  /* Agreement Container */
-  .agreement-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 40px 24px 60px;
+  /* ── Sticky Form Sidebar ── */
+  .form-sidebar {
+    position: fixed;
+    top: 53px;
+    right: 0;
+    width: 360px;
+    height: calc(100vh - 53px);
+    overflow-y: auto;
+    padding: 24px 20px;
+    z-index: 90;
+    background: rgba(15, 15, 17, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  .agreement-document {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 48px 56px;
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.06),
-      0 8px 24px rgba(0, 0, 0, 0.04);
-    border: 1px solid #e7e5e4;
+  .form-card {
+    position: sticky;
+    top: 0;
   }
 
-  @media (max-width: 640px) {
-    .agreement-document {
-      padding: 28px 20px;
-    }
-    .agreement-container {
-      padding: 20px 12px 40px;
-    }
-  }
-
-  /* Document Title */
-  .doc-title-section {
-    text-align: center;
-    margin-bottom: 40px;
-    padding-bottom: 32px;
-    border-bottom: 2px solid #1c1917;
-  }
-
-  .doc-title {
+  .form-card h3 {
     font-family: 'EB Garamond', Georgia, serif;
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    margin: 0 0 16px;
-    color: #1c1917;
-  }
-
-  .doc-subtitle {
-    font-size: 0.9375rem;
-    color: #57534e;
-    line-height: 1.7;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  /* Sections */
-  .doc-section {
-    margin-bottom: 28px;
-  }
-
-  .doc-section h2 {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #1c1917;
-    margin: 0 0 12px;
-    letter-spacing: 0.02em;
-  }
-
-  .doc-section p {
-    font-size: 0.9375rem;
-    line-height: 1.75;
-    color: #44403c;
-    margin: 0 0 10px;
-  }
-
-  .and-divider {
-    text-align: center;
-    font-weight: 700;
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 1rem;
-    margin: 20px 0;
-    color: #1c1917;
-  }
-
-  .party-note {
-    font-style: italic;
-    color: #78716c;
-  }
-
-  .consideration-clause {
-    text-align: center;
-    font-size: 0.875rem;
-    line-height: 1.6;
-    color: #1c1917;
-    margin: 32px 0;
-    padding: 20px;
-    background: #fafaf9;
-    border-radius: 8px;
-    border: 1px solid #e7e5e4;
-  }
-
-  /* Lists */
-  .recitals-list,
-  .clause-list {
-    padding-left: 24px;
-    margin: 8px 0 0;
-  }
-
-  .recitals-list li,
-  .clause-list li {
-    font-size: 0.9375rem;
-    line-height: 1.75;
-    color: #44403c;
-    margin-bottom: 10px;
-  }
-
-  .clause-sublist {
-    padding-left: 20px;
-    margin-top: 6px;
-  }
-
-  /* Definitions */
-  .definitions-list {
-    margin: 0;
-  }
-
-  .def-item {
-    margin-bottom: 10px;
-  }
-
-  .def-item dt {
-    font-weight: 700;
-    font-size: 0.9375rem;
-    color: #1c1917;
-    display: inline;
-  }
-
-  .def-item dd {
-    display: inline;
-    margin: 0;
-    font-size: 0.9375rem;
-    line-height: 1.75;
-    color: #44403c;
-  }
-
-  /* Signing Section */
-  .signing-section {
-    margin-top: 48px;
-    padding-top: 40px;
-    border-top: 2px solid #1c1917;
-  }
-
-  .signing-section h2 {
     font-size: 1.25rem;
-    text-align: center;
-    margin-bottom: 8px;
+    font-weight: 600;
+    color: #ededef;
+    margin: 0 0 6px;
   }
 
-  .signing-section > p {
-    text-align: center;
-    margin-bottom: 32px;
-  }
-
-  .signing-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-  }
-
-  @media (max-width: 640px) {
-    .signing-grid {
-      grid-template-columns: 1fr;
-      gap: 32px;
-    }
-  }
-
-  .signing-party h3 {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-size: 1.125rem;
-    font-weight: 700;
+  .form-desc {
+    font-size: 0.8125rem;
+    color: #8a8a90;
+    line-height: 1.5;
     margin: 0 0 20px;
-    color: #1c1917;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e7e5e4;
   }
 
-  .prefilled-field {
-    margin-bottom: 12px;
-  }
-
-  .field-label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #78716c;
-    margin-bottom: 2px;
-  }
-
-  .field-value {
-    font-size: 0.9375rem;
-    color: #1c1917;
-  }
-
-  .signature-text {
-    font-family: 'EB Garamond', Georgia, serif;
-    font-style: italic;
-    font-size: 1.375rem;
-    color: #1c1917;
-  }
-
-  /* Form */
+  /* ── Form Fields ── */
   .form-field {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .form-field label {
     display: block;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: #44403c;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #8a8a90;
     margin-bottom: 6px;
-  }
-
-  .required {
-    color: #dc2626;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .form-field input[type='text'] {
     width: 100%;
-    padding: 10px 14px;
-    font-size: 0.9375rem;
-    font-family: 'Lato', sans-serif;
-    border: 1.5px solid #d4d4d4;
+    padding: 10px 12px;
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
-    background: #fafaf9;
-    color: #1c1917;
+    background: rgba(255, 255, 255, 0.04);
+    color: #ededef;
     outline: none;
     transition: border-color 200ms;
     box-sizing: border-box;
   }
 
   .form-field input[type='text']:focus {
-    border-color: #ca8a04;
-    box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.1);
+    border-color: #e8833a;
+    box-shadow: 0 0 0 2px rgba(232, 131, 58, 0.15);
   }
 
   .form-field input[type='text']::placeholder {
-    color: #a8a29e;
+    color: #4a4a50;
+  }
+
+  .field-hint {
+    display: block;
+    font-size: 0.6875rem;
+    color: #e8833a;
+    margin-top: 4px;
+    opacity: 0.8;
   }
 
   .signature-actions {
-    margin-top: 8px;
+    margin-top: 6px;
     display: flex;
     justify-content: flex-end;
   }
 
   .btn-clear {
-    font-family: 'Lato', sans-serif;
-    font-size: 0.8125rem;
-    color: #78716c;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    color: #8a8a90;
     background: none;
     border: none;
     cursor: pointer;
@@ -1066,48 +974,46 @@
   }
 
   .btn-clear:hover {
-    color: #1c1917;
+    color: #ededef;
   }
 
-  /* Checkbox */
+  /* ── Checkbox ── */
   .checkbox-label {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
     cursor: pointer;
-    font-weight: 400 !important;
+    margin-bottom: 16px;
   }
 
   .checkbox-label input[type='checkbox'] {
-    margin-top: 3px;
-    width: 16px;
-    height: 16px;
-    accent-color: #ca8a04;
+    margin-top: 2px;
+    width: 15px;
+    height: 15px;
+    accent-color: #e8833a;
     cursor: pointer;
     flex-shrink: 0;
   }
 
   .checkbox-label span {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     line-height: 1.5;
-    color: #57534e;
+    color: #8a8a90;
   }
 
-  /* Submit Button */
+  /* ── Submit ── */
   .btn-submit {
     width: 100%;
-    padding: 14px 24px;
-    font-family: 'Lato', sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fafaf9;
-    background: #1c1917;
+    padding: 12px 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f0f11;
+    background: #ededef;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
-    transition:
-      background-color 200ms,
-      opacity 200ms;
+    transition: opacity 200ms;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1115,19 +1021,19 @@
   }
 
   .btn-submit:hover:not(:disabled) {
-    background: #292524;
+    opacity: 0.9;
   }
 
   .btn-submit:disabled {
-    opacity: 0.4;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 
   .spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(15, 15, 17, 0.2);
+    border-top-color: #0f0f11;
     border-radius: 50%;
     animation: spin 600ms linear infinite;
   }
@@ -1138,69 +1044,270 @@
     }
   }
 
-  /* Error */
+  /* ── Error ── */
   .error-banner {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.2);
     border-radius: 8px;
-    color: #dc2626;
-    font-size: 0.875rem;
-    margin-bottom: 20px;
+    color: #f87171;
+    font-size: 0.8125rem;
+    margin-bottom: 16px;
   }
 
-  /* Success */
+  /* ── Agreement Container ── */
+  .agreement-container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    padding-right: 400px;
+  }
+
+  .agreement-document {
+    background: linear-gradient(175deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.006));
+    border-radius: 14px;
+    padding: 48px 48px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  /* ── Document Styles ── */
+  .doc-title-section {
+    text-align: center;
+    margin-bottom: 36px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .doc-title {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin: 0 0 14px;
+    color: #ededef;
+  }
+
+  .doc-subtitle {
+    font-size: 0.875rem;
+    color: #8a8a90;
+    line-height: 1.7;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .doc-section {
+    margin-bottom: 24px;
+  }
+
+  .doc-section h2 {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ededef;
+    margin: 0 0 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .doc-section p {
+    font-size: 0.875rem;
+    line-height: 1.75;
+    color: #8a8a90;
+    margin: 0 0 8px;
+  }
+
+  .and-divider {
+    text-align: center;
+    font-weight: 700;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1rem;
+    margin: 16px 0;
+    color: #ededef;
+  }
+
+  .party-note {
+    font-style: italic;
+    color: #4a4a50 !important;
+  }
+
+  .consideration-clause {
+    text-align: center;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: #ededef;
+    margin: 28px 0;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* ── Dynamic client name highlight ── */
+  :global(.client-highlight) {
+    color: #e8833a;
+    font-weight: 600;
+  }
+
+  /* ── Lists ── */
+  .recitals-list,
+  .clause-list {
+    padding-left: 20px;
+    margin: 6px 0 0;
+  }
+
+  .recitals-list li,
+  .clause-list li {
+    font-size: 0.875rem;
+    line-height: 1.75;
+    color: #8a8a90;
+    margin-bottom: 8px;
+  }
+
+  .clause-sublist {
+    padding-left: 18px;
+    margin-top: 4px;
+  }
+
+  /* ── Definitions ── */
+  .definitions-list {
+    margin: 0;
+  }
+
+  .def-item {
+    margin-bottom: 8px;
+  }
+
+  .def-item dt {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #ededef;
+    display: inline;
+  }
+
+  .def-item dd {
+    display: inline;
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.75;
+    color: #8a8a90;
+  }
+
+  /* ── Signing Section ── */
+  .signing-section {
+    margin-top: 40px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .signing-section h2 {
+    font-size: 1.125rem;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .signing-section > p {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .signing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+
+  .signing-party h3 {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: #ededef;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .prefilled-field {
+    margin-bottom: 10px;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #4a4a50;
+    margin-bottom: 2px;
+  }
+
+  .field-value {
+    font-size: 0.875rem;
+    color: #ededef;
+  }
+
+  .signature-text {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 1.25rem;
+    color: #ededef;
+  }
+
+  .signature-preview {
+    max-width: 160px;
+    height: 48px;
+    object-fit: contain;
+    filter: invert(1);
+  }
+
+  /* ── Success ── */
   .success-container {
-    max-width: 560px;
+    max-width: 480px;
     margin: 0 auto;
     padding: 80px 24px;
   }
 
   .success-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 48px 40px;
+    background: linear-gradient(175deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.006));
+    border-radius: 14px;
+    padding: 44px 36px;
     text-align: center;
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.06),
-      0 8px 24px rgba(0, 0, 0, 0.04);
-    border: 1px solid #e7e5e4;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .success-icon {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .success-card h1 {
     font-family: 'EB Garamond', Georgia, serif;
-    font-size: 1.5rem;
-    color: #1c1917;
-    margin: 0 0 12px;
+    font-size: 1.375rem;
+    color: #ededef;
+    margin: 0 0 10px;
   }
 
   .success-card > p {
-    font-size: 0.9375rem;
-    color: #57534e;
+    font-size: 0.875rem;
+    color: #8a8a90;
     line-height: 1.6;
-    margin: 0 0 28px;
+    margin: 0 0 24px;
   }
 
   .success-details {
-    background: #fafaf9;
+    background: rgba(255, 255, 255, 0.03);
     border-radius: 8px;
-    padding: 20px;
+    padding: 16px;
     text-align: left;
-    border: 1px solid #e7e5e4;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .detail-row {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #f5f5f4;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   }
 
   .detail-row:last-child {
@@ -1208,34 +1315,68 @@
   }
 
   .detail-label {
-    font-size: 0.8125rem;
-    color: #78716c;
-    font-weight: 700;
+    font-size: 0.75rem;
+    color: #4a4a50;
+    font-weight: 600;
   }
 
   .detail-value {
-    font-size: 0.875rem;
-    color: #1c1917;
-    font-weight: 500;
+    font-size: 0.8125rem;
+    color: #ededef;
   }
 
-  /* Footer */
+  /* ── Footer ── */
   .agreement-footer {
-    max-width: 900px;
+    max-width: 780px;
     margin: 0 auto;
-    padding: 24px 24px 40px;
+    padding: 20px 24px 40px;
+    padding-right: 400px;
     text-align: center;
   }
 
   .agreement-footer p {
-    font-size: 0.75rem;
-    color: #a8a29e;
+    font-size: 0.6875rem;
+    color: #4a4a50;
     line-height: 1.6;
-    margin: 0 0 8px;
+    margin: 0 0 4px;
   }
 
   .footer-copy {
-    font-size: 0.6875rem;
-    color: #d6d3d1;
+    color: #2a2a30;
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 900px) {
+    .form-sidebar {
+      position: relative;
+      top: 0;
+      width: 100%;
+      height: auto;
+      border-left: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 20px 16px;
+    }
+
+    .form-card {
+      position: static;
+    }
+
+    .agreement-container {
+      padding: 24px 16px 60px;
+      padding-right: 16px;
+    }
+
+    .agreement-document {
+      padding: 28px 20px;
+    }
+
+    .agreement-footer {
+      padding-right: 16px;
+    }
+
+    .signing-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
   }
 </style>
