@@ -117,7 +117,6 @@ export function coerceRosterProfileSnapshot(
     rates: r.rates ? String(r.rates) : undefined,
     notes: r.notes ? String(r.notes) : undefined,
     tags: r.tags ? String(r.tags) : undefined,
-    custom_fields:
-      customFields && Object.keys(customFields).length > 0 ? customFields : undefined,
+    custom_fields: customFields && Object.keys(customFields).length > 0 ? customFields : undefined,
   };
 }
