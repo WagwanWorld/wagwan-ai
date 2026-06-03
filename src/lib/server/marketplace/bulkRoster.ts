@@ -5,16 +5,7 @@ type ExistingRosterRow = {
 };
 
 type RosterLookupClient = {
-  from(table: 'brand_creator_roster'): {
-    select(columns: 'ig_username'): {
-      eq(column: 'brand_id', value: string): {
-        in(
-          column: 'ig_username',
-          values: string[],
-        ): Promise<{ data: ExistingRosterRow[] | null; error?: { message?: string } | null }>;
-      };
-    };
-  };
+  from(table: string): any;
 };
 
 export async function splitRowsByExistingRoster<T extends Pick<ParsedCreatorRow, 'handle'>>(
@@ -27,11 +18,14 @@ export async function splitRowsByExistingRoster<T extends Pick<ParsedCreatorRow,
   }
 
   const handles = rows.map((row) => row.handle);
-  const { data: existingRows, error } = await sb
+  const { data: existingRows, error } = (await sb
     .from('brand_creator_roster')
     .select('ig_username')
     .eq('brand_id', brandId)
-    .in('ig_username', handles);
+    .in('ig_username', handles)) as {
+    data: ExistingRosterRow[] | null;
+    error?: { message?: string } | null;
+  };
 
   if (error) {
     throw new Error(error.message || 'roster_lookup_failed');
