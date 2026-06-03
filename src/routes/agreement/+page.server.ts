@@ -1,21 +1,26 @@
 import type { Actions } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { fail } from '@sveltejs/kit';
+import { validateAgreementSubmission } from '$lib/server/agreementValidation';
 
-export const actions = {
-  default: async ({ request }: { request: Request }) => {
+export const actions: Actions = {
+  default: async ({ request, getClientAddress }) => {
     const formData = await request.formData();
-    const name = formData.get('name')?.toString().trim();
-    const company = formData.get('company')?.toString().trim();
-    const signature = formData.get('signature')?.toString();
+    const validation = validateAgreementSubmission(
+      formData.get('name'),
+      formData.get('company'),
+      formData.get('signature'),
+    );
 
-    if (!name || !company || !signature) {
+    if (!validation.ok) {
       return fail(400, {
-        error: 'Please fill in your name, company name, and provide your signature.',
-        name,
-        company,
+        error: validation.message,
+        name: formData.get('name')?.toString().trim(),
+        company: formData.get('company')?.toString().trim(),
       });
     }
+
+    const { name, company, signature } = validation.value;
 
     if (!isSupabaseConfigured()) {
       return fail(500, { error: 'Service temporarily unavailable. Please try again later.' });
@@ -29,7 +34,7 @@ export const actions = {
         signature_data: signature,
         agreement_type: 'service_agreement_fuzone',
         signed_at: new Date().toISOString(),
-        ip_address: null,
+        ip_address: getClientAddress(),
       });
 
       if (error) {
