@@ -20,7 +20,7 @@ ALTER TABLE follower_snapshots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role follower_snapshots" ON follower_snapshots;
 CREATE POLICY "Service role follower_snapshots" ON follower_snapshots
-  FOR ALL USING (true) WITH CHECK (true);
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- 2. Weekly demographic breakdowns (age, gender, city, country)
 CREATE TABLE IF NOT EXISTS demographic_snapshots (
@@ -40,7 +40,7 @@ ALTER TABLE demographic_snapshots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role demographic_snapshots" ON demographic_snapshots;
 CREATE POLICY "Service role demographic_snapshots" ON demographic_snapshots
-  FOR ALL USING (true) WITH CHECK (true);
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- 3. Weekly 7x24 online-activity heatmap
 CREATE TABLE IF NOT EXISTS online_activity_snapshots (
@@ -61,7 +61,7 @@ ALTER TABLE online_activity_snapshots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role online_activity_snapshots" ON online_activity_snapshots;
 CREATE POLICY "Service role online_activity_snapshots" ON online_activity_snapshots
-  FOR ALL USING (true) WITH CHECK (true);
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- 4. Per-post follower conversion attribution
 CREATE TABLE IF NOT EXISTS post_follow_attribution (
@@ -88,4 +88,4 @@ ALTER TABLE post_follow_attribution ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role post_follow_attribution" ON post_follow_attribution;
 CREATE POLICY "Service role post_follow_attribution" ON post_follow_attribution
-  FOR ALL USING (true) WITH CHECK (true);
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
