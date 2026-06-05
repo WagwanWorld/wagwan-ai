@@ -2,7 +2,8 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import { partitionRowsByBrandRoster } from '$lib/server/marketplace/bulkRoster';
+import { processCreatorInvite, resolveBrandForSession } from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
 
@@ -53,23 +54,14 @@ export const POST: RequestHandler = async ({ request }) => {
   const toProcess: ParsedCreatorRow[] = [];
 
   if (valid.length > 0) {
-    const handles = valid.map((r) => r.handle);
-    const { data: existingRows } = await sb
-      .from('brand_creator_roster')
-      .select('ig_username')
-      .in('ig_username', handles);
+    const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
+    const partition = await partitionRowsByBrandRoster(sb, brandId, valid).catch((e) => {
+      console.error('[bulkRoster] Existing roster lookup failed:', e instanceof Error ? e.message : e);
+      throw error(500, 'Could not check existing roster entries');
+    });
 
-    const existingSet = new Set(
-      (existingRows ?? []).map((r: { ig_username: string }) => r.ig_username),
-    );
-
-    for (const row of valid) {
-      if (existingSet.has(row.handle)) {
-        alreadyInRoster++;
-      } else {
-        toProcess.push(row);
-      }
-    }
+    alreadyInRoster = partition.alreadyInRoster;
+    toProcess.push(...partition.toProcess);
   }
 
   // Stream results via SSE

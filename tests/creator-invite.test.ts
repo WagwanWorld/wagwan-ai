@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { describe, it, expect, vi } from 'vitest';
 import {
   normalizeIgHandle,
   buildSimpleCreatorAnalysisRuleOnly,
@@ -6,6 +7,8 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import { partitionRowsByBrandRoster } from '../src/lib/server/marketplace/bulkRoster';
+import type { ParsedCreatorRow } from '../src/lib/server/marketplace/sheetParser';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -199,5 +202,38 @@ describe('rosterEntryToView', () => {
     expect(view.profilePicture).toBe('https://example.com/p.jpg');
     expect(view.fitScore).toBe(68);
     expect(view.feedSummary).toContain('fashion');
+  });
+});
+
+describe('partitionRowsByBrandRoster', () => {
+  it('only treats rows as existing when they are in the current brand roster', async () => {
+    const rows: ParsedCreatorRow[] = [
+      { row: 1, handle: 'sharedcreator', custom_fields: {} },
+      { row: 2, handle: 'newcreator', custom_fields: {} },
+    ];
+
+    const query = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      in: vi.fn(),
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.in.mockResolvedValue({
+      data: [{ ig_username: 'sharedcreator' }],
+      error: null,
+    });
+
+    const sb = {
+      from: vi.fn().mockReturnValue(query),
+    } as unknown as SupabaseClient;
+
+    const partition = await partitionRowsByBrandRoster(sb, 'brand-b', rows);
+
+    expect(sb.from).toHaveBeenCalledWith('brand_creator_roster');
+    expect(query.eq).toHaveBeenCalledWith('brand_id', 'brand-b');
+    expect(query.in).toHaveBeenCalledWith('ig_username', ['sharedcreator', 'newcreator']);
+    expect(partition.alreadyInRoster).toBe(1);
+    expect(partition.toProcess.map((r) => r.handle)).toEqual(['newcreator']);
   });
 });
