@@ -51,10 +51,7 @@ function createSupabaseMock() {
           }),
           in: vi.fn((_column: string, _values: string[]) => {
             return {
-              data:
-                filters.brand_id === 'brand-current'
-                  ? []
-                  : [{ ig_username: 'sharedcreator' }],
+              data: filters.brand_id === 'brand-current' ? [] : [{ ig_username: 'sharedcreator' }],
             };
           }),
         };
@@ -101,7 +98,9 @@ describe('creator roster bulk upload', () => {
     const body = new FormData();
     body.set('file', new File(['handle\nsharedcreator\n'], 'creators.csv', { type: 'text/csv' }));
 
-    const response = await POST({ request: new Request('https://app.test/bulk', { method: 'POST', body }) });
+    const response = await POST({
+      request: new Request('https://app.test/bulk', { method: 'POST', body }),
+    });
     const events = await response.text();
 
     expect(mocks.resolveBrandForSession).toHaveBeenCalledWith(
