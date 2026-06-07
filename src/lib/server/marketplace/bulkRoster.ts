@@ -1,14 +1,19 @@
 import type { ParsedCreatorRow } from './sheetParser';
 
 type RosterLookupClient = {
-  from(table: 'brand_creator_roster'): {
-    select(columns: 'ig_username'): {
-      eq(column: 'brand_id', value: string): {
-        in(
-          column: 'ig_username',
-          values: string[],
-        ): PromiseLike<{ data: Array<{ ig_username: string }> | null }>;
-      };
+  from(table: string): unknown;
+};
+
+type RosterLookupQuery = {
+  select(columns: 'ig_username'): {
+    eq(
+      column: 'brand_id',
+      value: string,
+    ): {
+      in(
+        column: 'ig_username',
+        values: string[],
+      ): PromiseLike<{ data: Array<{ ig_username: string }> | null }>;
     };
   };
 };
@@ -28,8 +33,8 @@ export async function filterRowsAlreadyInBrandRoster(
   }
 
   const handles = validRows.map((row) => row.handle);
-  const { data: existingRows } = await sb
-    .from('brand_creator_roster')
+  const query = sb.from('brand_creator_roster') as RosterLookupQuery;
+  const { data: existingRows } = await query
     .select('ig_username')
     .eq('brand_id', brandId)
     .in('ig_username', handles);

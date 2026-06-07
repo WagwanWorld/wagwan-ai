@@ -30,7 +30,10 @@ function makeRosterClient(rows: RosterRow[]) {
                     return {
                       data: rows
                         .filter((rosterRow) =>
-                          filters.every((filter) => rosterRow[filter.column as keyof RosterRow] === filter.value),
+                          filters.every(
+                            (filter) =>
+                              rosterRow[filter.column as keyof RosterRow] === filter.value,
+                          ),
                         )
                         .filter((rosterRow) => values.includes(rosterRow.ig_username))
                         .map(({ ig_username }) => ({ ig_username })),
@@ -53,10 +56,11 @@ describe('filterRowsAlreadyInBrandRoster', () => {
       { brand_id: 'brand-b', ig_username: 'owncreator' },
     ]);
 
-    const result: BrandRosterFilterResult = await filterRowsAlreadyInBrandRoster(client, 'brand-b', [
-      row('sharedcreator'),
-      row('owncreator'),
-    ]);
+    const result: BrandRosterFilterResult = await filterRowsAlreadyInBrandRoster(
+      client,
+      'brand-b',
+      [row('sharedcreator'), row('owncreator')],
+    );
 
     expect(filters).toEqual([{ column: 'brand_id', value: 'brand-b' }]);
     expect(result.alreadyInRoster).toBe(1);
