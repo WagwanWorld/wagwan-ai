@@ -74,7 +74,9 @@ function optionalStringRecord(value: unknown): Record<string, string> | undefine
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
 
   const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, entryValue]) => entryValue !== null && entryValue !== undefined && entryValue !== '')
+    .filter(
+      ([, entryValue]) => entryValue !== null && entryValue !== undefined && entryValue !== '',
+    )
     .map(([key, entryValue]) => [key, String(entryValue)] as const);
 
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
