@@ -7,7 +7,10 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +141,39 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk-upload sheet metadata', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator Name',
+        scrapedAt: '2026-06-01T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+15551234567',
+        rates: '$500',
+        notes: 'Prefers product seeding',
+        tags: 'beauty, skincare',
+        custom_fields: {
+          Campaign: 'Summer Launch',
+          Empty: '',
+          Budget: 2500,
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15551234567');
+    expect(snap.rates).toBe('$500');
+    expect(snap.notes).toBe('Prefers product seeding');
+    expect(snap.tags).toBe('beauty, skincare');
+    expect(snap.custom_fields).toEqual({
+      Campaign: 'Summer Launch',
+      Budget: '2500',
+    });
   });
 });
 
