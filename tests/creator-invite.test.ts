@@ -7,7 +7,10 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -150,6 +153,47 @@ describe('buildFeedSummary', () => {
     });
     expect(feedSummary.length).toBeGreaterThan(10);
     expect(contentThemes.length).toBeGreaterThan(0);
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk sheet fields after roster API normalization', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator Name',
+        bio: 'Creator bio',
+        followers: '10K',
+        followersCount: 10000,
+        following: '200',
+        posts: '50',
+        isVerified: false,
+        onPlatform: false,
+        scrapedAt: '2026-01-01T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+15551234567',
+        rates: '$500/post',
+        notes: 'Prefers email',
+        tags: 'fashion, lifestyle',
+        custom_fields: {
+          Agency: 'Studio One',
+          'Rate card': '$500/post',
+          Empty: '',
+        },
+      },
+      'fallback',
+      'Fallback Name',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15551234567');
+    expect(snap.rates).toBe('$500/post');
+    expect(snap.notes).toBe('Prefers email');
+    expect(snap.tags).toBe('fashion, lifestyle');
+    expect(snap.custom_fields).toEqual({
+      Agency: 'Studio One',
+      'Rate card': '$500/post',
+    });
   });
 });
 
