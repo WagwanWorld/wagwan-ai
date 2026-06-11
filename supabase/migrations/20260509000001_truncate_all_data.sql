@@ -3,6 +3,8 @@
 -- 2026-05-09: Wipe all rows, keep schema intact
 -- ============================================
 -- Uses DO block to skip tables that don't exist in this database.
+-- Safety: this is intentionally blocked unless the session explicitly opts in:
+--   SET app.allow_truncate_all_data = 'true';
 
 DO $$
 DECLARE
@@ -53,6 +55,10 @@ DECLARE
     'user_profiles'
   ];
 BEGIN
+  IF current_setting('app.allow_truncate_all_data', true) IS DISTINCT FROM 'true' THEN
+    RAISE EXCEPTION 'Refusing to truncate application data without SET app.allow_truncate_all_data = true';
+  END IF;
+
   FOREACH tbl IN ARRAY tables LOOP
     IF EXISTS (
       SELECT 1 FROM information_schema.tables
