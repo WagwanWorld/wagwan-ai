@@ -2,9 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getExistingRosterHandlesForBrand } from '../src/lib/server/marketplace/bulkRoster';
 
-function makeRosterLookupClient(
-  result: { data: Array<{ ig_username: string }> | null; error: { message: string } | null },
-) {
+function makeRosterLookupClient(result: {
+  data: Array<{ ig_username: string }> | null;
+  error: { message: string } | null;
+}) {
   const calls: Array<[string, ...unknown[]]> = [];
   const query = {
     select(columns: string) {
