@@ -7,7 +7,10 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +141,39 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves optional sheet upload fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: '@sheetcreator',
+        displayName: 'Sheet Creator',
+        scrapedAt: '2026-06-12T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+15551234567',
+        rates: '$500/post',
+        notes: 'Prefers email outreach',
+        tags: 'fashion, travel',
+        custom_fields: {
+          Manager: 'Alex',
+          'Campaign ID': 1234,
+          Empty: '',
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15551234567');
+    expect(snap.rates).toBe('$500/post');
+    expect(snap.notes).toBe('Prefers email outreach');
+    expect(snap.tags).toBe('fashion, travel');
+    expect(snap.custom_fields).toEqual({
+      Manager: 'Alex',
+      'Campaign ID': '1234',
+    });
   });
 });
 
