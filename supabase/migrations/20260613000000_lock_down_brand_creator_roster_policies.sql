@@ -6,3 +6,6 @@ DROP POLICY IF EXISTS roster_brand_update ON brand_creator_roster;
 DROP POLICY IF EXISTS roster_brand_delete ON brand_creator_roster;
 
 ALTER TABLE brand_creator_roster ENABLE ROW LEVEL SECURITY;
+
+-- Legitimate signal inserts are performed through service-role server code.
+DROP POLICY IF EXISTS creator_signals_insert ON creator_brand_signals;

@@ -33,6 +33,3 @@ CREATE POLICY creator_signals_select ON creator_brand_signals
 CREATE POLICY creator_signals_update ON creator_brand_signals
   FOR UPDATE USING (creator_google_sub = current_setting('request.jwt.claims', true)::json->>'sub')
   WITH CHECK (creator_google_sub = current_setting('request.jwt.claims', true)::json->>'sub');
-
-CREATE POLICY creator_signals_insert ON creator_brand_signals
-  FOR INSERT WITH CHECK (true);
