@@ -2,7 +2,10 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import {
+  processCreatorInvite,
+  resolveBrandForSession,
+} from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
 
@@ -53,11 +56,17 @@ export const POST: RequestHandler = async ({ request }) => {
   const toProcess: ParsedCreatorRow[] = [];
 
   if (valid.length > 0) {
+    const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
     const handles = valid.map((r) => r.handle);
-    const { data: existingRows } = await sb
+    const { data: existingRows, error: existingErr } = await sb
       .from('brand_creator_roster')
       .select('ig_username')
+      .eq('brand_id', brandId)
       .in('ig_username', handles);
+    if (existingErr) {
+      console.error('[creator-roster:bulk] existing check', existingErr.message);
+      throw error(500, 'Could not check existing roster entries');
+    }
 
     const existingSet = new Set(
       (existingRows ?? []).map((r: { ig_username: string }) => r.ig_username),
@@ -131,11 +140,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
             // Update the roster entry with merged snapshot
             const entryId = (result.entry as Record<string, unknown>).id as string;
-            if (entryId) {
-              await sb
-                .from('brand_creator_roster')
-                .update({ profile_snapshot: snapshot })
-                .eq('id', entryId);
+            if (!entryId) throw new Error('roster_entry_missing');
+            const { error: mergeErr } = await sb
+              .from('brand_creator_roster')
+              .update({ profile_snapshot: snapshot })
+              .eq('id', entryId);
+            if (mergeErr) {
+              console.error('[creator-roster:bulk] sheet merge', mergeErr.message);
+              throw new Error('sheet_merge_failed');
             }
 
             return { handle: row.handle, analysis: result.analysis };
