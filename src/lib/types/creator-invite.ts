@@ -66,6 +66,19 @@ export type BrandCreatorRosterEntry = {
   updated_at: string;
 };
 
+function optionalString(value: unknown): string | undefined {
+  if (value === null || value === undefined || value === '') return undefined;
+  return String(value);
+}
+
+function coerceCustomFields(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => [k, String(v)] as const);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 /** Normalize legacy or partial profile_snapshot rows from the database. */
 export function coerceRosterProfileSnapshot(
   raw: Record<string, unknown> | null | undefined,
@@ -104,5 +117,11 @@ export function coerceRosterProfileSnapshot(
       ? (r.recentCaptions as string[]).slice(0, 6)
       : undefined,
     scrapedAt: String(r.scrapedAt ?? new Date(0).toISOString()),
+    email: optionalString(r.email),
+    phone: optionalString(r.phone),
+    rates: optionalString(r.rates),
+    notes: optionalString(r.notes),
+    tags: optionalString(r.tags),
+    custom_fields: coerceCustomFields(r.custom_fields),
   };
 }
