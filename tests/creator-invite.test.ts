@@ -6,6 +6,7 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import { validateRosterLinkback } from '../src/lib/server/creatorInviteLinkback';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -28,6 +29,41 @@ describe('parseFollowerCount', () => {
   it('parses K and M suffixes', () => {
     expect(parseFollowerCount('12.5K')).toBe(12500);
     expect(parseFollowerCount('1.2M')).toBe(1200000);
+  });
+});
+
+describe('validateRosterLinkback', () => {
+  it('allows an unclaimed invite only for the matching verified Instagram handle', () => {
+    expect(
+      validateRosterLinkback({
+        googleSub: 'sub-1',
+        rosterIgUsername: '@Creator_Name',
+        existingUserGoogleSub: null,
+        verifiedIgUsername: 'creator_name',
+      }),
+    ).toEqual({ ok: true, alreadyLinked: false });
+  });
+
+  it('rejects a shareable invite when the verified Instagram account differs', () => {
+    expect(
+      validateRosterLinkback({
+        googleSub: 'attacker-sub',
+        rosterIgUsername: 'intended_creator',
+        existingUserGoogleSub: null,
+        verifiedIgUsername: 'attacker_creator',
+      }),
+    ).toEqual({ ok: false, status: 403, error: 'invite_identity_mismatch' });
+  });
+
+  it('does not allow an already linked roster entry to be overwritten', () => {
+    expect(
+      validateRosterLinkback({
+        googleSub: 'attacker-sub',
+        rosterIgUsername: 'intended_creator',
+        existingUserGoogleSub: 'intended-sub',
+        verifiedIgUsername: 'intended_creator',
+      }),
+    ).toEqual({ ok: false, status: 409, error: 'invite_already_linked' });
   });
 });
 
