@@ -14,6 +14,7 @@ create table if not exists signed_agreements (
 alter table signed_agreements enable row level security;
 
 -- Only service role can insert/read (no public access)
+drop policy if exists "Service role full access on signed_agreements" on signed_agreements;
 create policy "Service role full access on signed_agreements"
   on signed_agreements
   for all
