@@ -4,6 +4,13 @@ import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
 import { assertCreatorSessionSub } from '$lib/server/creatorSession';
 
+type LinkInviteRosterRow = {
+  id: string;
+  user_google_sub: string | null;
+  analysis_snapshot: Record<string, unknown> | null;
+  invite_message: string | null;
+};
+
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
@@ -19,14 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const sb = getServiceSupabase();
 
-  let rosterRow:
-    | {
-        id: string;
-        user_google_sub: string | null;
-        analysis_snapshot: Record<string, unknown> | null;
-        invite_message: string | null;
-      }
-    | null = null;
+  let rosterRow: LinkInviteRosterRow | null = null;
 
   // 1. Update roster entry if it exists: mark as on_platform, link google_sub
   if (rosterId) {
@@ -41,7 +41,7 @@ export const POST: RequestHandler = async ({ request }) => {
       throw error(500, 'Could not load invite');
     }
 
-    rosterRow = (data as typeof rosterRow) ?? null;
+    rosterRow = (data as LinkInviteRosterRow | null) ?? null;
     if (rosterRow?.user_google_sub && rosterRow.user_google_sub !== googleSub) {
       throw error(409, 'Invite already linked to another creator');
     }
