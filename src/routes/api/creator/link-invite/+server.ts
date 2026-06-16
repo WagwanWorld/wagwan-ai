@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
+import { assertCreatorSessionSub } from '$lib/server/creatorSession';
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
@@ -9,26 +10,56 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   const body = await request.json();
-  const googleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
+  const suppliedSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : undefined;
+  const googleSub = assertCreatorSessionSub(request, suppliedSub);
   const brandId = typeof body.brandId === 'string' ? body.brandId.trim() : '';
   const rosterId = typeof body.rosterId === 'string' ? body.rosterId.trim() : undefined;
 
-  if (!googleSub) throw error(400, 'googleSub is required');
   if (!brandId) throw error(400, 'brandId is required');
 
   const sb = getServiceSupabase();
 
+  let rosterRow:
+    | {
+        id: string;
+        user_google_sub: string | null;
+        analysis_snapshot: Record<string, unknown> | null;
+        invite_message: string | null;
+      }
+    | null = null;
+
   // 1. Update roster entry if it exists: mark as on_platform, link google_sub
   if (rosterId) {
-    await sb
+    const { data, error: rosterError } = await sb
       .from('brand_creator_roster')
-      .update({
-        status: 'on_platform',
-        user_google_sub: googleSub,
-        updated_at: new Date().toISOString(),
-      })
+      .select('id, user_google_sub, analysis_snapshot, invite_message')
       .eq('id', rosterId)
-      .eq('brand_id', brandId);
+      .eq('brand_id', brandId)
+      .maybeSingle();
+
+    if (rosterError) {
+      throw error(500, 'Could not load invite');
+    }
+
+    rosterRow = (data as typeof rosterRow) ?? null;
+    if (rosterRow?.user_google_sub && rosterRow.user_google_sub !== googleSub) {
+      throw error(409, 'Invite already linked to another creator');
+    }
+
+    if (rosterRow) {
+      const { error: updateError } = await sb
+        .from('brand_creator_roster')
+        .update({
+          status: 'on_platform',
+          user_google_sub: googleSub,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rosterId)
+        .eq('brand_id', brandId);
+      if (updateError) {
+        throw error(500, 'Could not link invite');
+      }
+    }
   }
 
   // 2. Look up brand context for the signal
@@ -51,20 +82,12 @@ export const POST: RequestHandler = async ({ request }) => {
   let inviteMessage: string | null = null;
   let analysisSnapshot: Record<string, unknown> = {};
 
-  if (rosterId) {
-    const { data: rosterRow } = await sb
-      .from('brand_creator_roster')
-      .select('analysis_snapshot, invite_message')
-      .eq('id', rosterId)
-      .maybeSingle();
-
-    if (rosterRow) {
-      const analysis = rosterRow.analysis_snapshot as Record<string, unknown> | null;
-      fitLabel = (analysis?.fitLabel as string) ?? null;
-      fitScore = (analysis?.fitScore as number) ?? null;
-      inviteMessage = (rosterRow.invite_message as string) ?? null;
-      analysisSnapshot = analysis ?? {};
-    }
+  if (rosterRow) {
+    const analysis = rosterRow.analysis_snapshot;
+    fitLabel = (analysis?.fitLabel as string) ?? null;
+    fitScore = (analysis?.fitScore as number) ?? null;
+    inviteMessage = rosterRow.invite_message ?? null;
+    analysisSnapshot = analysis ?? {};
   }
 
   // 4. Upsert the signal
@@ -72,7 +95,7 @@ export const POST: RequestHandler = async ({ request }) => {
     creator_google_sub: googleSub,
     signal_type: 'roster_add',
     brand_id: brandId,
-    roster_entry_id: rosterId ?? null,
+    roster_entry_id: rosterRow?.id ?? null,
     brand_name: brandName,
     brand_handle: brandHandle,
     brand_profile_picture: brandProfilePicture,
