@@ -248,7 +248,7 @@
     const sub = $profile.googleSub?.trim();
     if (!sub) return;
     try {
-      const res = await fetch(`/api/creator/brand-signals?googleSub=${encodeURIComponent(sub)}`);
+      const res = await fetch('/api/creator/brand-signals');
       if (!res.ok) return;
       const data = await res.json();
       if (data.ok) {
@@ -269,7 +269,7 @@
     fetch('/api/creator/brand-signals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ googleSub: sub, id }),
+      body: JSON.stringify({ id }),
     }).catch(() => {});
   }
 

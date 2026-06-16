@@ -641,15 +641,16 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          googleSub: accountSub,
           brandId: invBrand,
           rosterId: invRoster || undefined,
         }),
       })
-        .then(() => {
-          localStorage.removeItem('wagwan_invite_brand');
-          localStorage.removeItem('wagwan_invite_id');
-          localStorage.removeItem('wagwan_invite_from');
+        .then((res) => {
+          if (res.ok) {
+            localStorage.removeItem('wagwan_invite_brand');
+            localStorage.removeItem('wagwan_invite_id');
+            localStorage.removeItem('wagwan_invite_from');
+          }
         })
         .catch(() => {
           // Silent fail — creator still onboards fine

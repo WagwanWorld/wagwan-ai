@@ -7,6 +7,11 @@ import {
   analyseGoogleIdentity,
 } from '$lib/server/google';
 import { computeGoogleTwinForToken } from '$lib/server/signalProcessor/googleProcessor';
+import {
+  CREATOR_SESSION_COOKIE,
+  CREATOR_SESSION_COOKIE_OPTIONS,
+  mintCreatorSessionCookieValue,
+} from '$lib/server/creatorSession';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
 const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
@@ -73,6 +78,13 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     // Attach the stable Google sub to the identity object
     (identity as unknown as Record<string, unknown>).sub = sub;
     if (twin) identity.twin = twin;
+    if (sub) {
+      cookies.set(
+        CREATOR_SESSION_COOKIE,
+        mintCreatorSessionCookieValue(sub),
+        CREATOR_SESSION_COOKIE_OPTIONS,
+      );
+    }
 
     // Store identity + tokens in short-lived cookie for profile page to read
     cookies.set('google_identity', JSON.stringify(identity), {
