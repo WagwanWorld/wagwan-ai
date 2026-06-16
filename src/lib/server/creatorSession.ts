@@ -1,15 +1,19 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { error } from '@sveltejs/kit';
-import { COOKIE_SECRET } from '$env/static/private';
-import { PUBLIC_BASE_URL } from '$env/static/public';
 
 export const CREATOR_SESSION_COOKIE = 'wagwan_creator_session';
 
 const MAX_AGE_SEC = 60 * 60 * 24 * 7;
-const cookieSecure = PUBLIC_BASE_URL.startsWith('https://');
+const cookieSecure = (process.env.PUBLIC_BASE_URL ?? '').startsWith('https://');
+
+function cookieSecret(): string {
+  const secret = process.env.COOKIE_SECRET?.trim();
+  if (!secret) throw new Error('COOKIE_SECRET is required for creator sessions');
+  return secret;
+}
 
 function signPayload(payload: string): string {
-  return createHmac('sha256', COOKIE_SECRET).update(payload).digest('hex');
+  return createHmac('sha256', cookieSecret()).update(payload).digest('hex');
 }
 
 function safeEqual(a: string, b: string): boolean {

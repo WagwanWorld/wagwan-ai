@@ -6,6 +6,8 @@ import {
   verifyCreatorSessionCookieValue,
 } from '../src/lib/server/creatorSession';
 
+process.env.COOKIE_SECRET = 'creator-session-test-secret';
+
 describe('creator session cookies', () => {
   it('round-trips a signed account sub', () => {
     const raw = mintCreatorSessionCookieValue('ig:12345');
