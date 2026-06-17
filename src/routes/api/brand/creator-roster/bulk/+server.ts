@@ -2,8 +2,12 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import {
+  processCreatorInvite,
+  resolveBrandForSession,
+} from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
+import { splitRowsByExistingRoster } from '$lib/server/marketplace/bulkRoster';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
 
 const BATCH_SIZE = 20;
@@ -53,23 +57,23 @@ export const POST: RequestHandler = async ({ request }) => {
   const toProcess: ParsedCreatorRow[] = [];
 
   if (valid.length > 0) {
+    const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
     const handles = valid.map((r) => r.handle);
-    const { data: existingRows } = await sb
+    const { data: existingRows, error: existingError } = await sb
       .from('brand_creator_roster')
-      .select('ig_username')
+      .select('brand_id, ig_username')
+      .eq('brand_id', brandId)
       .in('ig_username', handles);
 
-    const existingSet = new Set(
-      (existingRows ?? []).map((r: { ig_username: string }) => r.ig_username),
-    );
+    if (existingError) throw error(500, 'Could not check existing roster entries');
 
-    for (const row of valid) {
-      if (existingSet.has(row.handle)) {
-        alreadyInRoster++;
-      } else {
-        toProcess.push(row);
-      }
-    }
+    const split = splitRowsByExistingRoster(
+      valid,
+      (existingRows ?? []) as Array<{ brand_id: string; ig_username: string }>,
+      brandId,
+    );
+    alreadyInRoster = split.alreadyInRoster;
+    toProcess.push(...split.toProcess);
   }
 
   // Stream results via SSE
