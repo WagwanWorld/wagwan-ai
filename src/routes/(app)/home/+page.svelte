@@ -119,6 +119,12 @@
   let dashRespondingId = '';
   let dashErr = '';
 
+  function wagwanAuthHeaders(): Record<string, string> {
+    const token =
+      typeof window !== 'undefined' ? localStorage.getItem('wagwan_access_token') || '' : '';
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   async function loadDashboard() {
     const sub = $profile.googleSub?.trim();
     if (!sub) {
@@ -163,7 +169,7 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...wagwanAuthHeaders() },
         body: JSON.stringify({
           sub,
           campaignId,
@@ -193,7 +199,7 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...wagwanAuthHeaders() },
         body: JSON.stringify({ sub, campaignId, action: 'decline' }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
@@ -224,7 +230,7 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...wagwanAuthHeaders() },
         body: JSON.stringify({
           sub,
           campaignId,
