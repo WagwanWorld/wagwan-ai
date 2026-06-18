@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { isSupabaseConfigured } from '$lib/server/supabase';
 import { settlePendingEarnings } from '$lib/server/creatorMarketplace';
+import { authorizeWalletMutation } from '$lib/server/walletAccess';
 
 /**
  * POST /api/user/wallet/settle
@@ -24,6 +25,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const sub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
   if (!sub) throw error(400, 'googleSub is required');
+
+  const access = await authorizeWalletMutation(request, sub);
+  if (!access.ok) {
+    return json({ ok: false, error: access.error }, { status: access.status });
+  }
 
   const minAge = Math.max(0, Number(body.minAgeSeconds ?? 0));
   const updated = await settlePendingEarnings(sub, minAge);
