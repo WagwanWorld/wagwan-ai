@@ -223,9 +223,13 @@
     withdrawMsg = '';
     if (!sub) return;
     try {
+      const wagwanAccessToken = localStorage.getItem('wagwan_access_token') || '';
       const res = await fetch('/api/user/wallet/withdraw', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(wagwanAccessToken ? { Authorization: `Bearer ${wagwanAccessToken}` } : {}),
+        },
         body: JSON.stringify({ googleSub: sub }),
       });
       const j = (await res.json().catch(() => ({}))) as {
