@@ -613,7 +613,7 @@
     }
   }
 
-  function finish() {
+  async function finish() {
     finishError = '';
     const minOk = igConnected && !!igIdentity;
     if (!minOk) {
@@ -630,30 +630,6 @@
     if (!accountSub) {
       finishError = 'Could not determine your account. Try connecting again.';
       return;
-    }
-
-    // Link invite back to roster + create creator signal
-    const invBrand = localStorage.getItem('wagwan_invite_brand');
-    const invRoster = localStorage.getItem('wagwan_invite_id');
-    if (invBrand && accountSub) {
-      // Fire-and-forget — don't block onboarding completion
-      fetch('/api/creator/link-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          googleSub: accountSub,
-          brandId: invBrand,
-          rosterId: invRoster || undefined,
-        }),
-      })
-        .then(() => {
-          localStorage.removeItem('wagwan_invite_brand');
-          localStorage.removeItem('wagwan_invite_id');
-          localStorage.removeItem('wagwan_invite_from');
-        })
-        .catch(() => {
-          // Silent fail — creator still onboards fine
-        });
     }
 
     const name = googleIdentity?.name || igIdentity?.displayName || '';
@@ -705,11 +681,43 @@
     if (spotifyToken) tokens.spotifyToken = spotifyToken;
     if (linkedinToken) tokens.linkedinToken = linkedinToken;
 
-    fetch('/api/profile/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ googleSub: accountSub, profile: fullProfile, tokens }),
-    }).catch(() => {});
+    let profileSaved = false;
+    try {
+      const saveRes = await fetch('/api/profile/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSub: accountSub, profile: fullProfile, tokens }),
+      });
+      const saveBody = (await saveRes.json().catch(() => null)) as { ok?: boolean } | null;
+      profileSaved = saveRes.ok && saveBody?.ok !== false;
+    } catch {
+      profileSaved = false;
+    }
+
+    // Link invite back to roster only after the profile exists for server-side identity checks.
+    const invBrand = localStorage.getItem('wagwan_invite_brand');
+    const invRoster = localStorage.getItem('wagwan_invite_id');
+    if (invBrand && invRoster && accountSub && profileSaved) {
+      try {
+        const linkRes = await fetch('/api/creator/link-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            googleSub: accountSub,
+            brandId: invBrand,
+            rosterId: invRoster,
+          }),
+        });
+        const linkBody = (await linkRes.json().catch(() => null)) as { ok?: boolean } | null;
+        if (linkRes.ok && linkBody?.ok) {
+          localStorage.removeItem('wagwan_invite_brand');
+          localStorage.removeItem('wagwan_invite_id');
+          localStorage.removeItem('wagwan_invite_from');
+        }
+      } catch {
+        // Keep invite params so a later completion can retry the linkback.
+      }
+    }
 
     // Link wagwan user if authenticated
     const wToken = wagwanAccessToken || localStorage.getItem('wagwan_access_token') || '';
