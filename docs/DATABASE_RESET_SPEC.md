@@ -24,7 +24,9 @@ Run `supabase/migrations/20260509000000_drop_unused_tables.sql` in the Supabase 
 
 ## Step 2: Truncate All Data
 
-Run `supabase/migrations/20260509000001_truncate_all_data.sql` in the Supabase SQL Editor.
+Data truncation is intentionally not stored under `supabase/migrations/`. Files in that
+directory can be applied by `supabase db push`, so destructive reset SQL must be composed
+and run manually only after confirming the target project and backup/restore plan.
 
 Truncates all 34 remaining active tables in FK-safe order (children first):
 
