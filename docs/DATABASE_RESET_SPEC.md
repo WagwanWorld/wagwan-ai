@@ -6,7 +6,10 @@
 
 ## Step 1: Drop 9 Unused Tables
 
-Run `supabase/migrations/20260509000000_drop_unused_tables.sql` in the Supabase SQL Editor.
+Run `supabase/manual-reset/20260509000000_drop_unused_tables.sql` in the Supabase SQL Editor.
+
+> Manual reset SQL must stay outside `supabase/migrations`; files in that
+> directory can be applied automatically by deployment tooling.
 
 | Table                           | Why it's dead                     |
 | ------------------------------- | --------------------------------- |
@@ -24,7 +27,7 @@ Run `supabase/migrations/20260509000000_drop_unused_tables.sql` in the Supabase 
 
 ## Step 2: Truncate All Data
 
-Run `supabase/migrations/20260509000001_truncate_all_data.sql` in the Supabase SQL Editor.
+Run `supabase/manual-reset/20260509000001_truncate_all_data.sql` in the Supabase SQL Editor.
 
 Truncates all 34 remaining active tables in FK-safe order (children first):
 

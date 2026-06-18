@@ -1,32 +1,8 @@
--- ============================================
--- DROP UNUSED TABLES
--- 2026-05-09: Remove 9 tables with zero code references
--- ============================================
--- These tables were created in earlier migrations but never
--- had application code written to read or write them.
+-- Intentionally left non-destructive.
 --
--- Verified by grepping all .ts/.svelte files for .from('table_name')
--- and any raw SQL string references. Zero hits for all 9.
-
-BEGIN;
-
--- Creative Studio (never implemented) — 20260428100000_creative_studio.sql
-DROP TABLE IF EXISTS creative_generation_versions CASCADE;
-DROP TABLE IF EXISTS creative_taste_log CASCADE;
-DROP TABLE IF EXISTS creative_cost_log CASCADE;
-DROP TABLE IF EXISTS creative_generations CASCADE;
-
--- Carousel items (never built) — 20260417000000_brand_content_automation.sql
-DROP TABLE IF EXISTS scheduled_post_carousel_items CASCADE;
-
--- Content activity log (never wired up) — 20260428000000_content_activity_log.sql
-DROP TABLE IF EXISTS content_activity_log CASCADE;
-
--- Agent memory (defined but never used) — 003_multi_agent_chats.sql
-DROP TABLE IF EXISTS agent_memory CASCADE;
-
--- Brand intelligence stubs (never used) — 20260418000000_brand_intelligence.sql
-DROP TABLE IF EXISTS brand_competitors CASCADE;
-DROP TABLE IF EXISTS brand_action_proposals CASCADE;
-
-COMMIT;
+-- This filename was originally used for a local fresh-start reset script. Keeping
+-- DROP TABLE statements in supabase/migrations makes automated migration runners
+-- delete production tables when they apply pending migrations. The manual reset
+-- SQL now lives in:
+--
+--   supabase/manual-reset/20260509000000_drop_unused_tables.sql
