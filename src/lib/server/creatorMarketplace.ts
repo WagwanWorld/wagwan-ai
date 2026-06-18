@@ -175,30 +175,16 @@ export async function completeBrief(
   campaignId: string,
   igPostUrl: string,
 ): Promise<boolean> {
-  const sb = getServiceSupabase();
-  const now = new Date().toISOString();
-  const { data: updated, error } = await sb
-    .from('brief_responses')
-    .update({
-      status: 'completed',
-      ig_post_url: igPostUrl,
-      completed_at: now,
-      updated_at: now,
-    })
-    .eq('campaign_id', campaignId)
-    .eq('user_google_sub', sub)
-    .in('status', ['accepted', 'live'])
-    .select('id')
-    .maybeSingle();
-
+  const { data, error } = await getServiceSupabase().rpc('complete_brief_with_pending_earning', {
+    p_user_google_sub: sub,
+    p_campaign_id: campaignId,
+    p_ig_post_url: igPostUrl,
+  });
   if (error) {
     console.error('[creatorMarketplace] completeBrief:', error.message);
     return false;
   }
-  if (!updated) return false;
-
-  await creditPendingEarnings(sub, campaignId);
-  return true;
+  return data === true;
 }
 
 /**
