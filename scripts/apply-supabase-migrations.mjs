@@ -23,6 +23,8 @@ const files = [
   'supabase/009_location_updated_at.sql',
   'supabase/010_creator_marketplace.sql',
   'supabase/011_flow_hardening.sql',
+  'supabase/migrations/20260519000000_creator_brand_signals.sql',
+  'supabase/migrations/20260529000000_lock_creator_brand_signal_rls.sql',
 ];
 
 const url = process.env.SUPABASE_DB_URL;
