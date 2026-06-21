@@ -5,11 +5,14 @@ type RosterHandleRow = { ig_username: string | null };
 type RosterLookupClient = {
   from(table: 'brand_creator_roster'): {
     select(columns: 'ig_username'): {
-      eq(column: 'brand_id', value: string): {
+      eq(
+        column: 'brand_id',
+        value: string,
+      ): {
         in(
           column: 'ig_username',
           values: string[],
-        ): Promise<{ data: RosterHandleRow[] | null; error: { message?: string } | null }>;
+        ): PromiseLike<{ data: RosterHandleRow[] | null; error: { message?: string } | null }>;
       };
     };
   };
@@ -32,7 +35,9 @@ export async function loadExistingBrandRosterHandles(
     throw new Error(error.message || 'roster_lookup_failed');
   }
 
-  return new Set((data ?? []).map((row) => row.ig_username).filter((handle): handle is string => !!handle));
+  return new Set(
+    (data ?? []).map((row) => row.ig_username).filter((handle): handle is string => !!handle),
+  );
 }
 
 export function partitionRowsByExistingRoster(
