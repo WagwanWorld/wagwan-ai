@@ -19,13 +19,14 @@ type RosterLookupClient = {
 };
 
 export async function loadExistingBrandRosterHandles(
-  sb: RosterLookupClient,
+  sb: unknown,
   brandId: string,
   handles: string[],
 ): Promise<Set<string>> {
   if (handles.length === 0) return new Set();
 
-  const { data, error } = await sb
+  const rosterLookup = sb as RosterLookupClient;
+  const { data, error } = await rosterLookup
     .from('brand_creator_roster')
     .select('ig_username')
     .eq('brand_id', brandId)
