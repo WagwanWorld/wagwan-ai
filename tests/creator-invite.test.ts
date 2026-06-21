@@ -7,6 +7,7 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
@@ -150,6 +151,37 @@ describe('buildFeedSummary', () => {
     });
     expect(feedSummary.length).toBeGreaterThan(10);
     expect(contentThemes.length).toBeGreaterThan(0);
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves optional sheet upload fields', () => {
+    const snapshot = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: '25000 INR',
+        notes: 'Prefers email',
+        tags: 'fashion, mumbai',
+        custom_fields: {
+          manager: 'Asha',
+          priority: 1,
+        },
+      },
+      'creator',
+    );
+
+    expect(snapshot.email).toBe('creator@example.com');
+    expect(snapshot.phone).toBe('+919999999999');
+    expect(snapshot.rates).toBe('25000 INR');
+    expect(snapshot.notes).toBe('Prefers email');
+    expect(snapshot.tags).toBe('fashion, mumbai');
+    expect(snapshot.custom_fields).toEqual({
+      manager: 'Asha',
+      priority: '1',
+    });
   });
 });
 
