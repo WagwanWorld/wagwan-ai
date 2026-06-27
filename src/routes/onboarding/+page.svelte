@@ -636,14 +636,19 @@
     const invBrand = localStorage.getItem('wagwan_invite_brand');
     const invRoster = localStorage.getItem('wagwan_invite_id');
     if (invBrand && accountSub) {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const wToken = wagwanAccessToken || localStorage.getItem('wagwan_access_token') || '';
+      if (wToken) headers.Authorization = `Bearer ${wToken}`;
       // Fire-and-forget — don't block onboarding completion
       fetch('/api/creator/link-invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           googleSub: accountSub,
           brandId: invBrand,
           rosterId: invRoster || undefined,
+          googleAccessToken: googleTokens?.accessToken ?? '',
+          instagramToken: igToken,
         }),
       })
         .then(() => {

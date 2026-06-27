@@ -2,6 +2,14 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
+import { assertCreatorAccount } from '$lib/server/creatorAuth';
+import { fetchInstagramProfile } from '$lib/server/instagram';
+
+type RosterInviteRow = {
+  ig_username?: string | null;
+  analysis_snapshot?: unknown;
+  invite_message?: unknown;
+};
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
@@ -13,14 +21,42 @@ export const POST: RequestHandler = async ({ request }) => {
   const brandId = typeof body.brandId === 'string' ? body.brandId.trim() : '';
   const rosterId = typeof body.rosterId === 'string' ? body.rosterId.trim() : undefined;
 
-  if (!googleSub) throw error(400, 'googleSub is required');
+  await assertCreatorAccount(request, googleSub, body);
   if (!brandId) throw error(400, 'brandId is required');
 
   const sb = getServiceSupabase();
+  let rosterRow: RosterInviteRow | null = null;
 
   // 1. Update roster entry if it exists: mark as on_platform, link google_sub
   if (rosterId) {
-    await sb
+    const { data } = await sb
+      .from('brand_creator_roster')
+      .select('ig_username, analysis_snapshot, invite_message')
+      .eq('id', rosterId)
+      .eq('brand_id', brandId)
+      .maybeSingle();
+
+    if (!data) throw error(404, 'Roster invite not found');
+    rosterRow = data as RosterInviteRow;
+
+    const instagramToken =
+      typeof body.instagramToken === 'string' ? body.instagramToken.trim() : '';
+    if (!instagramToken) throw error(401, 'Instagram authentication required');
+
+    let instagramUsername = '';
+    try {
+      const instagramProfile = await fetchInstagramProfile(instagramToken);
+      instagramUsername = instagramProfile.username?.trim().toLowerCase() ?? '';
+    } catch {
+      throw error(401, 'Invalid Instagram token');
+    }
+
+    const rosterUsername = rosterRow?.ig_username?.trim().toLowerCase() ?? '';
+    if (!instagramUsername || instagramUsername !== rosterUsername) {
+      throw error(403, 'Creator does not match roster invite');
+    }
+
+    const { error: updateError } = await sb
       .from('brand_creator_roster')
       .update({
         status: 'on_platform',
@@ -29,6 +65,7 @@ export const POST: RequestHandler = async ({ request }) => {
       })
       .eq('id', rosterId)
       .eq('brand_id', brandId);
+    if (updateError) throw error(500, 'Could not link roster invite');
   }
 
   // 2. Look up brand context for the signal
@@ -52,12 +89,6 @@ export const POST: RequestHandler = async ({ request }) => {
   let analysisSnapshot: Record<string, unknown> = {};
 
   if (rosterId) {
-    const { data: rosterRow } = await sb
-      .from('brand_creator_roster')
-      .select('analysis_snapshot, invite_message')
-      .eq('id', rosterId)
-      .maybeSingle();
-
     if (rosterRow) {
       const analysis = rosterRow.analysis_snapshot as Record<string, unknown> | null;
       fitLabel = (analysis?.fitLabel as string) ?? null;
