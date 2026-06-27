@@ -5,6 +5,12 @@ import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
 import { assertCreatorAccount } from '$lib/server/creatorAuth';
 import { fetchInstagramProfile } from '$lib/server/instagram';
 
+type RosterInviteRow = {
+  ig_username?: string | null;
+  analysis_snapshot?: unknown;
+  invite_message?: unknown;
+};
+
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
@@ -19,13 +25,7 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!brandId) throw error(400, 'brandId is required');
 
   const sb = getServiceSupabase();
-  let rosterRow:
-    | {
-        ig_username?: string | null;
-        analysis_snapshot?: unknown;
-        invite_message?: unknown;
-      }
-    | null = null;
+  let rosterRow: RosterInviteRow | null = null;
 
   // 1. Update roster entry if it exists: mark as on_platform, link google_sub
   if (rosterId) {
@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
       .maybeSingle();
 
     if (!data) throw error(404, 'Roster invite not found');
-    rosterRow = data as typeof rosterRow;
+    rosterRow = data as RosterInviteRow;
 
     const instagramToken =
       typeof body.instagramToken === 'string' ? body.instagramToken.trim() : '';
