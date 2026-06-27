@@ -247,8 +247,16 @@
   async function loadBrandSignals() {
     const sub = $profile.googleSub?.trim();
     if (!sub) return;
+    const headers: Record<string, string> = {};
+    const wToken = localStorage.getItem('wagwan_access_token') || '';
+    if (wToken) headers.Authorization = `Bearer ${wToken}`;
+    if ($profile.googleAccessToken) headers['x-google-access-token'] = $profile.googleAccessToken;
+    const igToken = localStorage.getItem('onboarding_ig_token') || '';
+    if (igToken) headers['x-instagram-token'] = igToken;
     try {
-      const res = await fetch(`/api/creator/brand-signals?googleSub=${encodeURIComponent(sub)}`);
+      const res = await fetch(`/api/creator/brand-signals?googleSub=${encodeURIComponent(sub)}`, {
+        headers,
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (data.ok) {
@@ -266,10 +274,18 @@
     if (!sub) return;
     brandSignals = brandSignals.map((s) => (s.id === id ? { ...s, seen: true } : s));
     brandSignalsUnseenCount = Math.max(0, brandSignalsUnseenCount - 1);
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const wToken = localStorage.getItem('wagwan_access_token') || '';
+    if (wToken) headers.Authorization = `Bearer ${wToken}`;
     fetch('/api/creator/brand-signals', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ googleSub: sub, id }),
+      headers,
+      body: JSON.stringify({
+        googleSub: sub,
+        id,
+        googleAccessToken: $profile.googleAccessToken,
+        instagramToken: localStorage.getItem('onboarding_ig_token') || '',
+      }),
     }).catch(() => {});
   }
 
