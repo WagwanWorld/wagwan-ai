@@ -31,7 +31,7 @@
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
-    ctx.strokeStyle = '#ededef';
+    ctx.strokeStyle = '#111111';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -123,6 +123,7 @@
     height: 100%;
     cursor: crosshair;
     touch-action: none;
+    filter: invert(1);
   }
 
   .signature-placeholder {
