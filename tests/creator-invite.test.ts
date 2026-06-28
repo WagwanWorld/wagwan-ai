@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
+import {
   normalizeIgHandle,
   buildSimpleCreatorAnalysisRuleOnly,
   buildRosterProfileSnapshot,
@@ -7,7 +11,6 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -150,6 +153,35 @@ describe('buildFeedSummary', () => {
     });
     expect(feedSummary.length).toBeGreaterThan(10);
     expect(contentThemes.length).toBeGreaterThan(0);
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk upload sheet fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'testcreator',
+        displayName: 'Test Creator',
+        email: 'creator@example.com',
+        phone: '+15551234567',
+        rates: '$500/post',
+        notes: 'Prefers email',
+        tags: 'fashion, nyc',
+        custom_fields: {
+          agency: 'Example Agency',
+          empty: '',
+          invalid: 123,
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15551234567');
+    expect(snap.rates).toBe('$500/post');
+    expect(snap.notes).toBe('Prefers email');
+    expect(snap.tags).toBe('fashion, nyc');
+    expect(snap.custom_fields).toEqual({ agency: 'Example Agency' });
   });
 });
 

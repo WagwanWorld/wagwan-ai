@@ -114,6 +114,7 @@
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let eventType = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -123,7 +124,6 @@
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
-        let eventType = '';
         for (const line of lines) {
           if (line.startsWith('event: ')) {
             eventType = line.slice(7).trim();
