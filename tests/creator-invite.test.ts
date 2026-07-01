@@ -6,8 +6,13 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import { filterRowsAlreadyInBrandRoster } from '../src/lib/server/marketplace/bulkRoster';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -199,5 +204,71 @@ describe('rosterEntryToView', () => {
     expect(view.profilePicture).toBe('https://example.com/p.jpg');
     expect(view.fitScore).toBe(68);
     expect(view.feedSummary).toContain('fashion');
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk-upload sheet fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'testcreator',
+        displayName: 'Test Creator',
+        scrapedAt: '2026-01-01T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+15551234567',
+        rates: '$500/reel',
+        notes: 'Prefers email',
+        tags: 'fashion, travel',
+        custom_fields: {
+          Agency: 'Example Mgmt',
+          Empty: '',
+          Count: 3,
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15551234567');
+    expect(snap.rates).toBe('$500/reel');
+    expect(snap.notes).toBe('Prefers email');
+    expect(snap.tags).toBe('fashion, travel');
+    expect(snap.custom_fields).toEqual({ Agency: 'Example Mgmt' });
+  });
+});
+
+describe('filterRowsAlreadyInBrandRoster', () => {
+  it('checks existing handles only within the current brand', async () => {
+    const calls: unknown[][] = [];
+    const sb = {
+      from(table: string) {
+        calls.push(['from', table]);
+        return {
+          select(columns: string) {
+            calls.push(['select', columns]);
+            return {
+              eq(column: string, value: string) {
+                calls.push(['eq', column, value]);
+                return {
+                  in(column: string, values: string[]) {
+                    calls.push(['in', column, values]);
+                    return Promise.resolve({ data: [{ ig_username: 'alreadyhere' }] });
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    const result = await filterRowsAlreadyInBrandRoster(sb, 'brand-b', [
+      { row: 2, handle: 'alreadyhere', custom_fields: {} },
+      { row: 3, handle: 'newcreator', custom_fields: {} },
+    ]);
+
+    expect(calls).toContainEqual(['eq', 'brand_id', 'brand-b']);
+    expect(result.alreadyInRoster).toBe(1);
+    expect(result.toProcess.map((row) => row.handle)).toEqual(['newcreator']);
   });
 });
