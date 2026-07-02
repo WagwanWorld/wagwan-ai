@@ -1,6 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getProfileByWagwanId, getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
+import {
+  getProfileByWagwanId,
+  getServiceSupabase,
+  isSupabaseConfigured,
+} from '$lib/server/supabase';
 import { listCreatorBrandSignals, markSignalsSeen } from '$lib/server/creatorSignals';
 import type { SignalType } from '$lib/types/creator-signals';
 import { extractWagwanUserId, isWagwanAuthConfigured } from '$lib/server/wagwanAuth';
@@ -30,7 +34,11 @@ export const GET: RequestHandler = async ({ request, url }) => {
   });
 
   // Strip creator_google_sub from response
-  const views = signals.map(({ creator_google_sub: _sub, ...rest }) => rest);
+  const views = signals.map((signal) => {
+    const view = { ...signal } as Partial<typeof signal>;
+    delete view.creator_google_sub;
+    return view;
+  });
 
   return json({ ok: true, signals: views, unseenCount });
 };
