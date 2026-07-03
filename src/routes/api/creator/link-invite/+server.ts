@@ -2,7 +2,8 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
-import { profileOwnsInstagramHandle, requireAuthenticatedCreator } from '$lib/server/creatorAuth';
+import { requireAuthenticatedCreator } from '$lib/server/creatorAuth';
+import { profileOwnsInstagramHandle } from '$lib/server/creatorProfileOwnership';
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
@@ -18,15 +19,13 @@ export const POST: RequestHandler = async ({ request }) => {
   const { googleSub, profile } = await requireAuthenticatedCreator(request);
   const sb = getServiceSupabase();
 
-  let rosterRow:
-    | {
-        analysis_snapshot: Record<string, unknown> | null;
-        invite_message: string | null;
-        ig_username: string | null;
-        status: string | null;
-        user_google_sub: string | null;
-      }
-    | null = null;
+  let rosterRow: {
+    analysis_snapshot: Record<string, unknown> | null;
+    invite_message: string | null;
+    ig_username: string | null;
+    status: string | null;
+    user_google_sub: string | null;
+  } | null = null;
 
   // 1. Update roster entry if it exists: mark as on_platform, link google_sub
   if (rosterId) {

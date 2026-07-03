@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { instagramUsernameForProfile, profileOwnsInstagramHandle } from '../src/lib/server/creatorAuth';
+import {
+  instagramUsernameForProfile,
+  profileOwnsInstagramHandle,
+} from '../src/lib/server/creatorProfileOwnership';
 import type { UserProfileRow } from '../src/lib/server/supabase';
 
 function profileWithInstagram(username: string | null): UserProfileRow {
@@ -20,7 +23,9 @@ function profileWithInstagram(username: string | null): UserProfileRow {
 
 describe('instagramUsernameForProfile', () => {
   it('normalizes the linked creator Instagram username', () => {
-    expect(instagramUsernameForProfile(profileWithInstagram(' Creator.Name '))).toBe('creator.name');
+    expect(instagramUsernameForProfile(profileWithInstagram(' Creator.Name '))).toBe(
+      'creator.name',
+    );
   });
 
   it('returns null when no creator Instagram username is linked', () => {
@@ -30,10 +35,14 @@ describe('instagramUsernameForProfile', () => {
 
 describe('profileOwnsInstagramHandle', () => {
   it('matches roster handles case-insensitively and ignores @ prefixes', () => {
-    expect(profileOwnsInstagramHandle(profileWithInstagram('Creator.Name'), '@creator.name')).toBe(true);
+    expect(profileOwnsInstagramHandle(profileWithInstagram('Creator.Name'), '@creator.name')).toBe(
+      true,
+    );
   });
 
   it('rejects roster handles owned by a different Instagram account', () => {
-    expect(profileOwnsInstagramHandle(profileWithInstagram('creator.name'), 'other.creator')).toBe(false);
+    expect(profileOwnsInstagramHandle(profileWithInstagram('creator.name'), 'other.creator')).toBe(
+      false,
+    );
   });
 });
