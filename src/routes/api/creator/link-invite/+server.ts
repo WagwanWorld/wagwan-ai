@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
+import { profileOwnsInstagramHandle, requireAuthenticatedCreator } from '$lib/server/creatorAuth';
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
@@ -9,26 +10,77 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   const body = await request.json();
-  const googleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
   const brandId = typeof body.brandId === 'string' ? body.brandId.trim() : '';
   const rosterId = typeof body.rosterId === 'string' ? body.rosterId.trim() : undefined;
 
-  if (!googleSub) throw error(400, 'googleSub is required');
   if (!brandId) throw error(400, 'brandId is required');
 
+  const { googleSub, profile } = await requireAuthenticatedCreator(request);
   const sb = getServiceSupabase();
+
+  let rosterRow:
+    | {
+        analysis_snapshot: Record<string, unknown> | null;
+        invite_message: string | null;
+        ig_username: string | null;
+        status: string | null;
+        user_google_sub: string | null;
+      }
+    | null = null;
 
   // 1. Update roster entry if it exists: mark as on_platform, link google_sub
   if (rosterId) {
-    await sb
+    const { data: existingRoster, error: rosterLookupError } = await sb
       .from('brand_creator_roster')
-      .update({
-        status: 'on_platform',
-        user_google_sub: googleSub,
-        updated_at: new Date().toISOString(),
-      })
+      .select('analysis_snapshot, invite_message, ig_username, status, user_google_sub')
       .eq('id', rosterId)
-      .eq('brand_id', brandId);
+      .eq('brand_id', brandId)
+      .maybeSingle();
+
+    if (rosterLookupError) {
+      console.error('[link-invite] roster lookup failed:', rosterLookupError.message);
+      throw error(500, 'roster_lookup_failed');
+    }
+    if (!existingRoster) throw error(404, 'roster_entry_not_found');
+    if (!profileOwnsInstagramHandle(profile, existingRoster.ig_username)) {
+      throw error(403, 'invite_creator_mismatch');
+    }
+
+    rosterRow = existingRoster;
+
+    if (existingRoster.user_google_sub && existingRoster.user_google_sub !== googleSub) {
+      throw error(409, 'invite_already_linked');
+    }
+
+    if (!existingRoster.user_google_sub) {
+      if (existingRoster.status !== 'prospect') {
+        throw error(409, 'invite_already_linked');
+      }
+
+      const { data: updatedRoster, error: rosterUpdateError } = await sb
+        .from('brand_creator_roster')
+        .update({
+          status: 'on_platform',
+          user_google_sub: googleSub,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rosterId)
+        .eq('brand_id', brandId)
+        .eq('status', 'prospect')
+        .is('user_google_sub', null)
+        .select('analysis_snapshot, invite_message, ig_username, status, user_google_sub')
+        .maybeSingle();
+
+      if (rosterUpdateError) {
+        console.error('[link-invite] roster update failed:', rosterUpdateError.message);
+        throw error(500, 'roster_update_failed');
+      }
+      if (!updatedRoster) {
+        throw error(409, 'invite_already_linked');
+      }
+
+      rosterRow = updatedRoster;
+    }
   }
 
   // 2. Look up brand context for the signal
@@ -51,20 +103,12 @@ export const POST: RequestHandler = async ({ request }) => {
   let inviteMessage: string | null = null;
   let analysisSnapshot: Record<string, unknown> = {};
 
-  if (rosterId) {
-    const { data: rosterRow } = await sb
-      .from('brand_creator_roster')
-      .select('analysis_snapshot, invite_message')
-      .eq('id', rosterId)
-      .maybeSingle();
-
-    if (rosterRow) {
-      const analysis = rosterRow.analysis_snapshot as Record<string, unknown> | null;
-      fitLabel = (analysis?.fitLabel as string) ?? null;
-      fitScore = (analysis?.fitScore as number) ?? null;
-      inviteMessage = (rosterRow.invite_message as string) ?? null;
-      analysisSnapshot = analysis ?? {};
-    }
+  if (rosterRow) {
+    const analysis = rosterRow.analysis_snapshot as Record<string, unknown> | null;
+    fitLabel = (analysis?.fitLabel as string) ?? null;
+    fitScore = (analysis?.fitScore as number) ?? null;
+    inviteMessage = (rosterRow.invite_message as string) ?? null;
+    analysisSnapshot = analysis ?? {};
   }
 
   // 4. Upsert the signal
