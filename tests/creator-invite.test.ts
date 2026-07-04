@@ -6,6 +6,10 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import {
+  creatorMatchesRosterInstagram,
+  normalizeInstagramUsername,
+} from '../src/lib/utils/creatorIdentity';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -28,6 +32,30 @@ describe('parseFollowerCount', () => {
   it('parses K and M suffixes', () => {
     expect(parseFollowerCount('12.5K')).toBe(12500);
     expect(parseFollowerCount('1.2M')).toBe(1200000);
+  });
+});
+
+describe('creator invite linkback identity checks', () => {
+  const profile = {
+    profile_data: {
+      instagramIdentity: {
+        username: 'Creator_Name',
+      },
+    },
+  };
+
+  it('normalizes Instagram usernames before comparing roster ownership', () => {
+    expect(normalizeInstagramUsername('@Creator_Name')).toBe('creator_name');
+    expect(creatorMatchesRosterInstagram(profile, 'creator_name')).toBe(true);
+    expect(creatorMatchesRosterInstagram(profile, '@CREATOR_NAME')).toBe(true);
+  });
+
+  it('rejects roster linkback when the authenticated creator has a different handle', () => {
+    expect(creatorMatchesRosterInstagram(profile, 'other_creator')).toBe(false);
+  });
+
+  it('rejects roster linkback when the authenticated profile has no Instagram username', () => {
+    expect(creatorMatchesRosterInstagram({ profile_data: {} }, 'creator_name')).toBe(false);
   });
 });
 
