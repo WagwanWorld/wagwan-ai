@@ -1,6 +1,11 @@
 import type { UserProfileRow } from '$lib/server/supabase';
 import { getProfileByWagwanId } from '$lib/server/supabase';
 import { extractWagwanUserId, isWagwanAuthConfigured } from '$lib/server/wagwanAuth';
+export {
+  creatorInstagramUsername,
+  creatorMatchesRosterInstagram,
+  normalizeInstagramUsername,
+} from '$lib/utils/creatorIdentity';
 
 export type CreatorAuthResult =
   | { ok: true; profile: UserProfileRow; wagwanUserId: string }
@@ -22,30 +27,4 @@ export async function requireCreatorProfile(request: Request): Promise<CreatorAu
   }
 
   return { ok: true, profile, wagwanUserId };
-}
-
-export function normalizeInstagramUsername(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const normalized = value.trim().replace(/^@/, '').toLowerCase();
-  return normalized || null;
-}
-
-export function creatorInstagramUsername(
-  profile: Pick<UserProfileRow, 'profile_data'>,
-): string | null {
-  const data = profile.profile_data ?? {};
-  const instagramIdentity =
-    typeof data.instagramIdentity === 'object' && data.instagramIdentity !== null
-      ? (data.instagramIdentity as Record<string, unknown>)
-      : null;
-  return normalizeInstagramUsername(instagramIdentity?.username);
-}
-
-export function creatorMatchesRosterInstagram(
-  profile: Pick<UserProfileRow, 'profile_data'>,
-  rosterIgUsername: unknown,
-): boolean {
-  const creatorHandle = creatorInstagramUsername(profile);
-  const rosterHandle = normalizeInstagramUsername(rosterIgUsername);
-  return Boolean(creatorHandle && rosterHandle && creatorHandle === rosterHandle);
 }

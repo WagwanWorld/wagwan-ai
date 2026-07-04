@@ -9,7 +9,7 @@ import {
 import {
   creatorMatchesRosterInstagram,
   normalizeInstagramUsername,
-} from '../src/lib/server/creatorAuth';
+} from '../src/lib/utils/creatorIdentity';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
