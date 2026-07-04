@@ -635,18 +635,22 @@
     // Link invite back to roster + create creator signal
     const invBrand = localStorage.getItem('wagwan_invite_brand');
     const invRoster = localStorage.getItem('wagwan_invite_id');
-    if (invBrand && accountSub) {
+    if (invBrand && accountSub && wagwanAccessToken) {
       // Fire-and-forget — don't block onboarding completion
       fetch('/api/creator/link-invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${wagwanAccessToken}`,
+        },
         body: JSON.stringify({
-          googleSub: accountSub,
           brandId: invBrand,
           rosterId: invRoster || undefined,
         }),
       })
-        .then(() => {
+        .then(async (res) => {
+          const data = (await res.json().catch(() => ({}))) as { ok?: boolean };
+          if (!res.ok || !data.ok) return;
           localStorage.removeItem('wagwan_invite_brand');
           localStorage.removeItem('wagwan_invite_id');
           localStorage.removeItem('wagwan_invite_from');
