@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   normalizeIgHandle,
   buildSimpleCreatorAnalysisRuleOnly,
@@ -7,7 +9,11 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import { doesProfileMatchRosterHandle } from '../src/lib/utils/creatorIdentity';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +144,64 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk-upload metadata fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'Reel: 25000',
+        notes: 'Prefers email',
+        tags: 'fashion,lifestyle',
+        custom_fields: {
+          manager: 'Asha',
+          priority: 1,
+        },
+      },
+      'creator',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('Reel: 25000');
+    expect(snap.notes).toBe('Prefers email');
+    expect(snap.tags).toBe('fashion,lifestyle');
+    expect(snap.custom_fields).toEqual({ manager: 'Asha', priority: '1' });
+  });
+});
+
+describe('creator invite identity matching', () => {
+  it('matches roster handles against the authenticated profile Instagram username', () => {
+    const profile = {
+      instagramIdentity: {
+        username: '@Creator.Name',
+      },
+    };
+
+    expect(doesProfileMatchRosterHandle(profile, 'creator.name')).toBe(true);
+    expect(doesProfileMatchRosterHandle(profile, 'other.creator')).toBe(false);
+  });
+});
+
+describe('brand creator roster RLS migration', () => {
+  it('drops open roster policies and replaces them with service-role policies', () => {
+    const sql = readFileSync(
+      join(
+        process.cwd(),
+        'supabase/migrations/20260705000000_restrict_brand_creator_roster_rls.sql',
+      ),
+      'utf8',
+    );
+
+    expect(sql).toContain('DROP POLICY IF EXISTS roster_brand_select');
+    expect(sql).toContain("auth.role() = 'service_role'");
+    expect(sql).not.toMatch(/FOR SELECT USING \(true\)/);
+    expect(sql).not.toMatch(/FOR DELETE USING \(true\)/);
   });
 });
 
