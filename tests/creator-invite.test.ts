@@ -209,11 +209,10 @@ describe('bulk roster helpers', () => {
       },
     };
 
-    const existing = await findExistingRosterHandles(
-      sb as never,
-      'brand-1',
-      ['creator_a', 'creator_b'],
-    );
+    const existing = await findExistingRosterHandles(sb as never, 'brand-1', [
+      'creator_a',
+      'creator_b',
+    ]);
 
     expect(existing).toEqual(new Set(['creator_a']));
     expect(calls).toContainEqual(['eq', { column: 'brand_id', value: 'brand-1' }]);
