@@ -6,8 +6,15 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import {
+  findExistingRosterHandles,
+  mergeSheetDataIntoSnapshot,
+} from '../src/lib/server/marketplace/bulkRoster';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +145,110 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves metadata captured from bulk sheet uploads', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        email: 'creator@example.com',
+        phone: '+15555550123',
+        rates: '$500/post',
+        notes: 'Prefers gifting campaigns',
+        tags: 'fashion, lifestyle',
+        custom_fields: {
+          Agency: 'Example Talent',
+          Empty: '',
+          Reach: 12000,
+        },
+        scrapedAt: '2026-01-01T00:00:00.000Z',
+      },
+      'creator',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15555550123');
+    expect(snap.rates).toBe('$500/post');
+    expect(snap.notes).toBe('Prefers gifting campaigns');
+    expect(snap.tags).toBe('fashion, lifestyle');
+    expect(snap.custom_fields).toEqual({
+      Agency: 'Example Talent',
+      Reach: '12000',
+    });
+  });
+});
+
+describe('bulk roster helpers', () => {
+  it('checks existing roster handles within the current brand only', async () => {
+    const calls: Array<[string, unknown]> = [];
+    const sb = {
+      from(table: string) {
+        calls.push(['from', table]);
+        return {
+          select(columns: string) {
+            calls.push(['select', columns]);
+            return {
+              eq(column: string, value: string) {
+                calls.push(['eq', { column, value }]);
+                return {
+                  in(column: string, values: string[]) {
+                    calls.push(['in', { column, values }]);
+                    return Promise.resolve({
+                      data: [{ ig_username: 'creator_a' }],
+                      error: null,
+                    });
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+    };
+
+    const existing = await findExistingRosterHandles(
+      sb as never,
+      'brand-1',
+      ['creator_a', 'creator_b'],
+    );
+
+    expect(existing).toEqual(new Set(['creator_a']));
+    expect(calls).toContainEqual(['eq', { column: 'brand_id', value: 'brand-1' }]);
+    expect(calls).toContainEqual([
+      'in',
+      { column: 'ig_username', values: ['creator_a', 'creator_b'] },
+    ]);
+  });
+
+  it('merges bulk sheet metadata into a copied snapshot', () => {
+    const profile = { handle: 'creator', displayName: 'Creator' };
+    const merged = mergeSheetDataIntoSnapshot(profile, {
+      row: 2,
+      handle: 'creator',
+      email: 'creator@example.com',
+      phone: '+15555550123',
+      rates: '$500/post',
+      notes: 'Warm intro',
+      tags: 'fashion',
+      location: 'Mumbai',
+      custom_fields: { Agency: 'Example Talent' },
+    });
+
+    expect(merged).toEqual({
+      handle: 'creator',
+      displayName: 'Creator',
+      email: 'creator@example.com',
+      phone: '+15555550123',
+      rates: '$500/post',
+      notes: 'Warm intro',
+      tags: 'fashion',
+      location: 'Mumbai',
+      custom_fields: { Agency: 'Example Talent' },
+    });
+    expect(profile).toEqual({ handle: 'creator', displayName: 'Creator' });
   });
 });
 
