@@ -6,6 +6,7 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import { getExistingRosterHandlesForBrand } from '../src/lib/server/marketplace/bulkRoster';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -199,5 +200,41 @@ describe('rosterEntryToView', () => {
     expect(view.profilePicture).toBe('https://example.com/p.jpg');
     expect(view.fitScore).toBe(68);
     expect(view.feedSummary).toContain('fashion');
+  });
+});
+
+describe('getExistingRosterHandlesForBrand', () => {
+  it('scopes duplicate checks to the current brand roster', async () => {
+    const calls: Array<[string, string]> = [];
+    const query = {
+      select(columns: string) {
+        calls.push(['select', columns]);
+        return this;
+      },
+      eq(column: string, value: string) {
+        calls.push([column, value]);
+        return this;
+      },
+      in(column: string, values: string[]) {
+        calls.push([column, values.join(',')]);
+        return Promise.resolve({ data: [{ ig_username: 'sharedcreator' }] });
+      },
+    };
+    const sb = {
+      from(table: string) {
+        calls.push(['from', table]);
+        return query;
+      },
+    };
+
+    const handles = await getExistingRosterHandlesForBrand(
+      sb as never,
+      'brand-current',
+      ['sharedcreator'],
+    );
+
+    expect(handles.has('sharedcreator')).toBe(true);
+    expect(calls).toContainEqual(['brand_id', 'brand-current']);
+    expect(calls).toContainEqual(['ig_username', 'sharedcreator']);
   });
 });

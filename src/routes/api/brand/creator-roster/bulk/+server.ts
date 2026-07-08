@@ -2,9 +2,10 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import { processCreatorInvite, resolveBrandForSession } from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
+import { getExistingRosterHandlesForBrand } from '$lib/server/marketplace/bulkRoster';
 
 const BATCH_SIZE = 20;
 
@@ -49,19 +50,13 @@ export const POST: RequestHandler = async ({ request }) => {
 
   // Check for existing handles in this brand's roster
   const sb = getServiceSupabase();
+  const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
   let alreadyInRoster = 0;
   const toProcess: ParsedCreatorRow[] = [];
 
   if (valid.length > 0) {
     const handles = valid.map((r) => r.handle);
-    const { data: existingRows } = await sb
-      .from('brand_creator_roster')
-      .select('ig_username')
-      .in('ig_username', handles);
-
-    const existingSet = new Set(
-      (existingRows ?? []).map((r: { ig_username: string }) => r.ig_username),
-    );
+    const existingSet = await getExistingRosterHandlesForBrand(sb, brandId, handles);
 
     for (const row of valid) {
       if (existingSet.has(row.handle)) {
