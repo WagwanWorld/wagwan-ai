@@ -8,6 +8,7 @@ import {
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +139,35 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves metadata captured during bulk sheet upload', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'sheetcreator',
+        displayName: 'Sheet Creator',
+        email: 'creator@example.com',
+        phone: '+91 99999 99999',
+        rates: 'INR 25k',
+        notes: 'Prefers WhatsApp',
+        tags: 'fashion, nightlife',
+        custom_fields: {
+          Manager: 'Asha',
+          Empty: '',
+        },
+        scrapedAt: '2026-07-09T00:00:00.000Z',
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+91 99999 99999');
+    expect(snap.rates).toBe('INR 25k');
+    expect(snap.notes).toBe('Prefers WhatsApp');
+    expect(snap.tags).toBe('fashion, nightlife');
+    expect(snap.custom_fields).toEqual({ Manager: 'Asha' });
   });
 });
 
