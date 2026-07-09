@@ -73,11 +73,9 @@ function stringField(value: unknown): string | undefined {
 function stringRecordField(value: unknown): Record<string, string> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
 
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(
-      (entry): entry is [string, string] =>
-        typeof entry[1] === 'string' && entry[1].trim() !== '',
-    );
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].trim() !== '',
+  );
 
   return entries.length ? Object.fromEntries(entries) : undefined;
 }
