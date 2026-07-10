@@ -14,7 +14,7 @@ import {
 import {
   creatorProfileMatchesRosterHandle,
   getProfileInstagramUsername,
-} from '../src/lib/server/creatorAuth';
+} from '../src/lib/utils/creatorIdentity';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {

@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractWagwanUserId } from '$lib/server/wagwanAuth';
 import type { UserProfileRow } from '$lib/server/supabase';
+import { getProfileInstagramUsername } from '$lib/utils/creatorIdentity';
 
 export type AuthenticatedCreator = {
   googleSub: string;
@@ -9,23 +10,6 @@ export type AuthenticatedCreator = {
   profileData: Record<string, unknown>;
   instagramUsername: string | null;
 };
-
-export function normalizeCreatorUsername(value: unknown): string {
-  return typeof value === 'string' ? value.trim().replace(/^@/, '').toLowerCase() : '';
-}
-
-export function getProfileInstagramUsername(profileData: Record<string, unknown> | null): string {
-  const instagram = profileData?.instagramIdentity as Record<string, unknown> | undefined;
-  return normalizeCreatorUsername(instagram?.username);
-}
-
-export function creatorProfileMatchesRosterHandle(
-  profileData: Record<string, unknown> | null,
-  rosterHandle: string,
-): boolean {
-  const profileUsername = getProfileInstagramUsername(profileData);
-  return !!profileUsername && profileUsername === normalizeCreatorUsername(rosterHandle);
-}
 
 export async function requireCreatorFromWagwanRequest(
   request: Request,

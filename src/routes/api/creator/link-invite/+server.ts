@@ -3,10 +3,8 @@ import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
 import { isWagwanAuthConfigured } from '$lib/server/wagwanAuth';
-import {
-  creatorProfileMatchesRosterHandle,
-  requireCreatorFromWagwanRequest,
-} from '$lib/server/creatorAuth';
+import { requireCreatorFromWagwanRequest } from '$lib/server/creatorAuth';
+import { creatorProfileMatchesRosterHandle } from '$lib/utils/creatorIdentity';
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
