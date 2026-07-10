@@ -7,7 +7,14 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
+import {
+  creatorProfileMatchesRosterHandle,
+  getProfileInstagramUsername,
+} from '../src/lib/utils/creatorIdentity';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +145,62 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk sheet metadata fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'sheetcreator',
+        displayName: 'Sheet Creator',
+        bio: 'Creator bio',
+        followers: '12K',
+        followersCount: 12000,
+        following: '200',
+        posts: '50',
+        isVerified: false,
+        scrapedAt: '2026-01-01T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 10k/reel',
+        notes: 'Prefers email',
+        tags: 'fashion,lifestyle',
+        custom_fields: {
+          manager: 'Riya',
+          empty: '',
+          ignored: 42,
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('INR 10k/reel');
+    expect(snap.notes).toBe('Prefers email');
+    expect(snap.tags).toBe('fashion,lifestyle');
+    expect(snap.custom_fields).toEqual({ manager: 'Riya' });
+  });
+});
+
+describe('creator invite auth helpers', () => {
+  it('normalizes creator Instagram username from profile data', () => {
+    expect(
+      getProfileInstagramUsername({
+        instagramIdentity: { username: '@TestCreator ' },
+      }),
+    ).toBe('testcreator');
+  });
+
+  it('matches invite roster handle only to the authenticated creator Instagram', () => {
+    const profileData = {
+      instagramIdentity: { username: 'testcreator' },
+    };
+
+    expect(creatorProfileMatchesRosterHandle(profileData, '@TestCreator')).toBe(true);
+    expect(creatorProfileMatchesRosterHandle(profileData, 'othercreator')).toBe(false);
+    expect(creatorProfileMatchesRosterHandle({}, 'testcreator')).toBe(false);
   });
 });
 
