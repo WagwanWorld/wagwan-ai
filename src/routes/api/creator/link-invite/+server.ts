@@ -4,6 +4,15 @@ import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
 import { getAuthenticatedCreator, instagramUsernamesMatch } from '$lib/server/creatorAuth';
 
+type RosterInviteRow = {
+  id: string;
+  ig_username: string;
+  user_google_sub: string | null;
+  status: string | null;
+  analysis_snapshot: Record<string, unknown> | null;
+  invite_message: string | null;
+};
+
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
@@ -25,16 +34,7 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!brandId) throw error(400, 'brandId is required');
 
   const sb = getServiceSupabase();
-  let rosterRow:
-    | {
-        id: string;
-        ig_username: string;
-        user_google_sub: string | null;
-        status: string | null;
-        analysis_snapshot: Record<string, unknown> | null;
-        invite_message: string | null;
-      }
-    | null = null;
+  let rosterRow: RosterInviteRow | null = null;
 
   // 1. Update roster entry if it exists and belongs to this creator's Instagram account.
   if (rosterId) {
@@ -55,14 +55,11 @@ export const POST: RequestHandler = async ({ request }) => {
     if (!instagramUsernamesMatch(creator.instagramUsername, existingRoster.ig_username)) {
       throw error(403, 'Invite does not match authenticated creator');
     }
-    if (
-      existingRoster.user_google_sub &&
-      existingRoster.user_google_sub !== creator.googleSub
-    ) {
+    if (existingRoster.user_google_sub && existingRoster.user_google_sub !== creator.googleSub) {
       throw error(409, 'Roster invite already linked');
     }
 
-    rosterRow = existingRoster as typeof rosterRow;
+    rosterRow = existingRoster as RosterInviteRow;
 
     if (!existingRoster.user_google_sub) {
       const { data: updatedRoster, error: rosterUpdateError } = await sb
@@ -86,7 +83,7 @@ export const POST: RequestHandler = async ({ request }) => {
       if (!updatedRoster) {
         throw error(409, 'Roster invite could not be linked');
       }
-      rosterRow = updatedRoster as typeof rosterRow;
+      rosterRow = updatedRoster as RosterInviteRow;
     }
   }
 
