@@ -6,6 +6,10 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import {
+  instagramUsernamesMatch,
+  normalizeInstagramUsername,
+} from '../src/lib/utils/creatorIdentity';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -21,6 +25,18 @@ describe('normalizeIgHandle', () => {
   it('rejects invalid handles', () => {
     expect(normalizeIgHandle('a')).toBeNull();
     expect(normalizeIgHandle('bad handle!')).toBeNull();
+  });
+});
+
+describe('creator invite ownership matching', () => {
+  it('normalizes Instagram usernames before comparing invite ownership', () => {
+    expect(normalizeInstagramUsername(' @Creator.Name ')).toBe('creator.name');
+    expect(instagramUsernamesMatch('@Creator.Name', 'creator.name')).toBe(true);
+  });
+
+  it('rejects empty or mismatched usernames', () => {
+    expect(instagramUsernamesMatch('', 'creator.name')).toBe(false);
+    expect(instagramUsernamesMatch('attacker', 'creator.name')).toBe(false);
   });
 });
 

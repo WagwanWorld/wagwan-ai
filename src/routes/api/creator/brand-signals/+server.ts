@@ -3,14 +3,22 @@ import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { listCreatorBrandSignals, markSignalsSeen } from '$lib/server/creatorSignals';
 import type { SignalType } from '$lib/types/creator-signals';
+import { getAuthenticatedCreator } from '$lib/server/creatorAuth';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ request, url }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
   }
 
-  const googleSub = url.searchParams.get('googleSub')?.trim();
-  if (!googleSub) throw error(400, 'googleSub is required');
+  const creator = await getAuthenticatedCreator(request);
+  if (!creator.ok) {
+    return json({ ok: false, error: creator.error }, { status: creator.status });
+  }
+
+  const requestedSub = url.searchParams.get('googleSub')?.trim();
+  if (requestedSub && requestedSub !== creator.googleSub) {
+    throw error(403, 'Cannot access another creator');
+  }
 
   const seenParam = url.searchParams.get('seen');
   const signalType = url.searchParams.get('signal_type') as SignalType | null;
@@ -18,7 +26,7 @@ export const GET: RequestHandler = async ({ url }) => {
   const seen = seenParam === 'true' ? true : seenParam === 'false' ? false : undefined;
 
   const sb = getServiceSupabase();
-  const { signals, unseenCount } = await listCreatorBrandSignals(sb, googleSub, {
+  const { signals, unseenCount } = await listCreatorBrandSignals(sb, creator.googleSub, {
     seen,
     signalType: signalType ?? undefined,
   });
@@ -35,8 +43,15 @@ export const PATCH: RequestHandler = async ({ request }) => {
   }
 
   const body = await request.json();
-  const googleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
-  if (!googleSub) throw error(400, 'googleSub is required');
+  const creator = await getAuthenticatedCreator(request);
+  if (!creator.ok) {
+    return json({ ok: false, error: creator.error }, { status: creator.status });
+  }
+
+  const requestedSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
+  if (requestedSub && requestedSub !== creator.googleSub) {
+    throw error(403, 'Cannot update another creator');
+  }
 
   const id = typeof body.id === 'string' ? body.id.trim() : undefined;
   const markAllSeen = body.markAllSeen === true;
@@ -46,7 +61,7 @@ export const PATCH: RequestHandler = async ({ request }) => {
   }
 
   const sb = getServiceSupabase();
-  const ok = await markSignalsSeen(sb, googleSub, { id, markAllSeen });
+  const ok = await markSignalsSeen(sb, creator.googleSub, { id, markAllSeen });
 
   return json({ ok });
 };

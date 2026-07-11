@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import { processCreatorInvite, resolveBrandForSession } from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
 
@@ -49,6 +49,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   // Check for existing handles in this brand's roster
   const sb = getServiceSupabase();
+  const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
   let alreadyInRoster = 0;
   const toProcess: ParsedCreatorRow[] = [];
 
@@ -57,6 +58,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const { data: existingRows } = await sb
       .from('brand_creator_roster')
       .select('ig_username')
+      .eq('brand_id', brandId)
       .in('ig_username', handles);
 
     const existingSet = new Set(
@@ -119,6 +121,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
             // Merge extra sheet data into profile_snapshot
             const snapshot = result.profile as Record<string, unknown>;
+            const updateRow: Record<string, unknown> = { profile_snapshot: snapshot };
+            if (row.display_name) {
+              snapshot.displayName = row.display_name;
+              updateRow.display_name = row.display_name;
+            }
             if (row.email) snapshot.email = row.email;
             if (row.phone) snapshot.phone = row.phone;
             if (row.rates) snapshot.rates = row.rates;
@@ -132,10 +139,11 @@ export const POST: RequestHandler = async ({ request }) => {
             // Update the roster entry with merged snapshot
             const entryId = (result.entry as Record<string, unknown>).id as string;
             if (entryId) {
-              await sb
+              const { error: updateError } = await sb
                 .from('brand_creator_roster')
-                .update({ profile_snapshot: snapshot })
+                .update(updateRow)
                 .eq('id', entryId);
+              if (updateError) throw new Error('roster_metadata_update_failed');
             }
 
             return { handle: row.handle, analysis: result.analysis };
