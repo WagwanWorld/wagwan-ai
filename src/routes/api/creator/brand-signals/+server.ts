@@ -23,7 +23,11 @@ export const GET: RequestHandler = async ({ request, url }) => {
   });
 
   // Strip creator_google_sub from response
-  const views = signals.map(({ creator_google_sub: _sub, ...rest }) => rest);
+  const views = signals.map((signal) => {
+    const view = { ...signal };
+    delete view.creator_google_sub;
+    return view;
+  });
 
   return json({ ok: true, signals: views, unseenCount });
 };
