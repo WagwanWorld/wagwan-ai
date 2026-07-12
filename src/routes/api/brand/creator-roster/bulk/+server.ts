@@ -2,7 +2,10 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import {
+  processCreatorInvite,
+  resolveBrandForSession,
+} from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
 
@@ -51,12 +54,14 @@ export const POST: RequestHandler = async ({ request }) => {
   const sb = getServiceSupabase();
   let alreadyInRoster = 0;
   const toProcess: ParsedCreatorRow[] = [];
+  const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
 
   if (valid.length > 0) {
     const handles = valid.map((r) => r.handle);
     const { data: existingRows } = await sb
       .from('brand_creator_roster')
       .select('ig_username')
+      .eq('brand_id', brandId)
       .in('ig_username', handles);
 
     const existingSet = new Set(
