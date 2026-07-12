@@ -24,8 +24,8 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
   // Strip creator_google_sub from response
   const views = signals.map((signal) => {
-    const view = { ...signal };
-    delete view.creator_google_sub;
+    const { creator_google_sub, ...view } = signal;
+    void creator_google_sub;
     return view;
   });
 
