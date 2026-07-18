@@ -96,6 +96,15 @@
 
   $: sub = $profile.googleSub;
 
+  function creatorJsonHeaders(): Record<string, string> {
+    const token =
+      typeof window !== 'undefined' ? localStorage.getItem('wagwan_access_token')?.trim() : '';
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
+
   async function loadAll() {
     if (!sub) return;
     loading = true;
@@ -357,9 +366,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: creatorJsonHeaders(),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'accept',
           phone,
@@ -390,8 +398,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sub, campaignId, action: 'decline' }),
+        headers: creatorJsonHeaders(),
+        body: JSON.stringify({ campaignId, action: 'decline' }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
@@ -415,9 +423,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: creatorJsonHeaders(),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'complete',
           igPostUrl: igPostUrl.trim(),

@@ -119,6 +119,15 @@
   let dashRespondingId = '';
   let dashErr = '';
 
+  function creatorJsonHeaders(): Record<string, string> {
+    const token =
+      typeof window !== 'undefined' ? localStorage.getItem('wagwan_access_token')?.trim() : '';
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
+
   async function loadDashboard() {
     const sub = $profile.googleSub?.trim();
     if (!sub) {
@@ -163,9 +172,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: creatorJsonHeaders(),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'accept',
           phone,
@@ -193,8 +201,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sub, campaignId, action: 'decline' }),
+        headers: creatorJsonHeaders(),
+        body: JSON.stringify({ campaignId, action: 'decline' }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
@@ -224,9 +232,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: creatorJsonHeaders(),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'complete',
           igPostUrl: igPostUrl.trim(),
@@ -248,7 +255,9 @@
     const sub = $profile.googleSub?.trim();
     if (!sub) return;
     try {
-      const res = await fetch(`/api/creator/brand-signals?googleSub=${encodeURIComponent(sub)}`);
+      const res = await fetch('/api/creator/brand-signals', {
+        headers: creatorJsonHeaders(),
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (data.ok) {
@@ -268,8 +277,8 @@
     brandSignalsUnseenCount = Math.max(0, brandSignalsUnseenCount - 1);
     fetch('/api/creator/brand-signals', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ googleSub: sub, id }),
+      headers: creatorJsonHeaders(),
+      body: JSON.stringify({ id }),
     }).catch(() => {});
   }
 
