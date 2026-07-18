@@ -129,18 +129,16 @@ export async function respondToBrief(
   const status: BriefStatus = action === 'accept' ? 'accepted' : 'declined';
   const { data, error } = await getServiceSupabase()
     .from('brief_responses')
-    .upsert(
-      {
-        campaign_id: campaignId,
-        user_google_sub: sub,
-        status,
-        accepted_at: action === 'accept' ? now : null,
-        updated_at: now,
-      },
-      { onConflict: 'campaign_id,user_google_sub' },
-    )
+    .update({
+      status,
+      accepted_at: action === 'accept' ? now : null,
+      updated_at: now,
+    })
+    .eq('campaign_id', campaignId)
+    .eq('user_google_sub', sub)
+    .eq('status', 'sent')
     .select()
-    .single();
+    .maybeSingle();
   if (error) console.error('[creatorMarketplace] respondToBrief:', error.message);
   return (data as BriefResponse | null) ?? null;
 }

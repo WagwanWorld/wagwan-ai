@@ -2,19 +2,26 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { respondToBrief, completeBrief } from '$lib/server/creatorMarketplace';
 import { isCampaignUuid } from '$lib/server/flowState';
+import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
+import { assertCreatorAccess } from '$lib/server/creatorAuth';
 
 export const POST: RequestHandler = async ({ request }) => {
+  if (!isSupabaseConfigured()) {
+    return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
+  }
+
   const body = await request.json().catch(() => null);
-  if (!body?.sub || !body?.campaignId) {
+  if (!body?.campaignId) {
     return json({ ok: false, error: 'missing_fields' }, { status: 400 });
   }
 
-  const sub = String(body.sub).trim();
   const campaignId = String(body.campaignId).trim();
   if (!isCampaignUuid(campaignId)) {
     return json({ ok: false, error: 'invalid_campaign_id' }, { status: 400 });
   }
 
+  const creator = await assertCreatorAccess(request, getServiceSupabase());
+  const sub = creator.googleSub;
   const action = body.action as string;
 
   if (action === 'accept' || action === 'decline' || action === 'request_changes') {

@@ -26,6 +26,15 @@
     return `₹${amount.toLocaleString('en-IN')}`;
   }
 
+  function creatorJsonHeaders(): Record<string, string> {
+    const token =
+      typeof window !== 'undefined' ? localStorage.getItem('wagwan_access_token')?.trim() : '';
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
+
   async function loadBrief() {
     const sub = $profile?.googleSub;
     if (!sub) {
@@ -79,8 +88,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sub, campaignId: $page.params.id, action }),
+        headers: creatorJsonHeaders(),
+        body: JSON.stringify({ campaignId: $page.params.id, action }),
       });
       const data = await res.json();
       if (data.ok)
@@ -104,9 +113,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: creatorJsonHeaders(),
         body: JSON.stringify({
-          sub,
           campaignId: $page.params.id,
           action: 'complete',
           igPostUrl: igPostUrl.trim(),
