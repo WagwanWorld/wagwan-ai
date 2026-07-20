@@ -66,6 +66,22 @@ export type BrandCreatorRosterEntry = {
   updated_at: string;
 };
 
+function optionalString(value: unknown): string | undefined {
+  return value ? String(value) : undefined;
+}
+
+function coerceStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '')
+    .map(([k, v]) => [k, String(v)] as const);
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 /** Normalize legacy or partial profile_snapshot rows from the database. */
 export function coerceRosterProfileSnapshot(
   raw: Record<string, unknown> | null | undefined,
@@ -87,22 +103,28 @@ export function coerceRosterProfileSnapshot(
     posts: String(r.posts ?? ''),
     isVerified: Boolean(r.isVerified),
     onPlatform: Boolean(r.onPlatform ?? r.wagwanName),
-    archetype: r.archetype ? String(r.archetype) : undefined,
-    location: r.location ? String(r.location) : undefined,
+    archetype: optionalString(r.archetype),
+    location: optionalString(r.location),
     strengthScore: typeof r.strengthScore === 'number' ? r.strengthScore : undefined,
-    strengthLabel: r.strengthLabel ? String(r.strengthLabel) : undefined,
-    engagementTier: r.engagementTier ? String(r.engagementTier) : undefined,
+    strengthLabel: optionalString(r.strengthLabel),
+    engagementTier: optionalString(r.engagementTier),
     vibeTags: Array.isArray(r.vibeTags) ? (r.vibeTags as string[]).slice(0, 6) : undefined,
     contentTags: Array.isArray(r.contentTags) ? (r.contentTags as string[]).slice(0, 8) : undefined,
     colorPalette: Array.isArray(r.colorPalette)
       ? (r.colorPalette as string[]).slice(0, 4)
       : undefined,
-    aesthetic: r.aesthetic ? String(r.aesthetic) : undefined,
-    lifestyle: r.lifestyle ? String(r.lifestyle) : undefined,
-    feedSummary: r.feedSummary ? String(r.feedSummary) : undefined,
+    aesthetic: optionalString(r.aesthetic),
+    lifestyle: optionalString(r.lifestyle),
+    feedSummary: optionalString(r.feedSummary),
     recentCaptions: Array.isArray(r.recentCaptions)
       ? (r.recentCaptions as string[]).slice(0, 6)
       : undefined,
     scrapedAt: String(r.scrapedAt ?? new Date(0).toISOString()),
+    email: optionalString(r.email),
+    phone: optionalString(r.phone),
+    rates: optionalString(r.rates),
+    notes: optionalString(r.notes),
+    tags: optionalString(r.tags),
+    custom_fields: coerceStringRecord(r.custom_fields),
   };
 }
