@@ -7,7 +7,10 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +141,38 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk sheet contact and custom fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'bulkcreator',
+        displayName: 'Bulk Creator',
+        email: 'creator@example.com',
+        phone: '+15550123',
+        rates: '500 USD',
+        notes: 'Prefers email',
+        tags: 'fashion, launch',
+        custom_fields: {
+          Manager: 'Avery',
+          Empty: '',
+          Followers: 12500,
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15550123');
+    expect(snap.rates).toBe('500 USD');
+    expect(snap.notes).toBe('Prefers email');
+    expect(snap.tags).toBe('fashion, launch');
+    expect(snap.custom_fields).toEqual({
+      Manager: 'Avery',
+      Followers: '12500',
+    });
   });
 });
 
