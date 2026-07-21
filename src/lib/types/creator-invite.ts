@@ -66,6 +66,23 @@ export type BrandCreatorRosterEntry = {
   updated_at: string;
 };
 
+function coerceOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function coerceCustomFields(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    (entry): entry is [string, string] =>
+      typeof entry[1] === 'string' && entry[1].trim().length > 0,
+  );
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 /** Normalize legacy or partial profile_snapshot rows from the database. */
 export function coerceRosterProfileSnapshot(
   raw: Record<string, unknown> | null | undefined,
@@ -88,7 +105,7 @@ export function coerceRosterProfileSnapshot(
     isVerified: Boolean(r.isVerified),
     onPlatform: Boolean(r.onPlatform ?? r.wagwanName),
     archetype: r.archetype ? String(r.archetype) : undefined,
-    location: r.location ? String(r.location) : undefined,
+    location: coerceOptionalString(r.location),
     strengthScore: typeof r.strengthScore === 'number' ? r.strengthScore : undefined,
     strengthLabel: r.strengthLabel ? String(r.strengthLabel) : undefined,
     engagementTier: r.engagementTier ? String(r.engagementTier) : undefined,
@@ -104,5 +121,11 @@ export function coerceRosterProfileSnapshot(
       ? (r.recentCaptions as string[]).slice(0, 6)
       : undefined,
     scrapedAt: String(r.scrapedAt ?? new Date(0).toISOString()),
+    email: coerceOptionalString(r.email),
+    phone: coerceOptionalString(r.phone),
+    rates: coerceOptionalString(r.rates),
+    notes: coerceOptionalString(r.notes),
+    tags: coerceOptionalString(r.tags),
+    custom_fields: coerceCustomFields(r.custom_fields),
   };
 }
