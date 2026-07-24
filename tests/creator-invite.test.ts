@@ -7,6 +7,7 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
@@ -138,6 +139,37 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves sheet upload metadata on roster reload', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'testcreator',
+        displayName: 'Test Creator',
+        email: 'creator@example.com',
+        phone: '+15551234567',
+        rates: '$500/post',
+        notes: 'Prefers short-form campaigns',
+        tags: 'fashion,local',
+        custom_fields: {
+          Manager: 'Ari',
+          'Past buyer': true,
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+15551234567');
+    expect(snap.rates).toBe('$500/post');
+    expect(snap.notes).toBe('Prefers short-form campaigns');
+    expect(snap.tags).toBe('fashion,local');
+    expect(snap.custom_fields).toEqual({
+      Manager: 'Ari',
+      'Past buyer': 'true',
+    });
   });
 });
 
