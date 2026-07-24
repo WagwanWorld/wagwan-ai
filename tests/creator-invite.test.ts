@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  coerceRosterProfileSnapshot,
   normalizeIgHandle,
   buildSimpleCreatorAnalysisRuleOnly,
   buildRosterProfileSnapshot,
@@ -8,6 +7,7 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
