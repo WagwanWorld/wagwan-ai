@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getCreatorInstagramUsername } from '../src/lib/server/creatorAuth';
+import { getCreatorInstagramUsername } from '../src/lib/server/creatorProfile';
 import type { UserProfileRow } from '../src/lib/server/supabase';
 
 function profileWithInstagram(username: unknown): UserProfileRow {
@@ -20,9 +20,7 @@ function profileWithInstagram(username: unknown): UserProfileRow {
 
 describe('getCreatorInstagramUsername', () => {
   it('normalizes the linked creator Instagram username', () => {
-    expect(getCreatorInstagramUsername(profileWithInstagram(' @Creator.One '))).toBe(
-      'creator.one',
-    );
+    expect(getCreatorInstagramUsername(profileWithInstagram(' @Creator.One '))).toBe('creator.one');
   });
 
   it('returns null when the profile has no Instagram username', () => {

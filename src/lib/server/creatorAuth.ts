@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { extractWagwanUserId, isWagwanAuthConfigured } from '$lib/server/wagwanAuth';
 import { getProfileByWagwanId, type UserProfileRow } from '$lib/server/supabase';
+export { getCreatorInstagramUsername } from '$lib/server/creatorProfile';
 
 export async function requireCreatorProfile(request: Request): Promise<UserProfileRow> {
   if (!isWagwanAuthConfigured()) {
@@ -18,15 +19,4 @@ export async function requireCreatorProfile(request: Request): Promise<UserProfi
   }
 
   return profile;
-}
-
-export function getCreatorInstagramUsername(profile: UserProfileRow): string | null {
-  const profileData = (profile.profile_data ?? {}) as Record<string, unknown>;
-  const instagramIdentity = profileData.instagramIdentity as Record<string, unknown> | undefined;
-  const username = String(instagramIdentity?.username ?? '')
-    .trim()
-    .replace(/^@/, '')
-    .toLowerCase();
-
-  return username || null;
 }
