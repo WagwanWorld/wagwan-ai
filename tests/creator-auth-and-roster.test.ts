@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getProfileInstagramUsername,
   normalizeInstagramUsername,
-} from '../src/lib/server/creatorAuth';
+} from '../src/lib/server/creatorIdentity';
 import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 
 describe('creator invite identity helpers', () => {
