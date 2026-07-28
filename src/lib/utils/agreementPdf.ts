@@ -368,9 +368,7 @@ export function generateAgreementPdf(info: SigningInfo) {
 
   // 13. Force Majeure
   heading('13. FORCE MAJEURE');
-  body(
-    '13.1. Neither Party shall be liable for failure due to events beyond reasonable control.',
-  );
+  body('13.1. Neither Party shall be liable for failure due to events beyond reasonable control.');
   body(
     '13.2. If the Force Majeure Event continues for sixty (60) consecutive days, either Party may terminate upon written notice.',
   );

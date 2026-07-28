@@ -53,7 +53,9 @@ describe('generateAgreementPdf', () => {
       '15.1. Disputes shall be resolved by arbitration under the Arbitration and Conciliation Act, 1996, conducted by a sole arbitrator mutually appointed within fifteen (15) days.',
     );
 
-    expect(rendered).not.toContain('During the grace period, services shall continue uninterrupted');
+    expect(rendered).not.toContain(
+      'During the grace period, services shall continue uninterrupted',
+    );
     expect(rendered).not.toContain('interest or penalties from prior non-payment');
     expect(rendered).not.toContain('fees materially changed mid-term');
     expect(rendered).not.toContain('appointment shall follow Section 11');
