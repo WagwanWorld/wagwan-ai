@@ -307,9 +307,7 @@ export function generateAgreementPdf(info: SigningInfo) {
   body(
     '7.1. This Agreement shall commence on the Effective Date and remain in effect for 12 months.',
   );
-  body(
-    "7.2. Either Party may terminate with 30 days' prior written notice.",
-  );
+  body("7.2. Either Party may terminate with 30 days' prior written notice.");
   body(
     `7.3. Upon termination: ${cn} shall cease Platform use and clear outstanding dues. The Service Provider shall provide all raw Client Data within fifteen (15) business days.`,
   );
