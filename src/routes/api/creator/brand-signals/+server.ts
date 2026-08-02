@@ -1,17 +1,15 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
+import { getServiceSupabase } from '$lib/server/supabase';
 import { listCreatorBrandSignals, markSignalsSeen } from '$lib/server/creatorSignals';
 import type { SignalType } from '$lib/types/creator-signals';
+import { requireAuthenticatedCreator } from '$lib/server/creatorAuth';
 
-export const GET: RequestHandler = async ({ url }) => {
-  if (!isSupabaseConfigured()) {
-    return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
-  }
+export const GET: RequestHandler = async ({ request, url }) => {
+  const auth = await requireAuthenticatedCreator(request);
+  if (!auth.ok) return auth.response;
 
-  const googleSub = url.searchParams.get('googleSub')?.trim();
-  if (!googleSub) throw error(400, 'googleSub is required');
-
+  const googleSub = auth.creator.googleSub;
   const seenParam = url.searchParams.get('seen');
   const signalType = url.searchParams.get('signal_type') as SignalType | null;
 
@@ -24,19 +22,21 @@ export const GET: RequestHandler = async ({ url }) => {
   });
 
   // Strip creator_google_sub from response
-  const views = signals.map(({ creator_google_sub: _sub, ...rest }) => rest);
+  const views = signals.map((signal) => {
+    const view = { ...signal };
+    delete (view as { creator_google_sub?: unknown }).creator_google_sub;
+    return view;
+  });
 
   return json({ ok: true, signals: views, unseenCount });
 };
 
 export const PATCH: RequestHandler = async ({ request }) => {
-  if (!isSupabaseConfigured()) {
-    return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
-  }
+  const auth = await requireAuthenticatedCreator(request);
+  if (!auth.ok) return auth.response;
 
   const body = await request.json();
-  const googleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
-  if (!googleSub) throw error(400, 'googleSub is required');
+  const googleSub = auth.creator.googleSub;
 
   const id = typeof body.id === 'string' ? body.id.trim() : undefined;
   const markAllSeen = body.markAllSeen === true;
