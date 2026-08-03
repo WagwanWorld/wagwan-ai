@@ -613,7 +613,7 @@
     }
   }
 
-  function finish() {
+  async function finish() {
     finishError = '';
     const minOk = igConnected && !!igIdentity;
     if (!minOk) {
