@@ -31,6 +31,7 @@
     month: 'long',
     year: 'numeric',
   });
+  let signedDate = $derived(form?.signedDate ?? today);
 
   onMount(() => {
     // Override the global overflow: hidden on html/body so this page scrolls
@@ -102,7 +103,7 @@
         <div class="ag-success-meta">
           <div><span>Signed by</span><strong>{form.name}</strong></div>
           <div><span>Company</span><strong>{form.company}</strong></div>
-          <div><span>Date</span><strong>{today}</strong></div>
+          <div><span>Date</span><strong>{signedDate}</strong></div>
         </div>
         <button
           class="ag-download"
@@ -111,7 +112,7 @@
               signerName: form.name,
               companyName: form.company,
               signatureDataUrl: form.signature ?? null,
-              date: today,
+              date: signedDate,
             })}
         >
           <svg
@@ -430,9 +431,8 @@
           <section class="ag-sec">
             <h2>7. TERM AND TERMINATION</h2>
             <p>
-              7.1. This Agreement shall commence on the Effective Date and remain in effect for <strong
-                >12 months</strong
-              >.
+              7.1. This Agreement shall commence on the Effective Date and remain in effect for the
+              period stated in Clause 3, unless terminated earlier.
             </p>
             <p>
               7.2. Either Party may terminate with <strong>30 days' prior written notice</strong>.

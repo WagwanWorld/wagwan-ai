@@ -23,12 +23,13 @@ export const actions = {
 
     try {
       const sb = getServiceSupabase();
+      const signedAt = new Date();
       const { error } = await sb.from('signed_agreements').insert({
         signer_name: name,
         company_name: company,
         signature_data: signature,
         agreement_type: 'service_agreement_fuzone',
-        signed_at: new Date().toISOString(),
+        signed_at: signedAt.toISOString(),
         ip_address: null,
       });
 
@@ -37,7 +38,17 @@ export const actions = {
         return fail(500, { error: 'Failed to save agreement. Please try again.' });
       }
 
-      return { success: true, name, company, signature };
+      return {
+        success: true,
+        name,
+        company,
+        signature,
+        signedDate: signedAt.toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }),
+      };
     } catch (err) {
       console.error('Agreement submission error:', err);
       return fail(500, { error: 'An unexpected error occurred. Please try again.' });

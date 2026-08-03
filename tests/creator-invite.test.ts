@@ -7,7 +7,14 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
+import {
+  normalizeInstagramUsername,
+  profileInstagramUsername,
+} from '../src/lib/server/creatorAuth';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -150,6 +157,48 @@ describe('buildFeedSummary', () => {
     });
     expect(feedSummary.length).toBeGreaterThan(10);
     expect(contentThemes.length).toBeGreaterThan(0);
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves sheet upload contact and custom fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: '@sheetcreator',
+        displayName: 'Sheet Creator',
+        email: 'creator@example.com',
+        phone: '+91 99999 99999',
+        rates: '50k/story',
+        notes: 'Prefers weekend events',
+        tags: 'nightlife, fashion',
+        location: 'Bengaluru',
+        custom_fields: {
+          Agency: 'ACME Talent',
+          Empty: '',
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.handle).toBe('sheetcreator');
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+91 99999 99999');
+    expect(snap.rates).toBe('50k/story');
+    expect(snap.notes).toBe('Prefers weekend events');
+    expect(snap.tags).toBe('nightlife, fashion');
+    expect(snap.location).toBe('Bengaluru');
+    expect(snap.custom_fields).toEqual({ Agency: 'ACME Talent' });
+  });
+});
+
+describe('creator auth utilities', () => {
+  it('normalizes Instagram usernames for invite ownership checks', () => {
+    expect(normalizeInstagramUsername('@Creator.Name')).toBe('creator.name');
+    expect(
+      profileInstagramUsername({
+        profile_data: { instagramIdentity: { username: '@Creator.Name' } },
+      }),
+    ).toBe('creator.name');
   });
 });
 
