@@ -247,8 +247,13 @@
   async function loadBrandSignals() {
     const sub = $profile.googleSub?.trim();
     if (!sub) return;
+    if (typeof localStorage === 'undefined') return;
+    const token = localStorage.getItem('wagwan_access_token') || '';
+    if (!token) return;
     try {
-      const res = await fetch(`/api/creator/brand-signals?googleSub=${encodeURIComponent(sub)}`);
+      const res = await fetch('/api/creator/brand-signals', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (data.ok) {
@@ -264,12 +269,15 @@
   function markSignalSeen(id: string) {
     const sub = $profile.googleSub?.trim();
     if (!sub) return;
+    if (typeof localStorage === 'undefined') return;
+    const token = localStorage.getItem('wagwan_access_token') || '';
+    if (!token) return;
     brandSignals = brandSignals.map((s) => (s.id === id ? { ...s, seen: true } : s));
     brandSignalsUnseenCount = Math.max(0, brandSignalsUnseenCount - 1);
     fetch('/api/creator/brand-signals', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ googleSub: sub, id }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id }),
     }).catch(() => {});
   }
 
