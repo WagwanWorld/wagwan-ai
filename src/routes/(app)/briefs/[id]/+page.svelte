@@ -3,6 +3,7 @@
   import { page } from '$app/stores';
   import { profile } from '$lib/stores/profile';
   import { ArrowLeft, CheckCircle, InstagramLogo, Lightning } from 'phosphor-svelte';
+  import { wagwanAuthHeaders } from '$lib/auth/wagwanApi';
 
   let campaign: any = null;
   let briefResponse: any = null;
@@ -79,8 +80,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sub, campaignId: $page.params.id, action }),
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ campaignId: $page.params.id, action }),
       });
       const data = await res.json();
       if (data.ok)
@@ -104,9 +105,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          sub,
           campaignId: $page.params.id,
           action: 'complete',
           igPostUrl: igPostUrl.trim(),

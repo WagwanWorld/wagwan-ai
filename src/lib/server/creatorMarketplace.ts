@@ -129,18 +129,16 @@ export async function respondToBrief(
   const status: BriefStatus = action === 'accept' ? 'accepted' : 'declined';
   const { data, error } = await getServiceSupabase()
     .from('brief_responses')
-    .upsert(
-      {
-        campaign_id: campaignId,
-        user_google_sub: sub,
-        status,
-        accepted_at: action === 'accept' ? now : null,
-        updated_at: now,
-      },
-      { onConflict: 'campaign_id,user_google_sub' },
-    )
+    .update({
+      status,
+      accepted_at: action === 'accept' ? now : null,
+      updated_at: now,
+    })
+    .eq('campaign_id', campaignId)
+    .eq('user_google_sub', sub)
+    .eq('status', 'sent')
     .select()
-    .single();
+    .maybeSingle();
   if (error) console.error('[creatorMarketplace] respondToBrief:', error.message);
   return (data as BriefResponse | null) ?? null;
 }
@@ -209,14 +207,6 @@ export async function completeBrief(
 export async function creditPendingEarnings(sub: string, campaignId: string): Promise<boolean> {
   const sb = getServiceSupabase();
 
-  const { data: existing } = await sb
-    .from('user_earnings')
-    .select('id')
-    .eq('user_google_sub', sub)
-    .eq('campaign_id', campaignId)
-    .limit(1);
-  if (existing && existing.length > 0) return true;
-
   const { data: camp, error: campErr } = await sb
     .from('campaigns')
     .select('reward_inr, title')
@@ -229,13 +219,16 @@ export async function creditPendingEarnings(sub: string, campaignId: string): Pr
   const reward = Number(camp?.reward_inr ?? 0);
   if (!(reward > 0)) return true;
 
-  const { error } = await sb.from('user_earnings').insert({
-    user_google_sub: sub,
-    campaign_id: campaignId,
-    amount_inr: reward,
-    status: 'pending',
-    note: `Campaign completed — pending settlement${camp?.title ? ` (${camp.title})` : ''}`,
-  });
+  const { error } = await sb.from('user_earnings').upsert(
+    {
+      user_google_sub: sub,
+      campaign_id: campaignId,
+      amount_inr: reward,
+      status: 'pending',
+      note: `Campaign completed - pending settlement${camp?.title ? ` (${camp.title})` : ''}`,
+    },
+    { onConflict: 'user_google_sub,campaign_id', ignoreDuplicates: true },
+  );
   if (error) {
     console.error('[creatorMarketplace] creditPendingEarnings insert:', error.message);
     return false;

@@ -6,7 +6,13 @@
   import { syncProfileToSupabase } from '$lib/client/syncProfileToSupabase';
   import { goto } from '$app/navigation';
   import type { InstagramIdentity } from '$lib/server/instagram';
-  import type { SpotifyIdentity, AppleMusicIdentity, YouTubeIdentity, LinkedInIdentity, GoogleIdentity } from '$lib/utils';
+  import type {
+    SpotifyIdentity,
+    AppleMusicIdentity,
+    YouTubeIdentity,
+    LinkedInIdentity,
+    GoogleIdentity,
+  } from '$lib/utils';
   import {
     clearChatMemory,
     exportChatMemoryJson,
@@ -24,12 +30,13 @@
   import { twinUiContext } from '$lib/stores/contextStore';
   import { prefetchArtistArtwork } from '$lib/client/itunesArtwork';
   import IntegrityScore from '$lib/components/earn/IntegrityScore.svelte';
+  import { wagwanAuthHeaders } from '$lib/auth/wagwanApi';
 
   // iTunes artwork cache (keyed by artist name) — shared module handles network + dedupe
   let itunesArtwork: Record<string, string> = {};
 
   async function fetchItunesArtwork(artists: string[]): Promise<void> {
-    const toFetch = artists.slice(0, 5).filter(a => a && !itunesArtwork[a]);
+    const toFetch = artists.slice(0, 5).filter((a) => a && !itunesArtwork[a]);
     if (!toFetch.length) return;
     const batch = await prefetchArtistArtwork(toFetch);
     itunesArtwork = { ...itunesArtwork, ...batch };
@@ -98,7 +105,8 @@
   $: googleTwinInsights = buildProfileTwinKnows($profile.googleIdentity?.twin);
   let refreshError = '';
 
-  $: profilePic = $profile.instagramIdentity?.profilePicture || $profile.googleIdentity?.picture || '';
+  $: profilePic =
+    $profile.instagramIdentity?.profilePicture || $profile.googleIdentity?.picture || '';
   $: displayName = $profile.name || 'You';
   $: city = $profile.city || $profile.instagramIdentity?.city || '';
 
@@ -111,30 +119,44 @@
     if (!next || next === ($profile.city || '')) return;
     locationSaving = true;
     locationSaved = false;
-    profile.update(p => ({ ...p, city: next, locationUpdatedAt: new Date().toISOString() }));
+    profile.update((p) => ({ ...p, city: next, locationUpdatedAt: new Date().toISOString() }));
 
     // Save to backend
     try {
       await fetch('/api/profile/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ googleSub: $profile.googleSub, profile: { ...$profile, city: next } }),
+        body: JSON.stringify({
+          googleSub: $profile.googleSub,
+          profile: { ...$profile, city: next },
+        }),
       });
       // Refresh signals with new location (fire-and-forget, consume SSE stream)
       fetch('/api/refresh-signals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ googleSub: $profile.googleSub, forceInference: true }),
-      }).then(r => r.body?.getReader().read()).catch(() => {});
+      })
+        .then((r) => r.body?.getReader().read())
+        .catch(() => {});
       locationSaved = true;
-      setTimeout(() => { locationSaved = false; }, 3000);
-    } catch {} finally {
+      setTimeout(() => {
+        locationSaved = false;
+      }, 3000);
+    } catch {
+    } finally {
       locationSaving = false;
     }
   }
 
   // Creator rates
-  let rates = { ig_post_rate_inr: 0, ig_story_rate_inr: 0, ig_reel_rate_inr: 0, whatsapp_intro_rate_inr: 0, available: false };
+  let rates = {
+    ig_post_rate_inr: 0,
+    ig_story_rate_inr: 0,
+    ig_reel_rate_inr: 0,
+    whatsapp_intro_rate_inr: 0,
+    available: false,
+  };
   let ratesLoaded = false;
   let ratesSaving = false;
   let ratesSaved = false;
@@ -160,8 +182,11 @@
         body: JSON.stringify({ sub: $profile.googleSub, rates }),
       });
       ratesSaved = true;
-      setTimeout(() => { ratesSaved = false; }, 3000);
-    } catch {} finally {
+      setTimeout(() => {
+        ratesSaved = false;
+      }, 3000);
+    } catch {
+    } finally {
       ratesSaving = false;
     }
   }
@@ -191,40 +216,97 @@
   }
 
   $: platforms = [
-    { name: 'Google', connected: $profile.googleConnected, icon: '🔵', color: '#4285F4',
-      connect: () => { window.location.href = '/auth/google?from=profile'; },
-      disconnect: () => { profile.update(p => ({ ...p, googleConnected: false, googleIdentity: null, googleAccessToken: '', googleRefreshToken: '' })); } },
-    { name: 'Instagram', connected: $profile.instagramConnected, icon: '📸', color: '#E1306C',
-      connect: () => { window.location.href = '/auth/instagram?from=profile'; },
-      disconnect: () => { profile.update(p => ({ ...p, instagramConnected: false, instagramIdentity: null })); } },
-    { name: 'Spotify', connected: $profile.spotifyConnected, icon: '🎵', color: '#1DB954',
-      connect: () => { window.location.href = '/auth/spotify?from=profile'; },
-      disconnect: () => { profile.update(p => ({ ...p, spotifyConnected: false, spotifyIdentity: null })); } },
-    { name: 'LinkedIn', connected: $profile.linkedinConnected, icon: '💼', color: '#0077B5',
-      connect: () => { window.location.href = '/auth/linkedin?from=profile'; },
-      disconnect: () => { profile.update(p => ({ ...p, linkedinConnected: false, linkedinIdentity: null })); } },
-    { name: 'Apple Music', connected: $profile.appleMusicConnected, icon: '🎧', color: '#FC3C44',
-      connect: () => { window.location.href = '/auth/applemusic/connect?from=profile'; },
+    {
+      name: 'Google',
+      connected: $profile.googleConnected,
+      icon: '🔵',
+      color: '#4285F4',
+      connect: () => {
+        window.location.href = '/auth/google?from=profile';
+      },
+      disconnect: () => {
+        profile.update((p) => ({
+          ...p,
+          googleConnected: false,
+          googleIdentity: null,
+          googleAccessToken: '',
+          googleRefreshToken: '',
+        }));
+      },
+    },
+    {
+      name: 'Instagram',
+      connected: $profile.instagramConnected,
+      icon: '📸',
+      color: '#E1306C',
+      connect: () => {
+        window.location.href = '/auth/instagram?from=profile';
+      },
+      disconnect: () => {
+        profile.update((p) => ({ ...p, instagramConnected: false, instagramIdentity: null }));
+      },
+    },
+    {
+      name: 'Spotify',
+      connected: $profile.spotifyConnected,
+      icon: '🎵',
+      color: '#1DB954',
+      connect: () => {
+        window.location.href = '/auth/spotify?from=profile';
+      },
+      disconnect: () => {
+        profile.update((p) => ({ ...p, spotifyConnected: false, spotifyIdentity: null }));
+      },
+    },
+    {
+      name: 'LinkedIn',
+      connected: $profile.linkedinConnected,
+      icon: '💼',
+      color: '#0077B5',
+      connect: () => {
+        window.location.href = '/auth/linkedin?from=profile';
+      },
+      disconnect: () => {
+        profile.update((p) => ({ ...p, linkedinConnected: false, linkedinIdentity: null }));
+      },
+    },
+    {
+      name: 'Apple Music',
+      connected: $profile.appleMusicConnected,
+      icon: '🎧',
+      color: '#FC3C44',
+      connect: () => {
+        window.location.href = '/auth/applemusic/connect?from=profile';
+      },
       disconnect: async () => {
         const sub = $profile.googleSub;
-        profile.update(p => ({ ...p, appleMusicConnected: false, appleMusicIdentity: null }));
+        profile.update((p) => ({ ...p, appleMusicConnected: false, appleMusicIdentity: null }));
         if (sub) await syncProfileToSupabase(get(profile), { appleMusicUserToken: '' });
-      } },
-    { name: 'YouTube', connected: $profile.youtubeConnected, icon: '📺', color: '#FF0000',
-      connect: () => { window.location.href = '/auth/youtube?from=profile'; },
-      disconnect: () => { profile.update(p => ({ ...p, youtubeConnected: false, youtubeIdentity: null })); } },
+      },
+    },
+    {
+      name: 'YouTube',
+      connected: $profile.youtubeConnected,
+      icon: '📺',
+      color: '#FF0000',
+      connect: () => {
+        window.location.href = '/auth/youtube?from=profile';
+      },
+      disconnect: () => {
+        profile.update((p) => ({ ...p, youtubeConnected: false, youtubeIdentity: null }));
+      },
+    },
   ] as PlatformInfo[];
 
-  $: connectedCount = platforms.filter(p => p.connected).length;
+  $: connectedCount = platforms.filter((p) => p.connected).length;
 
   async function clearCloudTwinChat(googleSub: string | undefined) {
     if (!googleSub) return;
     try {
       await fetch('/api/chat/thread', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          googleSub,
           thread: { version: 2, updatedAt: new Date().toISOString(), messages: [], summary: '' },
         }),
       });
@@ -240,8 +322,8 @@
     clearTwinMem(twinMemKey($profile));
     try {
       Object.keys(localStorage)
-        .filter(k => k.startsWith('wagwan_home_') || k.startsWith('wagwan_google_'))
-        .forEach(k => localStorage.removeItem(k));
+        .filter((k) => k.startsWith('wagwan_home_') || k.startsWith('wagwan_google_'))
+        .forEach((k) => localStorage.removeItem(k));
     } catch {}
     void clearCloudTwinChat(sub);
     profile.reset();
@@ -268,7 +350,12 @@
   }
 
   function readCookie(name: string): string | undefined {
-    return document.cookie.split('; ').find(c => c.startsWith(`${name}=`))?.split('=').slice(1).join('=');
+    return document.cookie
+      .split('; ')
+      .find((c) => c.startsWith(`${name}=`))
+      ?.split('=')
+      .slice(1)
+      .join('=');
   }
 
   function clearCookieByName(name: string) {
@@ -293,13 +380,20 @@
 
       if (!res.ok) {
         const text = await res.text();
-        try { refreshError = JSON.parse(text).error || 'Failed to refresh signals'; } catch { refreshError = 'Failed to refresh signals'; }
+        try {
+          refreshError = JSON.parse(text).error || 'Failed to refresh signals';
+        } catch {
+          refreshError = 'Failed to refresh signals';
+        }
         return;
       }
 
       // Read SSE stream for progress updates
       const reader = res.body?.getReader();
-      if (!reader) { refreshError = 'No response stream'; return; }
+      if (!reader) {
+        refreshError = 'No response stream';
+        return;
+      }
       const decoder = new TextDecoder();
       let buffer = '';
       let finalData: Record<string, unknown> | null = null;
@@ -317,7 +411,7 @@
             if (msg.step) refreshStatus = msg.step;
             if (msg.partial && msg.updated) {
               // Apply platform data immediately so UI refreshes fast
-              profile.update(p => ({
+              profile.update((p) => ({
                 ...p,
                 ...(msg.updated as Partial<typeof p>),
                 profileUpdatedAt: (msg.updatedAt as string) || new Date().toISOString(),
@@ -331,7 +425,7 @@
       if (finalData && finalData.ok) {
         refreshResult = { expired: (finalData.expired as string[]) ?? [] };
         if (finalData.updated) {
-          profile.update(p => ({
+          profile.update((p) => ({
             ...p,
             ...(finalData!.updated as Partial<typeof p>),
             profileUpdatedAt: (finalData!.updatedAt as string) || new Date().toISOString(),
@@ -340,8 +434,8 @@
         // Clear feed caches so next visit gets fresh content
         try {
           Object.keys(localStorage)
-            .filter(k => k.startsWith('wagwan_home_') || k.startsWith('wagwan_google_'))
-            .forEach(k => localStorage.removeItem(k));
+            .filter((k) => k.startsWith('wagwan_home_') || k.startsWith('wagwan_google_'))
+            .forEach((k) => localStorage.removeItem(k));
         } catch {}
       } else {
         refreshError = (finalData?.error as string) || 'Refresh failed — please try again.';
@@ -357,146 +451,161 @@
 
   onMount(() => {
     void (async () => {
-    const searchParams = $page.url.searchParams;
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      connectError =
-        errorParam === 'linkedin_denied' ? 'LinkedIn sign-in was cancelled.' :
-        errorParam === 'linkedin_failed' ? 'LinkedIn connection failed — check server logs.' :
-        errorParam === 'linkedin_not_configured' ? 'LinkedIn is not configured.' :
-        `Connection error: ${errorParam}`;
-      const u = new URL(window.location.href);
-      u.searchParams.delete('error');
-      window.history.replaceState({}, '', u.toString());
-    }
-    const igErr = searchParams.get('ig_error');
-    if (igErr) {
-      connectError =
-        igErr === 'not_configured'
-          ? 'Instagram is not configured on the server (missing INSTAGRAM_APP_ID).'
-          : (() => {
-              try {
-                return decodeURIComponent(igErr);
-              } catch {
-                return igErr;
+      const searchParams = $page.url.searchParams;
+      const errorParam = searchParams.get('error');
+      if (errorParam) {
+        connectError =
+          errorParam === 'linkedin_denied'
+            ? 'LinkedIn sign-in was cancelled.'
+            : errorParam === 'linkedin_failed'
+              ? 'LinkedIn connection failed — check server logs.'
+              : errorParam === 'linkedin_not_configured'
+                ? 'LinkedIn is not configured.'
+                : `Connection error: ${errorParam}`;
+        const u = new URL(window.location.href);
+        u.searchParams.delete('error');
+        window.history.replaceState({}, '', u.toString());
+      }
+      const igErr = searchParams.get('ig_error');
+      if (igErr) {
+        connectError =
+          igErr === 'not_configured'
+            ? 'Instagram is not configured on the server (missing INSTAGRAM_APP_ID).'
+            : (() => {
+                try {
+                  return decodeURIComponent(igErr);
+                } catch {
+                  return igErr;
+                }
+              })();
+        const u = new URL(window.location.href);
+        u.searchParams.delete('ig_error');
+        window.history.replaceState({}, '', u.toString());
+      }
+      if (searchParams.get('spotify') === 'connected') {
+        const spotifyTokRaw = readCookie('spotify_token');
+        if (spotifyTokRaw) clearCookieByName('spotify_token');
+        const cookie = document.cookie.split('; ').find((c) => c.startsWith('spotify_identity='));
+        if (cookie) {
+          try {
+            const identity: SpotifyIdentity = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+            profile.update((p) => ({ ...p, spotifyConnected: true, spotifyIdentity: identity }));
+            document.cookie = 'spotify_identity=; max-age=0; path=/';
+          } catch {}
+        } else {
+          profile.update((p) => ({ ...p, spotifyConnected: true }));
+        }
+        const st = spotifyTokRaw ? decodeURIComponent(spotifyTokRaw) : '';
+        if (get(profile).googleSub) {
+          await syncProfileToSupabase(get(profile), st ? { spotifyToken: st } : undefined);
+        }
+      }
+      if (searchParams.get('youtube') === 'connected') {
+        const ytCookie = document.cookie.split('; ').find((c) => c.startsWith('youtube_identity='));
+        if (ytCookie) {
+          try {
+            const identity: YouTubeIdentity = JSON.parse(
+              decodeURIComponent(ytCookie.split('=')[1]),
+            );
+            profile.update((p) => ({ ...p, youtubeConnected: true, youtubeIdentity: identity }));
+            document.cookie = 'youtube_identity=; max-age=0; path=/';
+          } catch {}
+        } else {
+          profile.update((p) => ({ ...p, youtubeConnected: true }));
+        }
+      }
+      if (searchParams.get('google') === 'connected') {
+        const gCookie = document.cookie.split('; ').find((c) => c.startsWith('google_identity='));
+        const tCookie = document.cookie.split('; ').find((c) => c.startsWith('google_tokens='));
+        if (gCookie) {
+          try {
+            const identity: GoogleIdentity = JSON.parse(decodeURIComponent(gCookie.split('=')[1]));
+            const tokens = tCookie ? JSON.parse(decodeURIComponent(tCookie.split('=')[1])) : {};
+            profile.update((p) => ({
+              ...p,
+              googleConnected: true,
+              googleIdentity: identity,
+              googleAccessToken: tokens.accessToken ?? '',
+              googleRefreshToken: tokens.refreshToken ?? '',
+            }));
+            document.cookie = 'google_identity=; max-age=0; path=/';
+            document.cookie = 'google_tokens=; max-age=0; path=/';
+            if (get(profile).googleSub) await syncProfileToSupabase(get(profile));
+          } catch {}
+        }
+      }
+      if (searchParams.get('linkedin') === 'connected') {
+        const liTokRaw = readCookie('linkedin_token');
+        if (liTokRaw) clearCookieByName('linkedin_token');
+        const liRaw = readCookie('linkedin_identity');
+        if (liRaw) document.cookie = 'linkedin_identity=; max-age=0; path=/';
+        let liIdentity: LinkedInIdentity | null = null;
+        if (liRaw) {
+          try {
+            liIdentity = JSON.parse(decodeURIComponent(liRaw)) as LinkedInIdentity;
+          } catch {}
+        }
+        // Mark connected regardless of whether identity parsed — user successfully authenticated
+        profile.update((p) => ({
+          ...p,
+          linkedinConnected: true,
+          ...(liIdentity ? { linkedinIdentity: liIdentity } : {}),
+        }));
+        // Clean up URL
+        const u = new URL(window.location.href);
+        u.searchParams.delete('linkedin');
+        window.history.replaceState({}, '', u.toString());
+        const lt = liTokRaw ? decodeURIComponent(liTokRaw) : '';
+        if (get(profile).googleSub) {
+          await syncProfileToSupabase(get(profile), lt ? { linkedinToken: lt } : undefined);
+        }
+      }
+      if (searchParams.get('apple') === 'connected' && get(profile).googleSub) {
+        await syncProfileToSupabase(get(profile));
+      }
+
+      // Instagram callback (from profile reconnection)
+      if (searchParams.get('ig_connected') === '1') {
+        const redemptionToken =
+          (searchParams.get('ig_rt') || '').trim() || readCookie('ig_redemption');
+        clearCookieByName('ig_redemption');
+        clearCookieByName('ig_identity');
+
+        const u = new URL(window.location.href);
+        u.searchParams.delete('ig_connected');
+        u.searchParams.delete('ig_rt');
+        window.history.replaceState({}, '', u.toString());
+
+        if (!redemptionToken) {
+          connectError = 'Instagram could not finish (missing token). Tap Connect again.';
+        } else {
+          profile.update((p) => ({ ...p, instagramConnected: true }));
+          fetch(`/api/instagram/identity?token=${encodeURIComponent(redemptionToken)}`)
+            .then(async (r) => {
+              if (!r.ok) {
+                connectError = 'Could not load Instagram profile — tap Connect again.';
+                profile.update((p) => ({ ...p, instagramConnected: false }));
+                return null;
               }
-            })();
-      const u = new URL(window.location.href);
-      u.searchParams.delete('ig_error');
-      window.history.replaceState({}, '', u.toString());
-    }
-    if (searchParams.get('spotify') === 'connected') {
-      const spotifyTokRaw = readCookie('spotify_token');
-      if (spotifyTokRaw) clearCookieByName('spotify_token');
-      const cookie = document.cookie.split('; ').find(c => c.startsWith('spotify_identity='));
-      if (cookie) {
-        try {
-          const identity: SpotifyIdentity = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
-          profile.update(p => ({ ...p, spotifyConnected: true, spotifyIdentity: identity }));
-          document.cookie = 'spotify_identity=; max-age=0; path=/';
-        } catch {}
-      } else {
-        profile.update(p => ({ ...p, spotifyConnected: true }));
+              return r.json();
+            })
+            .then(async (data) => {
+              if (data?.identity) {
+                profile.update((p) => ({
+                  ...p,
+                  instagramIdentity: data.identity as InstagramIdentity,
+                }));
+                if (get(profile).googleSub) await syncProfileToSupabase(get(profile));
+              }
+            })
+            .catch(() => {
+              connectError = 'Instagram connection failed — try again.';
+              profile.update((p) => ({ ...p, instagramConnected: false }));
+            });
+        }
       }
-      const st = spotifyTokRaw ? decodeURIComponent(spotifyTokRaw) : '';
-      if (get(profile).googleSub) {
-        await syncProfileToSupabase(get(profile), st ? { spotifyToken: st } : undefined);
-      }
-    }
-    if (searchParams.get('youtube') === 'connected') {
-      const ytCookie = document.cookie.split('; ').find(c => c.startsWith('youtube_identity='));
-      if (ytCookie) {
-        try {
-          const identity: YouTubeIdentity = JSON.parse(decodeURIComponent(ytCookie.split('=')[1]));
-          profile.update(p => ({ ...p, youtubeConnected: true, youtubeIdentity: identity }));
-          document.cookie = 'youtube_identity=; max-age=0; path=/';
-        } catch {}
-      } else {
-        profile.update(p => ({ ...p, youtubeConnected: true }));
-      }
-    }
-    if (searchParams.get('google') === 'connected') {
-      const gCookie = document.cookie.split('; ').find(c => c.startsWith('google_identity='));
-      const tCookie = document.cookie.split('; ').find(c => c.startsWith('google_tokens='));
-      if (gCookie) {
-        try {
-          const identity: GoogleIdentity = JSON.parse(decodeURIComponent(gCookie.split('=')[1]));
-          const tokens = tCookie ? JSON.parse(decodeURIComponent(tCookie.split('=')[1])) : {};
-          profile.update(p => ({ ...p, googleConnected: true, googleIdentity: identity, googleAccessToken: tokens.accessToken ?? '', googleRefreshToken: tokens.refreshToken ?? '' }));
-          document.cookie = 'google_identity=; max-age=0; path=/';
-          document.cookie = 'google_tokens=; max-age=0; path=/';
-          if (get(profile).googleSub) await syncProfileToSupabase(get(profile));
-        } catch {}
-      }
-    }
-    if (searchParams.get('linkedin') === 'connected') {
-      const liTokRaw = readCookie('linkedin_token');
-      if (liTokRaw) clearCookieByName('linkedin_token');
-      const liRaw = readCookie('linkedin_identity');
-      if (liRaw) document.cookie = 'linkedin_identity=; max-age=0; path=/';
-      let liIdentity: LinkedInIdentity | null = null;
-      if (liRaw) {
-        try {
-          liIdentity = JSON.parse(decodeURIComponent(liRaw)) as LinkedInIdentity;
-        } catch {}
-      }
-      // Mark connected regardless of whether identity parsed — user successfully authenticated
-      profile.update(p => ({ ...p, linkedinConnected: true, ...(liIdentity ? { linkedinIdentity: liIdentity } : {}) }));
-      // Clean up URL
-      const u = new URL(window.location.href);
-      u.searchParams.delete('linkedin');
-      window.history.replaceState({}, '', u.toString());
-      const lt = liTokRaw ? decodeURIComponent(liTokRaw) : '';
-      if (get(profile).googleSub) {
-        await syncProfileToSupabase(get(profile), lt ? { linkedinToken: lt } : undefined);
-      }
-    }
-    if (searchParams.get('apple') === 'connected' && get(profile).googleSub) {
-      await syncProfileToSupabase(get(profile));
-    }
-
-    // Instagram callback (from profile reconnection)
-    if (searchParams.get('ig_connected') === '1') {
-      const redemptionToken =
-        (searchParams.get('ig_rt') || '').trim() || readCookie('ig_redemption');
-      clearCookieByName('ig_redemption');
-      clearCookieByName('ig_identity');
-
-      const u = new URL(window.location.href);
-      u.searchParams.delete('ig_connected');
-      u.searchParams.delete('ig_rt');
-      window.history.replaceState({}, '', u.toString());
-
-      if (!redemptionToken) {
-        connectError = 'Instagram could not finish (missing token). Tap Connect again.';
-      } else {
-        profile.update(p => ({ ...p, instagramConnected: true }));
-        fetch(`/api/instagram/identity?token=${encodeURIComponent(redemptionToken)}`)
-          .then(async r => {
-            if (!r.ok) {
-              connectError = 'Could not load Instagram profile — tap Connect again.';
-              profile.update(p => ({ ...p, instagramConnected: false }));
-              return null;
-            }
-            return r.json();
-          })
-          .then(async data => {
-            if (data?.identity) {
-              profile.update(p => ({
-                ...p,
-                instagramIdentity: data.identity as InstagramIdentity,
-              }));
-              if (get(profile).googleSub) await syncProfileToSupabase(get(profile));
-            }
-          })
-          .catch(() => {
-            connectError = 'Instagram connection failed — try again.';
-            profile.update(p => ({ ...p, instagramConnected: false }));
-          });
-      }
-    }
-    await loadGraphStrength();
-    await loadRates();
+      await loadGraphStrength();
+      await loadRates();
     })();
   });
 </script>
@@ -504,496 +613,623 @@
 <div class="profile-page-root" data-profile-surface="dark">
   <div class="profile-aurora" aria-hidden="true"></div>
   <div class="pf">
-  {#if connectError}
-    <div class="pf-connect-error" role="alert">{connectError}</div>
-  {/if}
-  <!-- Identity Card -->
-  <div class="pf-card">
-    <div class="pf-card-glow" aria-hidden="true"></div>
-    {#if profilePic}
-      <img src={profilePic} alt="" class="pf-pic" referrerpolicy="no-referrer" />
-    {:else}
-      <div class="pf-pic-fallback">{displayName[0]?.toUpperCase()}</div>
+    {#if connectError}
+      <div class="pf-connect-error" role="alert">{connectError}</div>
     {/if}
-    <h1 class="pf-name">{displayName}</h1>
-    {#if city}<p class="pf-city">{city}</p>{/if}
-    {#if aesthetic}<p class="pf-aesthetic">{aesthetic}</p>{/if}
-
-    {#if personalTags.length > 0}
-      <div class="pf-tags">
-        {#each personalTags as tag}
-          <span class="pf-tag">{tag}</span>
-        {/each}
-      </div>
-    {/if}
-
-    {#if graphStrength}
-      <div style="margin-top: 16px;">
-        <IntegrityScore
-          score={graphStrength.score}
-          label={graphStrength.label}
-          breakdown={[
-            { name: 'Google', connected: $profile.googleConnected },
-            { name: 'Instagram', connected: $profile.instagramConnected },
-            { name: 'Spotify', connected: $profile.spotifyConnected },
-            { name: 'Apple Music', connected: $profile.appleMusicConnected },
-            { name: 'LinkedIn', connected: $profile.linkedinConnected },
-          ]}
-        />
-      </div>
-    {/if}
-
-    <a href="/earn" class="pf-creator-link">Creator Settings & Rates →</a>
-  </div>
-
-  {#if graphStrengthLoading && !graphStrength}
-    <p class="pf-graph-loading">Loading signal strength…</p>
-  {:else if graphStrength}
-    <section class="pf-section pf-graph-strength">
-      <div class="pf-signals-hd">
-        <h2 class="pf-label">
-          Match signal strength <span class="pf-label-count">{graphStrength.label}</span>
-        </h2>
-        <span class="pf-synced"
-          >{graphStrength.score}/100 · {graphStrength.source_count} sources · data {graphStrength.freshness_bucket}</span
-        >
-      </div>
-      <p class="pf-graph-copy">
-        Brands search using your identity graph. More connected accounts and fresher sync usually mean better,
-        more relevant matches. We summarize connected accounts into tags; brands do not receive raw inbox, DMs,
-        or full OAuth payloads. Edit manual interests on Earn. Disconnect any link here anytime.
-      </p>
-      <div class="pf-strength-bar" aria-hidden="true">
-        <div class="pf-strength-fill" style="width: {Math.min(100, graphStrength.score)}%"></div>
-      </div>
-      <p class="pf-graph-meta">{graphStrength.tag_count} signal tags indexed</p>
-    </section>
-  {/if}
-
-  <!-- Live Signal Tiles -->
-  <section class="pf-section">
-    <div class="pf-signals-hd">
-      <h2 class="pf-label">Signals <span class="pf-label-count">{connectedCount} connected</span></h2>
-      {#if $profile.profileUpdatedAt}
-        <span class="pf-synced">↻ {relativeTime($profile.profileUpdatedAt)}</span>
+    <!-- Identity Card -->
+    <div class="pf-card">
+      <div class="pf-card-glow" aria-hidden="true"></div>
+      {#if profilePic}
+        <img src={profilePic} alt="" class="pf-pic" referrerpolicy="no-referrer" />
+      {:else}
+        <div class="pf-pic-fallback">{displayName[0]?.toUpperCase()}</div>
       {/if}
+      <h1 class="pf-name">{displayName}</h1>
+      {#if city}<p class="pf-city">{city}</p>{/if}
+      {#if aesthetic}<p class="pf-aesthetic">{aesthetic}</p>{/if}
+
+      {#if personalTags.length > 0}
+        <div class="pf-tags">
+          {#each personalTags as tag}
+            <span class="pf-tag">{tag}</span>
+          {/each}
+        </div>
+      {/if}
+
+      {#if graphStrength}
+        <div style="margin-top: 16px;">
+          <IntegrityScore
+            score={graphStrength.score}
+            label={graphStrength.label}
+            breakdown={[
+              { name: 'Google', connected: $profile.googleConnected },
+              { name: 'Instagram', connected: $profile.instagramConnected },
+              { name: 'Spotify', connected: $profile.spotifyConnected },
+              { name: 'Apple Music', connected: $profile.appleMusicConnected },
+              { name: 'LinkedIn', connected: $profile.linkedinConnected },
+            ]}
+          />
+        </div>
+      {/if}
+
+      <a href="/earn" class="pf-creator-link">Creator Settings & Rates →</a>
     </div>
 
-    {#if connectedCount > 0}
-      <div class="pf-signal-tiles">
-
-        <!-- LinkedIn -->
-        {#if $profile.linkedinConnected}
-          {@const li = $profile.linkedinIdentity}
-          <div class="pf-tile">
-            <div class="pf-tile-hd">
-              <span class="pf-tile-icon">💼</span>
-              <span class="pf-tile-name">LinkedIn</span>
-              <span class="pf-tile-dot"></span>
-            </div>
-            {#if li?.currentRole || li?.headline}
-              <p class="pf-tile-lead">{li.currentRole || li.headline}</p>
-              {#if li.currentCompany}<p class="pf-tile-sub">at {li.currentCompany}</p>{/if}
-              <div class="pf-tile-chips">
-                {#if li.seniority}<span class="pf-chip pf-chip--pro">{li.seniority}</span>{/if}
-                {#each li.skills.slice(0, 2) as sk}<span class="pf-chip">{sk}</span>{/each}
-                {#each (li.professionalThemeTags ?? []).slice(0, 3) as tg}<span class="pf-chip">{tg.replace(/_/g, ' ')}</span>{/each}
-              </div>
-              {#if li.careerSummary}
-                <p class="pf-tile-quote">"{li.careerSummary.slice(0, 68)}{li.careerSummary.length > 68 ? '…' : ''}"</p>
-              {/if}
-            {:else}
-              <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
-            {/if}
-            <button class="pf-tile-disc" on:click={() => profile.update(p => ({ ...p, linkedinConnected: false, linkedinIdentity: null }))}>Disconnect</button>
-          </div>
-        {/if}
-
-        <!-- Instagram -->
-        {#if $profile.instagramConnected}
-          {@const ig = $profile.instagramIdentity}
-          <div class="pf-tile">
-            <div class="pf-tile-hd">
-              <span class="pf-tile-icon">📸</span>
-              <span class="pf-tile-name">Instagram</span>
-              <span class="pf-tile-dot"></span>
-            </div>
-            {#if ig?.aesthetic || ig?.interests?.length}
-              {#if ig.aesthetic}<p class="pf-tile-lead">{ig.aesthetic}</p>{/if}
-              {#if ig.followersCount != null}
-                <p class="pf-tile-sub">{ig.followersCount.toLocaleString()} followers{ig.mediaCount != null ? ` · ${ig.mediaCount} posts` : ''}</p>
-              {/if}
-              <div class="pf-tile-chips">
-                {#each (ig.interests ?? []).slice(0, 3) as t}<span class="pf-chip">{t}</span>{/each}
-              </div>
-              {#if ig.topHashtags?.length}
-                <p class="pf-tile-quote">"{ig.topHashtags.slice(0, 3).map(h => `#${h.replace(/^#/, '')}`).join(' ')}"</p>
-              {/if}
-            {:else}
-              <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
-            {/if}
-            <button class="pf-tile-disc" on:click={() => profile.update(p => ({ ...p, instagramConnected: false, instagramIdentity: null }))}>Disconnect</button>
-          </div>
-        {/if}
-
-        <!-- Apple Music -->
-        {#if $profile.appleMusicConnected}
-          {@const am = $profile.appleMusicIdentity}
-          <div class="pf-tile pf-tile--music">
-            <div class="pf-tile-hd">
-              <span class="pf-tile-icon">🎧</span>
-              <span class="pf-tile-name">Apple Music</span>
-              <span class="pf-tile-dot"></span>
-            </div>
-            {#if am}
-              {#if am.topArtists?.length}
-                <div class="pf-tile-art-row">
-                  {#each am.topArtists.slice(0, 3) as artist}
-                    {#if itunesArtwork[artist]}
-                      <img src={itunesArtwork[artist]} alt={artist} class="pf-tile-art" title={artist} />
-                    {:else}
-                      <div class="pf-tile-art pf-tile-art--ph">{artist[0]?.toUpperCase()}</div>
-                    {/if}
-                  {/each}
-                </div>
-              {/if}
-              {#if am.vibeDescription}<p class="pf-tile-lead">{am.vibeDescription}</p>{/if}
-              <div class="pf-tile-chips">
-                {#each (am.topGenres ?? []).slice(0, 3) as g}<span class="pf-chip">{g}</span>{/each}
-              </div>
-              {#if am.musicPersonality}
-                <p class="pf-tile-quote">"{am.musicPersonality.slice(0, 68)}{am.musicPersonality.length > 68 ? '…' : ''}"</p>
-              {/if}
-            {:else}
-              <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
-            {/if}
-            <button
-              class="pf-tile-disc"
-              on:click={async () => {
-                const sub = $profile.googleSub;
-                profile.update(p => ({ ...p, appleMusicConnected: false, appleMusicIdentity: null }));
-                if (sub) await syncProfileToSupabase(get(profile), { appleMusicUserToken: '' });
-              }}>Disconnect</button>
-          </div>
-        {/if}
-
-        <!-- Spotify -->
-        {#if $profile.spotifyConnected}
-          {@const sp = $profile.spotifyIdentity}
-          <div class="pf-tile pf-tile--music">
-            <div class="pf-tile-hd">
-              <span class="pf-tile-icon">🎵</span>
-              <span class="pf-tile-name">Spotify</span>
-              <span class="pf-tile-dot"></span>
-            </div>
-            {#if sp}
-              {#if sp.topArtists?.length}
-                <div class="pf-tile-art-row">
-                  {#each sp.topArtists.slice(0, 3) as artist}
-                    {#if itunesArtwork[artist]}
-                      <img src={itunesArtwork[artist]} alt={artist} class="pf-tile-art" title={artist} />
-                    {:else}
-                      <div class="pf-tile-art pf-tile-art--ph">{artist[0]?.toUpperCase()}</div>
-                    {/if}
-                  {/each}
-                </div>
-              {/if}
-              {#if sp.vibeDescription}<p class="pf-tile-lead">{sp.vibeDescription}</p>{/if}
-              <div class="pf-tile-chips">
-                {#each (sp.topGenres ?? []).slice(0, 3) as g}<span class="pf-chip">{g}</span>{/each}
-                {#each (sp.musicDescriptorTags ?? []).slice(0, 3) as g}<span class="pf-chip">{g}</span>{/each}
-              </div>
-              {#if sp.musicPersonality}
-                <p class="pf-tile-quote">"{sp.musicPersonality.slice(0, 68)}{sp.musicPersonality.length > 68 ? '…' : ''}"</p>
-              {/if}
-            {:else}
-              <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
-            {/if}
-            <button class="pf-tile-disc" on:click={() => profile.update(p => ({ ...p, spotifyConnected: false, spotifyIdentity: null }))}>Disconnect</button>
-          </div>
-        {/if}
-
-        <!-- Google -->
-        {#if $profile.googleConnected}
-          {@const gi = $profile.googleIdentity}
-          <div class="pf-tile">
-            <div class="pf-tile-hd">
-              <span class="pf-tile-icon">🔵</span>
-              <span class="pf-tile-name">Google</span>
-              <span class="pf-tile-dot"></span>
-            </div>
-            {#if $twinUiContext.nextEvent}
-              <p class="pf-tile-lead">{$twinUiContext.nextEvent.title}</p>
-              <p class="pf-tile-sub">{$twinUiContext.minutesUntilNext != null && $twinUiContext.minutesUntilNext < 120 ? `in ${$twinUiContext.minutesUntilNext}m` : 'upcoming'}</p>
-            {:else if gi?.contentPersonality}
-              <p class="pf-tile-lead">{gi.contentPersonality.slice(0, 52)}</p>
-            {:else}
-              <p class="pf-tile-sub pf-tile-empty">Calendar & inbox live</p>
-            {/if}
-            <div class="pf-tile-chips">
-              {#each (gi?.twin?.lifestyle?.dominantCalendarTypes ?? []).slice(0, 3) as t}
-                <span class="pf-chip">{t.replace(/_/g, ' ')}</span>
-              {/each}
-            </div>
-            {#if gi?.emailThemes?.[0]}
-              <p class="pf-tile-quote">"{gi.emailThemes[0].slice(0, 60)}{gi.emailThemes[0].length > 60 ? '…' : ''}"</p>
-            {/if}
-            <button class="pf-tile-disc" on:click={() => profile.update(p => ({ ...p, googleConnected: false, googleIdentity: null, googleAccessToken: '', googleRefreshToken: '' }))}>Disconnect</button>
-          </div>
-        {/if}
-
-        <!-- YouTube (standalone) -->
-        {#if $profile.youtubeConnected && !$profile.googleConnected}
-          {@const yt = $profile.youtubeIdentity}
-          <div class="pf-tile">
-            <div class="pf-tile-hd">
-              <span class="pf-tile-icon">📺</span>
-              <span class="pf-tile-name">YouTube</span>
-              <span class="pf-tile-dot"></span>
-            </div>
-            {#if yt?.contentPersonality}
-              <p class="pf-tile-lead">{yt.contentPersonality.slice(0, 52)}</p>
-              <div class="pf-tile-chips">
-                {#each (yt.topCategories ?? []).slice(0, 3) as c}<span class="pf-chip">{c}</span>{/each}
-              </div>
-            {:else}
-              <p class="pf-tile-sub pf-tile-empty">Library synced</p>
-            {/if}
-            <button class="pf-tile-disc" on:click={() => profile.update(p => ({ ...p, youtubeConnected: false, youtubeIdentity: null }))}>Disconnect</button>
-          </div>
-        {/if}
-
-      </div>
+    {#if graphStrengthLoading && !graphStrength}
+      <p class="pf-graph-loading">Loading signal strength…</p>
+    {:else if graphStrength}
+      <section class="pf-section pf-graph-strength">
+        <div class="pf-signals-hd">
+          <h2 class="pf-label">
+            Match signal strength <span class="pf-label-count">{graphStrength.label}</span>
+          </h2>
+          <span class="pf-synced"
+            >{graphStrength.score}/100 · {graphStrength.source_count} sources · data {graphStrength.freshness_bucket}</span
+          >
+        </div>
+        <p class="pf-graph-copy">
+          Brands search using your identity graph. More connected accounts and fresher sync usually
+          mean better, more relevant matches. We summarize connected accounts into tags; brands do
+          not receive raw inbox, DMs, or full OAuth payloads. Edit manual interests on Earn.
+          Disconnect any link here anytime.
+        </p>
+        <div class="pf-strength-bar" aria-hidden="true">
+          <div class="pf-strength-fill" style="width: {Math.min(100, graphStrength.score)}%"></div>
+        </div>
+        <p class="pf-graph-meta">{graphStrength.tag_count} signal tags indexed</p>
+      </section>
     {/if}
 
-    <!-- Add more signals -->
-    {#if platforms.filter(pl => !pl.connected).length > 0}
-      <div class="pf-add-signals">
-        <span class="pf-add-label">Add signals</span>
-        {#each platforms.filter(pl => !pl.connected) as pl}
-          <button type="button" class="pf-add-chip" on:click={() => pl.connect()}>{pl.icon} {pl.name}</button>
-        {/each}
+    <!-- Live Signal Tiles -->
+    <section class="pf-section">
+      <div class="pf-signals-hd">
+        <h2 class="pf-label">
+          Signals <span class="pf-label-count">{connectedCount} connected</span>
+        </h2>
+        {#if $profile.profileUpdatedAt}
+          <span class="pf-synced">↻ {relativeTime($profile.profileUpdatedAt)}</span>
+        {/if}
       </div>
-    {/if}
 
-    {#if connectedCount > 0 && $profile.googleSub}
-      <button class="pf-refresh-btn" on:click={refreshSignals} disabled={refreshing}>
-        <span class="pf-refresh-icon" class:spinning={refreshing}><ArrowClockwise size={14} /></span>
-        {refreshing ? (refreshStatus || 'Analyzing signals…') : 'Refresh signals'}
-      </button>
-      {#if refreshResult}
-        <div class="pf-refresh-result">
-          {#if refreshResult.expired.length > 0}
-            <p class="pf-refresh-warn">Tokens expired for: {refreshResult.expired.join(', ')}. Reconnect to refresh.</p>
-          {:else}
-            <p class="pf-refresh-ok">Signals updated successfully.</p>
+      {#if connectedCount > 0}
+        <div class="pf-signal-tiles">
+          <!-- LinkedIn -->
+          {#if $profile.linkedinConnected}
+            {@const li = $profile.linkedinIdentity}
+            <div class="pf-tile">
+              <div class="pf-tile-hd">
+                <span class="pf-tile-icon">💼</span>
+                <span class="pf-tile-name">LinkedIn</span>
+                <span class="pf-tile-dot"></span>
+              </div>
+              {#if li?.currentRole || li?.headline}
+                <p class="pf-tile-lead">{li.currentRole || li.headline}</p>
+                {#if li.currentCompany}<p class="pf-tile-sub">at {li.currentCompany}</p>{/if}
+                <div class="pf-tile-chips">
+                  {#if li.seniority}<span class="pf-chip pf-chip--pro">{li.seniority}</span>{/if}
+                  {#each li.skills.slice(0, 2) as sk}<span class="pf-chip">{sk}</span>{/each}
+                  {#each (li.professionalThemeTags ?? []).slice(0, 3) as tg}<span class="pf-chip"
+                      >{tg.replace(/_/g, ' ')}</span
+                    >{/each}
+                </div>
+                {#if li.careerSummary}
+                  <p class="pf-tile-quote">
+                    "{li.careerSummary.slice(0, 68)}{li.careerSummary.length > 68 ? '…' : ''}"
+                  </p>
+                {/if}
+              {:else}
+                <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
+              {/if}
+              <button
+                class="pf-tile-disc"
+                on:click={() =>
+                  profile.update((p) => ({
+                    ...p,
+                    linkedinConnected: false,
+                    linkedinIdentity: null,
+                  }))}>Disconnect</button
+              >
+            </div>
+          {/if}
+
+          <!-- Instagram -->
+          {#if $profile.instagramConnected}
+            {@const ig = $profile.instagramIdentity}
+            <div class="pf-tile">
+              <div class="pf-tile-hd">
+                <span class="pf-tile-icon">📸</span>
+                <span class="pf-tile-name">Instagram</span>
+                <span class="pf-tile-dot"></span>
+              </div>
+              {#if ig?.aesthetic || ig?.interests?.length}
+                {#if ig.aesthetic}<p class="pf-tile-lead">{ig.aesthetic}</p>{/if}
+                {#if ig.followersCount != null}
+                  <p class="pf-tile-sub">
+                    {ig.followersCount.toLocaleString()} followers{ig.mediaCount != null
+                      ? ` · ${ig.mediaCount} posts`
+                      : ''}
+                  </p>
+                {/if}
+                <div class="pf-tile-chips">
+                  {#each (ig.interests ?? []).slice(0, 3) as t}<span class="pf-chip">{t}</span
+                    >{/each}
+                </div>
+                {#if ig.topHashtags?.length}
+                  <p class="pf-tile-quote">
+                    "{ig.topHashtags
+                      .slice(0, 3)
+                      .map((h) => `#${h.replace(/^#/, '')}`)
+                      .join(' ')}"
+                  </p>
+                {/if}
+              {:else}
+                <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
+              {/if}
+              <button
+                class="pf-tile-disc"
+                on:click={() =>
+                  profile.update((p) => ({
+                    ...p,
+                    instagramConnected: false,
+                    instagramIdentity: null,
+                  }))}>Disconnect</button
+              >
+            </div>
+          {/if}
+
+          <!-- Apple Music -->
+          {#if $profile.appleMusicConnected}
+            {@const am = $profile.appleMusicIdentity}
+            <div class="pf-tile pf-tile--music">
+              <div class="pf-tile-hd">
+                <span class="pf-tile-icon">🎧</span>
+                <span class="pf-tile-name">Apple Music</span>
+                <span class="pf-tile-dot"></span>
+              </div>
+              {#if am}
+                {#if am.topArtists?.length}
+                  <div class="pf-tile-art-row">
+                    {#each am.topArtists.slice(0, 3) as artist}
+                      {#if itunesArtwork[artist]}
+                        <img
+                          src={itunesArtwork[artist]}
+                          alt={artist}
+                          class="pf-tile-art"
+                          title={artist}
+                        />
+                      {:else}
+                        <div class="pf-tile-art pf-tile-art--ph">{artist[0]?.toUpperCase()}</div>
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
+                {#if am.vibeDescription}<p class="pf-tile-lead">{am.vibeDescription}</p>{/if}
+                <div class="pf-tile-chips">
+                  {#each (am.topGenres ?? []).slice(0, 3) as g}<span class="pf-chip">{g}</span
+                    >{/each}
+                </div>
+                {#if am.musicPersonality}
+                  <p class="pf-tile-quote">
+                    "{am.musicPersonality.slice(0, 68)}{am.musicPersonality.length > 68 ? '…' : ''}"
+                  </p>
+                {/if}
+              {:else}
+                <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
+              {/if}
+              <button
+                class="pf-tile-disc"
+                on:click={async () => {
+                  const sub = $profile.googleSub;
+                  profile.update((p) => ({
+                    ...p,
+                    appleMusicConnected: false,
+                    appleMusicIdentity: null,
+                  }));
+                  if (sub) await syncProfileToSupabase(get(profile), { appleMusicUserToken: '' });
+                }}>Disconnect</button
+              >
+            </div>
+          {/if}
+
+          <!-- Spotify -->
+          {#if $profile.spotifyConnected}
+            {@const sp = $profile.spotifyIdentity}
+            <div class="pf-tile pf-tile--music">
+              <div class="pf-tile-hd">
+                <span class="pf-tile-icon">🎵</span>
+                <span class="pf-tile-name">Spotify</span>
+                <span class="pf-tile-dot"></span>
+              </div>
+              {#if sp}
+                {#if sp.topArtists?.length}
+                  <div class="pf-tile-art-row">
+                    {#each sp.topArtists.slice(0, 3) as artist}
+                      {#if itunesArtwork[artist]}
+                        <img
+                          src={itunesArtwork[artist]}
+                          alt={artist}
+                          class="pf-tile-art"
+                          title={artist}
+                        />
+                      {:else}
+                        <div class="pf-tile-art pf-tile-art--ph">{artist[0]?.toUpperCase()}</div>
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
+                {#if sp.vibeDescription}<p class="pf-tile-lead">{sp.vibeDescription}</p>{/if}
+                <div class="pf-tile-chips">
+                  {#each (sp.topGenres ?? []).slice(0, 3) as g}<span class="pf-chip">{g}</span
+                    >{/each}
+                  {#each (sp.musicDescriptorTags ?? []).slice(0, 3) as g}<span class="pf-chip"
+                      >{g}</span
+                    >{/each}
+                </div>
+                {#if sp.musicPersonality}
+                  <p class="pf-tile-quote">
+                    "{sp.musicPersonality.slice(0, 68)}{sp.musicPersonality.length > 68 ? '…' : ''}"
+                  </p>
+                {/if}
+              {:else}
+                <p class="pf-tile-sub pf-tile-empty">Identity syncing…</p>
+              {/if}
+              <button
+                class="pf-tile-disc"
+                on:click={() =>
+                  profile.update((p) => ({ ...p, spotifyConnected: false, spotifyIdentity: null }))}
+                >Disconnect</button
+              >
+            </div>
+          {/if}
+
+          <!-- Google -->
+          {#if $profile.googleConnected}
+            {@const gi = $profile.googleIdentity}
+            <div class="pf-tile">
+              <div class="pf-tile-hd">
+                <span class="pf-tile-icon">🔵</span>
+                <span class="pf-tile-name">Google</span>
+                <span class="pf-tile-dot"></span>
+              </div>
+              {#if $twinUiContext.nextEvent}
+                <p class="pf-tile-lead">{$twinUiContext.nextEvent.title}</p>
+                <p class="pf-tile-sub">
+                  {$twinUiContext.minutesUntilNext != null && $twinUiContext.minutesUntilNext < 120
+                    ? `in ${$twinUiContext.minutesUntilNext}m`
+                    : 'upcoming'}
+                </p>
+              {:else if gi?.contentPersonality}
+                <p class="pf-tile-lead">{gi.contentPersonality.slice(0, 52)}</p>
+              {:else}
+                <p class="pf-tile-sub pf-tile-empty">Calendar & inbox live</p>
+              {/if}
+              <div class="pf-tile-chips">
+                {#each (gi?.twin?.lifestyle?.dominantCalendarTypes ?? []).slice(0, 3) as t}
+                  <span class="pf-chip">{t.replace(/_/g, ' ')}</span>
+                {/each}
+              </div>
+              {#if gi?.emailThemes?.[0]}
+                <p class="pf-tile-quote">
+                  "{gi.emailThemes[0].slice(0, 60)}{gi.emailThemes[0].length > 60 ? '…' : ''}"
+                </p>
+              {/if}
+              <button
+                class="pf-tile-disc"
+                on:click={() =>
+                  profile.update((p) => ({
+                    ...p,
+                    googleConnected: false,
+                    googleIdentity: null,
+                    googleAccessToken: '',
+                    googleRefreshToken: '',
+                  }))}>Disconnect</button
+              >
+            </div>
+          {/if}
+
+          <!-- YouTube (standalone) -->
+          {#if $profile.youtubeConnected && !$profile.googleConnected}
+            {@const yt = $profile.youtubeIdentity}
+            <div class="pf-tile">
+              <div class="pf-tile-hd">
+                <span class="pf-tile-icon">📺</span>
+                <span class="pf-tile-name">YouTube</span>
+                <span class="pf-tile-dot"></span>
+              </div>
+              {#if yt?.contentPersonality}
+                <p class="pf-tile-lead">{yt.contentPersonality.slice(0, 52)}</p>
+                <div class="pf-tile-chips">
+                  {#each (yt.topCategories ?? []).slice(0, 3) as c}<span class="pf-chip">{c}</span
+                    >{/each}
+                </div>
+              {:else}
+                <p class="pf-tile-sub pf-tile-empty">Library synced</p>
+              {/if}
+              <button
+                class="pf-tile-disc"
+                on:click={() =>
+                  profile.update((p) => ({ ...p, youtubeConnected: false, youtubeIdentity: null }))}
+                >Disconnect</button
+              >
+            </div>
           {/if}
         </div>
       {/if}
-      {#if refreshError}<p class="pf-refresh-warn">{refreshError}</p>{/if}
+
+      <!-- Add more signals -->
+      {#if platforms.filter((pl) => !pl.connected).length > 0}
+        <div class="pf-add-signals">
+          <span class="pf-add-label">Add signals</span>
+          {#each platforms.filter((pl) => !pl.connected) as pl}
+            <button type="button" class="pf-add-chip" on:click={() => pl.connect()}
+              >{pl.icon} {pl.name}</button
+            >
+          {/each}
+        </div>
+      {/if}
+
+      {#if connectedCount > 0 && $profile.googleSub}
+        <button class="pf-refresh-btn" on:click={refreshSignals} disabled={refreshing}>
+          <span class="pf-refresh-icon" class:spinning={refreshing}
+            ><ArrowClockwise size={14} /></span
+          >
+          {refreshing ? refreshStatus || 'Analyzing signals…' : 'Refresh signals'}
+        </button>
+        {#if refreshResult}
+          <div class="pf-refresh-result">
+            {#if refreshResult.expired.length > 0}
+              <p class="pf-refresh-warn">
+                Tokens expired for: {refreshResult.expired.join(', ')}. Reconnect to refresh.
+              </p>
+            {:else}
+              <p class="pf-refresh-ok">Signals updated successfully.</p>
+            {/if}
+          </div>
+        {/if}
+        {#if refreshError}<p class="pf-refresh-warn">{refreshError}</p>{/if}
+      {/if}
+    </section>
+
+    {#if $profile.appleMusicConnected && $profile.appleMusicIdentity}
+      {@const am = $profile.appleMusicIdentity}
+      {@const hasAmExtras =
+        (am.latestReleases?.length ?? 0) > 0 ||
+        (am.rotationPlaylists?.length ?? 0) > 0 ||
+        (am.libraryPlaylists?.length ?? 0) > 0 ||
+        (am.topArtists?.length ?? 0) ||
+        (am.heavyRotationTracks?.length ?? 0) > 0 ||
+        (am.recentlyPlayed?.length ?? 0) > 0}
+      {#if hasAmExtras || am.vibeDescription || am.musicPersonality}
+        <section class="pf-section pf-am">
+          <h2 class="pf-label">Apple Music</h2>
+          <p class="pf-desc">
+            From your heavy rotation and library. Reconnect Apple Music anytime to refresh.
+          </p>
+          {#if am.vibeDescription}
+            <span class="pf-am-vibe-chip">{am.vibeDescription}</span>
+          {/if}
+          {#if am.musicPersonality}
+            <p class="pf-am-personality">{am.musicPersonality}</p>
+          {/if}
+
+          {#if am.topArtists?.length}
+            <p class="pf-am-sub">Artists on repeat</p>
+            <div class="pf-tags pf-am-tags">
+              {#each am.topArtists.slice(0, 8) as a}
+                <span class="pf-tag">{a}</span>
+              {/each}
+            </div>
+          {/if}
+
+          {#if am.heavyRotationTracks?.length}
+            <p class="pf-am-sub">Heavy rotation (tracks & albums)</p>
+            <ul class="pf-am-list">
+              {#each am.heavyRotationTracks.slice(0, 8) as tr}
+                <li>{tr.artistName ? `${tr.title} — ${tr.artistName}` : tr.title}</li>
+              {/each}
+            </ul>
+          {/if}
+
+          {#if am.recentlyPlayed?.length}
+            <p class="pf-am-sub">Recently played</p>
+            <ul class="pf-am-list">
+              {#each am.recentlyPlayed.slice(0, 8) as tr}
+                <li>{tr.artistName ? `${tr.title} — ${tr.artistName}` : tr.title}</li>
+              {/each}
+            </ul>
+          {/if}
+
+          {#if am.latestReleases?.length}
+            <p class="pf-am-sub">New from artists you play</p>
+            <div class="pf-facts">
+              {#each am.latestReleases.slice(0, 5) as r}
+                <div class="pf-fact pf-am-drop">
+                  <span class="pf-am-drop-title">{r.title}</span>
+                  <span class="pf-am-drop-meta"
+                    >{r.artistName}{#if r.releaseDate}
+                      · {r.releaseDate}{/if}</span
+                  >
+                </div>
+              {/each}
+            </div>
+          {/if}
+
+          {#if am.rotationPlaylists?.length}
+            <p class="pf-am-sub">Playlists in rotation</p>
+            <ul class="pf-am-list">
+              {#each am.rotationPlaylists.slice(0, 6) as p}
+                <li>{p}</li>
+              {/each}
+            </ul>
+          {/if}
+
+          {#if am.libraryPlaylists?.length}
+            <p class="pf-am-sub">From your library</p>
+            <div class="pf-am-playlist-row">
+              {#each am.libraryPlaylists.slice(0, 8) as p}
+                <span class="pf-am-pl">{p}</span>
+              {/each}
+            </div>
+          {/if}
+        </section>
+      {/if}
     {/if}
-  </section>
 
-  {#if $profile.appleMusicConnected && $profile.appleMusicIdentity}
-    {@const am = $profile.appleMusicIdentity}
-    {@const hasAmExtras =
-      (am.latestReleases?.length ?? 0) > 0 ||
-      (am.rotationPlaylists?.length ?? 0) > 0 ||
-      (am.libraryPlaylists?.length ?? 0) > 0 ||
-      (am.topArtists?.length ?? 0) ||
-      (am.heavyRotationTracks?.length ?? 0) > 0 ||
-      (am.recentlyPlayed?.length ?? 0) > 0}
-    {#if hasAmExtras || am.vibeDescription || am.musicPersonality}
-      <section class="pf-section pf-am">
-        <h2 class="pf-label">Apple Music</h2>
-        <p class="pf-desc">From your heavy rotation and library. Reconnect Apple Music anytime to refresh.</p>
-        {#if am.vibeDescription}
-          <span class="pf-am-vibe-chip">{am.vibeDescription}</span>
-        {/if}
-        {#if am.musicPersonality}
-          <p class="pf-am-personality">{am.musicPersonality}</p>
-        {/if}
-
-        {#if am.topArtists?.length}
-          <p class="pf-am-sub">Artists on repeat</p>
-          <div class="pf-tags pf-am-tags">
-            {#each am.topArtists.slice(0, 8) as a}
-              <span class="pf-tag">{a}</span>
-            {/each}
-          </div>
-        {/if}
-
-        {#if am.heavyRotationTracks?.length}
-          <p class="pf-am-sub">Heavy rotation (tracks & albums)</p>
-          <ul class="pf-am-list">
-            {#each am.heavyRotationTracks.slice(0, 8) as tr}
-              <li>{tr.artistName ? `${tr.title} — ${tr.artistName}` : tr.title}</li>
-            {/each}
-          </ul>
-        {/if}
-
-        {#if am.recentlyPlayed?.length}
-          <p class="pf-am-sub">Recently played</p>
-          <ul class="pf-am-list">
-            {#each am.recentlyPlayed.slice(0, 8) as tr}
-              <li>{tr.artistName ? `${tr.title} — ${tr.artistName}` : tr.title}</li>
-            {/each}
-          </ul>
-        {/if}
-
-        {#if am.latestReleases?.length}
-          <p class="pf-am-sub">New from artists you play</p>
-          <div class="pf-facts">
-            {#each am.latestReleases.slice(0, 5) as r}
-              <div class="pf-fact pf-am-drop">
-                <span class="pf-am-drop-title">{r.title}</span>
-                <span class="pf-am-drop-meta">{r.artistName}{#if r.releaseDate} · {r.releaseDate}{/if}</span>
-              </div>
-            {/each}
-          </div>
-        {/if}
-
-        {#if am.rotationPlaylists?.length}
-          <p class="pf-am-sub">Playlists in rotation</p>
-          <ul class="pf-am-list">
-            {#each am.rotationPlaylists.slice(0, 6) as p}
-              <li>{p}</li>
-            {/each}
-          </ul>
-        {/if}
-
-        {#if am.libraryPlaylists?.length}
-          <p class="pf-am-sub">From your library</p>
-          <div class="pf-am-playlist-row">
-            {#each am.libraryPlaylists.slice(0, 8) as p}
-              <span class="pf-am-pl">{p}</span>
-            {/each}
-          </div>
-        {/if}
+    {#if $profile.googleConnected && googleTwinInsights.length > 0}
+      <section class="pf-section">
+        <h2 class="pf-label">Your twin notices</h2>
+        <p class="pf-desc">
+          Patterns from your schedule and activity — reconnect Google after a while to refresh.
+        </p>
+        <div class="pf-facts">
+          {#each googleTwinInsights as line (line)}
+            <div class="pf-fact">{line}</div>
+          {/each}
+        </div>
       </section>
     {/if}
-  {/if}
 
-  {#if $profile.googleConnected && googleTwinInsights.length > 0}
+    <!-- Twin Knowledge -->
+    {#if learnedFacts.length > 0}
+      <section class="pf-section">
+        <h2 class="pf-label">Your twin knows</h2>
+        <div class="pf-facts">
+          {#each learnedFacts as fact}
+            <div class="pf-fact">{fact}</div>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    <!-- Location -->
     <section class="pf-section">
-      <h2 class="pf-label">Your twin notices</h2>
-      <p class="pf-desc">Patterns from your schedule and activity — reconnect Google after a while to refresh.</p>
-      <div class="pf-facts">
-        {#each googleTwinInsights as line (line)}
-          <div class="pf-fact">{line}</div>
-        {/each}
+      <h2 class="pf-label">Location</h2>
+      <p class="pf-desc">Where you're based. Updates your recommendations and match relevance.</p>
+      <div class="pf-location-row">
+        <input
+          class="pf-location-input"
+          type="text"
+          placeholder="Mumbai, Bangalore, Delhi..."
+          bind:value={locationCity}
+          on:keydown={(e) => {
+            if (e.key === 'Enter') saveLocation();
+          }}
+        />
+        <button
+          class="pf-save-btn"
+          on:click={saveLocation}
+          disabled={locationSaving ||
+            !locationCity.trim() ||
+            locationCity.trim() === ($profile.city || '')}
+        >
+          {#if locationSaving}Saving...{:else if locationSaved}Saved{:else}Update{/if}
+        </button>
+      </div>
+      {#if locationSaved}
+        <span class="pf-saved-msg">Location updated — refreshing your signals</span>
+      {/if}
+    </section>
+
+    <!-- Creator Rates -->
+    <section class="pf-section">
+      <h2 class="pf-label">Your rates</h2>
+      <p class="pf-desc">Set your rates so brands know what to expect. All values in INR.</p>
+      <div class="pf-rates-grid">
+        <div class="pf-rate-field">
+          <label for="rate-post">Instagram Post</label>
+          <div class="pf-rate-input-wrap">
+            <span class="pf-rate-currency">&#8377;</span>
+            <input
+              id="rate-post"
+              type="number"
+              min="0"
+              bind:value={rates.ig_post_rate_inr}
+              placeholder="0"
+            />
+          </div>
+        </div>
+        <div class="pf-rate-field">
+          <label for="rate-story">Instagram Story</label>
+          <div class="pf-rate-input-wrap">
+            <span class="pf-rate-currency">&#8377;</span>
+            <input
+              id="rate-story"
+              type="number"
+              min="0"
+              bind:value={rates.ig_story_rate_inr}
+              placeholder="0"
+            />
+          </div>
+        </div>
+        <div class="pf-rate-field">
+          <label for="rate-reel">Instagram Reel</label>
+          <div class="pf-rate-input-wrap">
+            <span class="pf-rate-currency">&#8377;</span>
+            <input
+              id="rate-reel"
+              type="number"
+              min="0"
+              bind:value={rates.ig_reel_rate_inr}
+              placeholder="0"
+            />
+          </div>
+        </div>
+        <div class="pf-rate-field">
+          <label for="rate-wa">WhatsApp Intro</label>
+          <div class="pf-rate-input-wrap">
+            <span class="pf-rate-currency">&#8377;</span>
+            <input
+              id="rate-wa"
+              type="number"
+              min="0"
+              bind:value={rates.whatsapp_intro_rate_inr}
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="pf-rates-footer">
+        <label class="pf-toggle">
+          <input type="checkbox" bind:checked={rates.available} on:change={saveRates} />
+          <span class="pf-toggle-label"
+            >{rates.available ? 'Open to brand deals' : 'Not available for deals'}</span
+          >
+        </label>
+        <button class="pf-save-btn" on:click={saveRates} disabled={ratesSaving}>
+          {#if ratesSaving}Saving...{:else if ratesSaved}Saved{:else}Save rates{/if}
+        </button>
+      </div>
+      {#if ratesSaved}
+        <span class="pf-saved-msg">Rates saved — brands can now see your pricing</span>
+      {/if}
+    </section>
+
+    <!-- Settings -->
+    <section class="pf-section">
+      <h2 class="pf-label">Settings</h2>
+      <p class="pf-desc">Twin chats and learned facts are saved on this device.</p>
+      <div class="pf-actions">
+        <button class="pf-btn" on:click={clearTwinMemory}>Clear memory</button>
+        <button class="pf-btn" on:click={exportTwinMemory}>Export</button>
       </div>
     </section>
-  {/if}
 
-  <!-- Twin Knowledge -->
-  {#if learnedFacts.length > 0}
-    <section class="pf-section">
-      <h2 class="pf-label">Your twin knows</h2>
-      <div class="pf-facts">
-        {#each learnedFacts as fact}
-          <div class="pf-fact">{fact}</div>
-        {/each}
+    <button class="pf-reset" on:click={resetApp}>Reset & start over</button>
+    <div class="pf-nav-spacer" aria-hidden="true"></div>
+
+    {#if refreshing}
+      <div class="pf-analyse-overlay" role="status" aria-live="polite" aria-busy="true">
+        <div class="pf-analyse-card">
+          <span class="pf-analyse-icon spinning" aria-hidden="true"
+            ><ArrowClockwise size={28} /></span
+          >
+          <p class="pf-analyse-title">Analysing your profile</p>
+          <p class="pf-analyse-sub">
+            {refreshStatus || 'Pulling fresh signals from connected accounts…'}
+          </p>
+        </div>
       </div>
-    </section>
-  {/if}
-
-  <!-- Location -->
-  <section class="pf-section">
-    <h2 class="pf-label">Location</h2>
-    <p class="pf-desc">Where you're based. Updates your recommendations and match relevance.</p>
-    <div class="pf-location-row">
-      <input
-        class="pf-location-input"
-        type="text"
-        placeholder="Mumbai, Bangalore, Delhi..."
-        bind:value={locationCity}
-        on:keydown={(e) => { if (e.key === 'Enter') saveLocation(); }}
-      />
-      <button class="pf-save-btn" on:click={saveLocation} disabled={locationSaving || !locationCity.trim() || locationCity.trim() === ($profile.city || '')}>
-        {#if locationSaving}Saving...{:else if locationSaved}Saved{:else}Update{/if}
-      </button>
-    </div>
-    {#if locationSaved}
-      <span class="pf-saved-msg">Location updated — refreshing your signals</span>
     {/if}
-  </section>
-
-  <!-- Creator Rates -->
-  <section class="pf-section">
-    <h2 class="pf-label">Your rates</h2>
-    <p class="pf-desc">Set your rates so brands know what to expect. All values in INR.</p>
-    <div class="pf-rates-grid">
-      <div class="pf-rate-field">
-        <label for="rate-post">Instagram Post</label>
-        <div class="pf-rate-input-wrap">
-          <span class="pf-rate-currency">&#8377;</span>
-          <input id="rate-post" type="number" min="0" bind:value={rates.ig_post_rate_inr} placeholder="0" />
-        </div>
-      </div>
-      <div class="pf-rate-field">
-        <label for="rate-story">Instagram Story</label>
-        <div class="pf-rate-input-wrap">
-          <span class="pf-rate-currency">&#8377;</span>
-          <input id="rate-story" type="number" min="0" bind:value={rates.ig_story_rate_inr} placeholder="0" />
-        </div>
-      </div>
-      <div class="pf-rate-field">
-        <label for="rate-reel">Instagram Reel</label>
-        <div class="pf-rate-input-wrap">
-          <span class="pf-rate-currency">&#8377;</span>
-          <input id="rate-reel" type="number" min="0" bind:value={rates.ig_reel_rate_inr} placeholder="0" />
-        </div>
-      </div>
-      <div class="pf-rate-field">
-        <label for="rate-wa">WhatsApp Intro</label>
-        <div class="pf-rate-input-wrap">
-          <span class="pf-rate-currency">&#8377;</span>
-          <input id="rate-wa" type="number" min="0" bind:value={rates.whatsapp_intro_rate_inr} placeholder="0" />
-        </div>
-      </div>
-    </div>
-    <div class="pf-rates-footer">
-      <label class="pf-toggle">
-        <input type="checkbox" bind:checked={rates.available} on:change={saveRates} />
-        <span class="pf-toggle-label">{rates.available ? 'Open to brand deals' : 'Not available for deals'}</span>
-      </label>
-      <button class="pf-save-btn" on:click={saveRates} disabled={ratesSaving}>
-        {#if ratesSaving}Saving...{:else if ratesSaved}Saved{:else}Save rates{/if}
-      </button>
-    </div>
-    {#if ratesSaved}
-      <span class="pf-saved-msg">Rates saved — brands can now see your pricing</span>
-    {/if}
-  </section>
-
-  <!-- Settings -->
-  <section class="pf-section">
-    <h2 class="pf-label">Settings</h2>
-    <p class="pf-desc">Twin chats and learned facts are saved on this device.</p>
-    <div class="pf-actions">
-      <button class="pf-btn" on:click={clearTwinMemory}>Clear memory</button>
-      <button class="pf-btn" on:click={exportTwinMemory}>Export</button>
-    </div>
-  </section>
-
-  <button class="pf-reset" on:click={resetApp}>Reset & start over</button>
-  <div class="pf-nav-spacer" aria-hidden="true"></div>
-
-  {#if refreshing}
-    <div
-      class="pf-analyse-overlay"
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <div class="pf-analyse-card">
-        <span class="pf-analyse-icon spinning" aria-hidden="true"><ArrowClockwise size={28} /></span>
-        <p class="pf-analyse-title">Analysing your profile</p>
-        <p class="pf-analyse-sub">{refreshStatus || 'Pulling fresh signals from connected accounts…'}</p>
-      </div>
-    </div>
-  {/if}
   </div>
 </div>
 
@@ -1067,8 +1303,10 @@
   }
   .pf-card-glow {
     position: absolute;
-    width: 200px; height: 200px;
-    top: -60px; left: 50%;
+    width: 200px;
+    height: 200px;
+    top: -60px;
+    left: 50%;
     transform: translateX(-50%);
     border-radius: 50%;
     background: radial-gradient(circle, var(--accent-glow), transparent 70%);
@@ -1076,7 +1314,8 @@
     pointer-events: none;
   }
   .pf-pic {
-    width: 80px; height: 80px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     object-fit: cover;
     margin: 0 auto 14px;
@@ -1085,17 +1324,23 @@
     position: relative;
   }
   .pf-pic-fallback {
-    width: 80px; height: 80px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     background: linear-gradient(145deg, var(--accent-primary), var(--accent-secondary));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 30px; font-weight: 700; color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: 700;
+    color: white;
     margin: 0 auto 14px;
     position: relative;
   }
   .pf-name {
     margin: 0;
-    font-size: 22px; font-weight: 700;
+    font-size: 22px;
+    font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--text-primary);
     position: relative;
@@ -1114,7 +1359,9 @@
     position: relative;
   }
   .pf-tags {
-    display: flex; flex-wrap: wrap; gap: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     justify-content: center;
     margin-top: 16px;
     position: relative;
@@ -1176,7 +1423,9 @@
     justify-content: space-between;
     margin-bottom: 12px;
   }
-  .pf-signals-hd .pf-label { margin-bottom: 0; }
+  .pf-signals-hd .pf-label {
+    margin-bottom: 0;
+  }
   .pf-synced {
     font-size: 10px;
     font-weight: 500;
@@ -1194,7 +1443,9 @@
     -webkit-overflow-scrolling: touch;
     margin-bottom: 12px;
   }
-  .pf-signal-tiles::-webkit-scrollbar { display: none; }
+  .pf-signal-tiles::-webkit-scrollbar {
+    display: none;
+  }
 
   @media (min-width: 1024px) {
     .pf-signal-tiles {
@@ -1232,7 +1483,10 @@
   }
 
   @media (min-width: 1024px) {
-    .pf-tile { width: auto; min-height: 190px; }
+    .pf-tile {
+      width: auto;
+      min-height: 190px;
+    }
   }
 
   .pf-tile--music {
@@ -1249,7 +1503,10 @@
     gap: 5px;
     margin-bottom: 2px;
   }
-  .pf-tile-icon { font-size: 13px; line-height: 1; }
+  .pf-tile-icon {
+    font-size: 13px;
+    line-height: 1;
+  }
   .pf-tile-name {
     font-size: 10px;
     font-weight: 700;
@@ -1259,7 +1516,8 @@
     flex: 1;
   }
   .pf-tile-dot {
-    width: 6px; height: 6px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--state-success);
     flex-shrink: 0;
@@ -1283,7 +1541,9 @@
     color: var(--text-muted);
     line-height: 1.4;
   }
-  .pf-tile-empty { font-style: italic; }
+  .pf-tile-empty {
+    font-style: italic;
+  }
 
   .pf-tile-chips {
     display: flex;
@@ -1357,7 +1617,10 @@
     opacity: 0.5;
     transition: opacity 0.15s;
   }
-  .pf-tile-disc:hover { opacity: 1; color: var(--state-error); }
+  .pf-tile-disc:hover {
+    opacity: 1;
+    color: var(--state-error);
+  }
 
   /* Add signals row */
   .pf-add-signals {
@@ -1384,7 +1647,9 @@
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
     white-space: nowrap;
   }
   .pf-add-chip:hover {
@@ -1406,7 +1671,9 @@
     border: 1px solid var(--accent-glow);
     border-radius: 100px;
     cursor: pointer;
-    transition: opacity 0.2s, background 0.2s;
+    transition:
+      opacity 0.2s,
+      background 0.2s;
     width: 100%;
     justify-content: center;
   }
@@ -1431,8 +1698,12 @@
     text-align: center;
   }
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
   .pf-analyse-overlay {
     position: fixed;
@@ -1601,7 +1872,9 @@
 
   /* Learned facts */
   .pf-facts {
-    display: flex; flex-direction: column; gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
   .pf-fact {
     padding: 10px 14px;
@@ -1615,7 +1888,8 @@
 
   /* Actions */
   .pf-actions {
-    display: flex; gap: 10px;
+    display: flex;
+    gap: 10px;
   }
   .pf-btn {
     padding: 10px 18px;
@@ -1626,7 +1900,10 @@
     border: 1px solid var(--panel-border);
     border-radius: 100px;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      border-color 0.2s;
   }
   .pf-btn:hover {
     background: var(--panel-hover);
@@ -1645,7 +1922,10 @@
     border: 1px dashed var(--panel-border-strong);
     border-radius: 14px;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      border-color 0.2s;
   }
   .pf-reset:hover {
     color: var(--state-error);
@@ -1669,7 +1949,9 @@
     border-radius: 12px;
     outline: none;
     box-sizing: border-box;
-    transition: border-color 0.2s, background 0.2s;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
     font-family: inherit;
   }
   .pf-location-input::placeholder {
@@ -1694,12 +1976,17 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .pf-save-btn:hover:not(:disabled) { opacity: 0.9; }
-  .pf-save-btn:disabled { opacity: 0.4; cursor: default; }
+  .pf-save-btn:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  .pf-save-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
 
   .pf-saved-msg {
     font-size: 12px;
-    color: #34D399;
+    color: #34d399;
     margin-top: 6px;
     display: block;
   }
@@ -1713,7 +2000,9 @@
   }
 
   @media (max-width: 480px) {
-    .pf-rates-grid { grid-template-columns: 1fr; }
+    .pf-rates-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .pf-rate-field {
@@ -1778,7 +2067,7 @@
     cursor: pointer;
   }
 
-  .pf-toggle input[type="checkbox"] {
+  .pf-toggle input[type='checkbox'] {
     width: 18px;
     height: 18px;
     accent-color: var(--accent-primary);
@@ -1799,7 +2088,9 @@
     text-decoration: none;
     transition: opacity 0.15s;
   }
-  .pf-creator-link:hover { opacity: 0.8; }
+  .pf-creator-link:hover {
+    opacity: 0.8;
+  }
 
   .pf-nav-spacer {
     height: calc(100px + env(safe-area-inset-bottom, 0px));

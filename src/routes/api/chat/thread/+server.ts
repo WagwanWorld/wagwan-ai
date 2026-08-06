@@ -4,6 +4,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getProfile, updateProfileData, isSupabaseConfigured } from '$lib/server/supabase';
+import { assertCreatorProfileFromRequest } from '$lib/server/creatorAuth';
 
 const THREAD_KEY = 'twinChatThread';
 const MAX_THREAD_JSON_BYTES = 480_000;
@@ -12,17 +13,14 @@ function byteLength(s: string): number {
   return new TextEncoder().encode(s).length;
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
   }
 
-  const sub = url.searchParams.get('sub');
-  if (!sub?.trim()) {
-    throw error(400, 'missing sub');
-  }
+  const { googleSub } = await assertCreatorProfileFromRequest(request);
 
-  const row = await getProfile(sub.trim());
+  const row = await getProfile(googleSub);
   if (!row) {
     return json({ ok: true, thread: null });
   }
@@ -40,16 +38,13 @@ export const PUT: RequestHandler = async ({ request }) => {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
   }
 
-  let body: { googleSub?: string; thread?: unknown };
+  const { googleSub } = await assertCreatorProfileFromRequest(request);
+
+  let body: { thread?: unknown };
   try {
     body = await request.json();
   } catch {
     throw error(400, 'invalid json');
-  }
-
-  const googleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
-  if (!googleSub) {
-    throw error(400, 'missing googleSub');
   }
 
   const thread = body.thread;

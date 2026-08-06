@@ -5,6 +5,7 @@ import { settlePendingEarnings } from '$lib/server/creatorMarketplace';
 
 /**
  * POST /api/user/wallet/settle
+ *   Authorization: Bearer <CRON_SECRET>
  *   body: { googleSub: string, minAgeSeconds?: number }
  *
  * Simulated settlement sink: moves rows from `user_earnings.status='pending'`
@@ -15,6 +16,10 @@ import { settlePendingEarnings } from '$lib/server/creatorMarketplace';
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
+  }
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+    return json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
 
   const body = (await request.json().catch(() => ({}))) as {

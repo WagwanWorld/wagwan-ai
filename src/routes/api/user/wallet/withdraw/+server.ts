@@ -1,11 +1,12 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { isSupabaseConfigured } from '$lib/server/supabase';
 import { withdrawAvailableEarnings } from '$lib/server/creatorMarketplace';
+import { assertCreatorProfileFromRequest } from '$lib/server/creatorAuth';
 
 /**
  * POST /api/user/wallet/withdraw
- *   body: { googleSub: string }
+ *   Authorization: Bearer <wagwan-access-token>
  *
  * Simulated payout. Moves every `user_earnings` row currently in 'available'
  * to 'withdrawn' and returns the total. There is no real UPI payout yet — the
@@ -17,11 +18,9 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as { googleSub?: string };
-  const sub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
-  if (!sub) throw error(400, 'googleSub is required');
+  const { googleSub } = await assertCreatorProfileFromRequest(request);
 
-  const { amount, rowIds } = await withdrawAvailableEarnings(sub);
+  const { amount, rowIds } = await withdrawAvailableEarnings(googleSub);
 
   if (amount <= 0) {
     return json(
