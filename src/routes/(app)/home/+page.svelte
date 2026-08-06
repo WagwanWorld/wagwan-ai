@@ -74,6 +74,7 @@
     type HomePersonaInferenceCompact as InferenceCompact,
     type HomePersonaHyperInferenceCompact as HyperInferenceCompact,
   } from '$lib/stores/homePersonaSessionCache';
+  import { getWagwanAccessToken, wagwanAuthHeaders } from '$lib/auth/wagwanApi';
   import { getCurrentContext } from '$lib/stores/contextStore';
   import { ensureMatchReason } from '$lib/utils/matchReason';
 
@@ -125,10 +126,11 @@
       dashLoading = false;
       return;
     }
+    const authHeaders = wagwanAuthHeaders();
     try {
       const [cRes, wRes] = await Promise.all([
         fetch(`/api/user/campaigns?sub=${encodeURIComponent(sub)}`),
-        fetch(`/api/user/wallet?sub=${encodeURIComponent(sub)}`),
+        fetch('/api/user/wallet', { headers: authHeaders }),
       ]);
       const cJson = await cRes.json();
       const wJson = await wRes.json();
@@ -163,9 +165,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'accept',
           phone,
@@ -193,8 +194,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sub, campaignId, action: 'decline' }),
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ campaignId, action: 'decline' }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
@@ -224,9 +225,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'complete',
           igPostUrl: igPostUrl.trim(),
@@ -245,7 +245,7 @@
   }
 
   async function loadBrandSignals() {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('wagwan_access_token') : '';
+    const token = getWagwanAccessToken();
     if (!token) return;
     try {
       const res = await fetch('/api/creator/brand-signals', {
@@ -264,7 +264,7 @@
   }
 
   function markSignalSeen(id: string) {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('wagwan_access_token') : '';
+    const token = getWagwanAccessToken();
     if (!token) return;
     brandSignals = brandSignals.map((s) => (s.id === id ? { ...s, seen: true } : s));
     brandSignalsUnseenCount = Math.max(0, brandSignalsUnseenCount - 1);
@@ -673,8 +673,8 @@
       try {
         await fetch('/api/chat/thread', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ googleSub: $profile.googleSub, thread: state }),
+          headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ thread: state }),
         });
       } catch {
         /* ignore */
@@ -1357,7 +1357,7 @@
     if (sub) {
       void (async () => {
         try {
-          const r = await fetch(`/api/chat/thread?sub=${encodeURIComponent(sub)}`);
+          const r = await fetch('/api/chat/thread', { headers: wagwanAuthHeaders() });
           if (r.ok) {
             const d = (await r.json()) as { thread?: unknown };
             const nowLocal = loadChatMemory(memoryKey);

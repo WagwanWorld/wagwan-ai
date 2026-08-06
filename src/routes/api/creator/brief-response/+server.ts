@@ -2,14 +2,15 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { respondToBrief, completeBrief } from '$lib/server/creatorMarketplace';
 import { isCampaignUuid } from '$lib/server/flowState';
+import { assertCreatorProfileFromRequest } from '$lib/server/creatorAuth';
 
 export const POST: RequestHandler = async ({ request }) => {
+  const { googleSub: sub } = await assertCreatorProfileFromRequest(request);
   const body = await request.json().catch(() => null);
-  if (!body?.sub || !body?.campaignId) {
+  if (!body?.campaignId) {
     return json({ ok: false, error: 'missing_fields' }, { status: 400 });
   }
 
-  const sub = String(body.sub).trim();
   const campaignId = String(body.campaignId).trim();
   if (!isCampaignUuid(campaignId)) {
     return json({ ok: false, error: 'invalid_campaign_id' }, { status: 400 });

@@ -41,7 +41,7 @@
   } from '$lib/voice/speech';
   import { ChatUserBubble, ChatSuggestionChips, ChatComposerPill } from '$lib/chat';
   import { renderChatMd } from '$lib/utils/chatMarkdown';
-
+  import { wagwanAuthHeaders } from '$lib/auth/wagwanApi';
 
   type TwinUiState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -68,7 +68,14 @@
   let userTurnsSinceSummary = 0;
   let memoryKey = '';
   let twinMemKey = '';
-  let twinMem: TwinMemoryState = { version: 1, facts: [], preferences: {}, recentTopics: [], identityOverrides: [], learnedAt: '' };
+  let twinMem: TwinMemoryState = {
+    version: 1,
+    facts: [],
+    preferences: {},
+    recentTopics: [],
+    identityOverrides: [],
+    learnedAt: '',
+  };
   let userTurnsSinceLearn = 0;
 
   let inputText = '';
@@ -104,10 +111,9 @@
   /** Filter full thread for recall (does not affect what is sent to the model). */
   let chatSearchQuery = '';
   $: chatSearchNorm = chatSearchQuery.trim().toLowerCase();
-  $: messagesForList =
-    !chatSearchNorm
-      ? messages
-      : messages.filter(m => (m.text || '').toLowerCase().includes(chatSearchNorm));
+  $: messagesForList = !chatSearchNorm
+    ? messages
+    : messages.filter((m) => (m.text || '').toLowerCase().includes(chatSearchNorm));
 
   function triggerRedPulse() {
     /* reserved for haptics / future accent pulse */
@@ -142,13 +148,15 @@
     return 'idle';
   })();
 
-  $: lastAiMood = [...messages].reverse().find(m => m.role === 'ai' && !m.loading && m.mood)?.mood;
+  $: lastAiMood = [...messages]
+    .reverse()
+    .find((m) => m.role === 'ai' && !m.loading && m.mood)?.mood;
 
   let showChips = true;
 
   let cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
-  $: lastAi = [...messages].reverse().find(m => m.role === 'ai' && !m.loading && !m.error);
+  $: lastAi = [...messages].reverse().find((m) => m.role === 'ai' && !m.loading && !m.error);
 
   // Signal completeness for chip strategy
   $: signalCount = [
@@ -160,12 +168,24 @@
 
   // Identity-building chips when profile is sparse
   const IDENTITY_CHIPS: { label: string; query: string }[] = [
-    { label: 'My music taste', query: "I mostly listen to indie and electronic. What does that say about me?" },
-    { label: 'Weekends', query: "On weekends I usually explore new cafes and go to local events" },
-    { label: 'Food vibes', query: "I love Asian fusion and street food — what places should I try?" },
-    { label: 'Work mode', query: "I work in tech/design. What would help me be more effective?" },
-    { label: 'My aesthetic', query: "My style is minimal and dark — think Bottega, Rick Owens kind of vibe" },
-    { label: 'What I want', query: "Help me figure out what to do this weekend based on my personality" },
+    {
+      label: 'My music taste',
+      query: 'I mostly listen to indie and electronic. What does that say about me?',
+    },
+    { label: 'Weekends', query: 'On weekends I usually explore new cafes and go to local events' },
+    {
+      label: 'Food vibes',
+      query: 'I love Asian fusion and street food — what places should I try?',
+    },
+    { label: 'Work mode', query: 'I work in tech/design. What would help me be more effective?' },
+    {
+      label: 'My aesthetic',
+      query: 'My style is minimal and dark — think Bottega, Rick Owens kind of vibe',
+    },
+    {
+      label: 'What I want',
+      query: 'Help me figure out what to do this weekend based on my personality',
+    },
   ];
 
   $: composerChips = ((): { label: string; query: string }[] => {
@@ -184,7 +204,10 @@
     if (lastAi.intent === 'event') {
       return [
         { label: 'This weekend', query: 'more events this weekend' },
-        { label: 'How to book', query: `book tickets for ${lastAi.cards?.[0]?.title ?? 'this event'}` },
+        {
+          label: 'How to book',
+          query: `book tickets for ${lastAi.cards?.[0]?.title ?? 'this event'}`,
+        },
       ];
     }
     if (lastAi.intent === 'music') {
@@ -217,8 +240,8 @@
       try {
         await fetch('/api/chat/thread', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ googleSub: $profile.googleSub, thread: state }),
+          headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ thread: state }),
         });
       } catch {
         /* ignore */
@@ -229,8 +252,8 @@
   function persistThread() {
     if (!memoryKey || typeof window === 'undefined') return;
     const stored: ChatMemoryState['messages'] = messages
-      .filter(m => !m.loading && !m.error)
-      .map(m => ({
+      .filter((m) => !m.loading && !m.error)
+      .map((m) => ({
         role: m.role,
         text: m.text,
         ...(m.at ? { at: m.at } : {}),
@@ -251,10 +274,11 @@
     twinMem = loadTwinMemory(twinMemKey);
     const local = loadChatMemory(memoryKey);
     threadSummary = local.summary ?? '';
-    userTurnsSinceSummary = local.messages.filter(m => m.role === 'user').length % SUMMARY_EVERY_USER_TURNS;
+    userTurnsSinceSummary =
+      local.messages.filter((m) => m.role === 'user').length % SUMMARY_EVERY_USER_TURNS;
 
     if (local.messages?.length) {
-      messages = local.messages.map(m => ({
+      messages = local.messages.map((m) => ({
         role: m.role,
         text: m.text,
         at: m.at,
@@ -269,7 +293,7 @@
     void (async () => {
       if (sub) {
         try {
-          const r = await fetch(`/api/chat/thread?sub=${encodeURIComponent(sub)}`);
+          const r = await fetch('/api/chat/thread', { headers: wagwanAuthHeaders() });
           if (r.ok) {
             const d = (await r.json()) as { thread?: unknown };
             const nowLocal = loadChatMemory(memoryKey);
@@ -281,9 +305,10 @@
               JSON.stringify(merged.messages) === JSON.stringify(nowLocal.messages);
             if (!same) {
               threadSummary = merged.summary ?? '';
-              userTurnsSinceSummary = merged.messages.filter(m => m.role === 'user').length % SUMMARY_EVERY_USER_TURNS;
+              userTurnsSinceSummary =
+                merged.messages.filter((m) => m.role === 'user').length % SUMMARY_EVERY_USER_TURNS;
               if (merged.messages?.length) {
-                messages = merged.messages.map(m => ({
+                messages = merged.messages.map((m) => ({
                   role: m.role,
                   text: m.text,
                   at: m.at,
@@ -327,8 +352,8 @@
   async function maybeRollSummary(prevUserCount: number, newUserCount: number) {
     if (!shouldRollSummary(prevUserCount, newUserCount)) return;
     const payload = messages
-      .filter(m => !m.loading && !m.error)
-      .map(m => ({ role: m.role, text: m.text }));
+      .filter((m) => !m.loading && !m.error)
+      .map((m) => ({ role: m.role, text: m.text }));
     try {
       const res = await fetch('/api/chat/summarize', {
         method: 'POST',
@@ -349,9 +374,9 @@
   async function maybeLearnFromChat(prevUserCount: number, newUserCount: number) {
     if (!shouldLearn(prevUserCount, newUserCount)) return;
     const payload = messages
-      .filter(m => !m.loading && !m.error && m.text)
+      .filter((m) => !m.loading && !m.error && m.text)
       .slice(-16)
-      .map(m => ({ role: m.role, text: m.text }));
+      .map((m) => ({ role: m.role, text: m.text }));
     if (payload.length < 2) return;
     try {
       const res = await fetch('/api/chat/learn', {
@@ -395,7 +420,7 @@
       return;
     }
     listening = true;
-    stopMicLevel = await startMicLevelMonitor(level => {
+    stopMicLevel = await startMicLevelMonitor((level) => {
       voiceLevel = level;
     });
     const r = new Ctor();
@@ -439,7 +464,7 @@
     if (!text || busy) return;
     const myGen = ++chatSendGeneration;
     activeChatAbort?.abort();
-    const prevUserCount = messages.filter(m => m.role === 'user').length;
+    const prevUserCount = messages.filter((m) => m.role === 'user').length;
     inputText = '';
     showChips = false;
     busy = true;
@@ -480,9 +505,9 @@
     }
 
     const historyPayload = messages
-      .filter(m => !m.loading && !m.error && m.text)
+      .filter((m) => !m.loading && !m.error && m.text)
       .slice(-24)
-      .map(m => ({
+      .map((m) => ({
         role: m.role,
         text: m.text,
         ...(m.at ? { at: m.at } : {}),
@@ -493,9 +518,17 @@
     activeChatAbort = chatCtl;
     const chatTimeout = setTimeout(() => chatCtl.abort(), 100_000);
     try {
-      const twinMemPayload = twinMem.facts.length || Object.keys(twinMem.preferences).length || twinMem.identityOverrides?.length
-        ? { facts: twinMem.facts, preferences: twinMem.preferences, recentTopics: twinMem.recentTopics, identityOverrides: twinMem.identityOverrides }
-        : undefined;
+      const twinMemPayload =
+        twinMem.facts.length ||
+        Object.keys(twinMem.preferences).length ||
+        twinMem.identityOverrides?.length
+          ? {
+              facts: twinMem.facts,
+              preferences: twinMem.preferences,
+              recentTopics: twinMem.recentTopics,
+              identityOverrides: twinMem.identityOverrides,
+            }
+          : undefined;
 
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -617,7 +650,7 @@
       }
       await scrollBottom();
       persistThread();
-      const newUserCount = messages.filter(m => m.role === 'user').length;
+      const newUserCount = messages.filter((m) => m.role === 'user').length;
       void maybeRollSummary(prevUserCount, newUserCount);
       void maybeLearnFromChat(prevUserCount, newUserCount);
       // Auto-speak if voice mode is enabled
@@ -654,7 +687,8 @@
     const vibe =
       $profile.spotifyIdentity?.vibeDescription ||
       $profile.appleMusicIdentity?.vibeDescription ||
-      $profile.instagramIdentity?.aesthetic || '';
+      $profile.instagramIdentity?.aesthetic ||
+      '';
 
     const city = $profile.city || $profile.instagramIdentity?.city || '';
 
@@ -676,12 +710,17 @@
       const hasGoogle = $profile.googleConnected;
 
       let gapQ = 'What would you like to do today?';
-      if (!hasMusic) gapQ = "What kind of music have you been into lately?";
-      else if (!hasLinkedIn) gapQ = "What do you do for work?";
+      if (!hasMusic) gapQ = 'What kind of music have you been into lately?';
+      else if (!hasLinkedIn) gapQ = 'What do you do for work?';
       else if (!hasGoogle) gapQ = "What's on your agenda today?";
 
       text = `Hey ${name}! I've got your ${connectedPlatforms.join(' + ')} signals${contextStr}. ${gapQ}`;
-      followups = ["Plan my day", "What's happening tonight?", "Music for my mood", "Something based on my vibe"];
+      followups = [
+        'Plan my day',
+        "What's happening tonight?",
+        'Music for my mood',
+        'Something based on my vibe',
+      ];
     }
 
     const greet: Message = {
@@ -703,7 +742,6 @@
     await tick();
     if (chatEl) chatEl.scrollTo({ top: chatEl.scrollHeight, behavior: 'smooth' });
   }
-
 
   function bumpTypingEnergy() {
     lastTyped = Date.now();
@@ -747,7 +785,7 @@
         }),
       });
       const data = await res.json();
-      if (data.newToken) profile.update(p => ({ ...p, googleAccessToken: data.newToken }));
+      if (data.newToken) profile.update((p) => ({ ...p, googleAccessToken: data.newToken }));
       draftOpen = false;
       messages = [
         ...messages,
@@ -765,12 +803,10 @@
       draftSubmitting = false;
     }
   }
-
 </script>
 
 <!-- Living presence root -->
 <div class="presence-root">
-
   <!-- Twin header -->
   <div class="twin-header">
     <TwinPresence state={twinState} mood={lastAiMood} compact />
@@ -779,14 +815,21 @@
       <div class="twin-status-line">
         <span
           class="status-dot"
-          style="background: {listening ? 'var(--accent-primary)' : busy ? 'var(--text-muted)' : 'var(--state-success)'};"
+          style="background: {listening
+            ? 'var(--accent-primary)'
+            : busy
+              ? 'var(--text-muted)'
+              : 'var(--state-success)'};"
         ></span>
         <span class="twin-subtitle">
           {#if listening}Listening...
           {:else if busy}{loadingStatus || 'Thinking...'}
           {:else if ttsPlaying}Speaking...
-          {:else}{$profile.instagramConnected ? '@' + ($profile.instagramIdentity?.username ?? '') : 'Ready'}
-            {#if $profile.spotifyConnected} · 🎵{/if}
+          {:else}{$profile.instagramConnected
+              ? '@' + ($profile.instagramIdentity?.username ?? '')
+              : 'Ready'}
+            {#if $profile.spotifyConnected}
+              · 🎵{/if}
           {/if}
         </span>
       </div>
@@ -798,21 +841,30 @@
     <div class="messages-top-spacer"></div>
 
     {#if messages.length === 0}
-    <div class="empty-state fade-up">
-      <div class="empty-blob-wrap">
-        <TwinHeroBlob state={busy ? 'thinking' : blobUiState} typingEnergy={typingLevel} ready={heroBlobReady} />
+      <div class="empty-state fade-up">
+        <div class="empty-blob-wrap">
+          <TwinHeroBlob
+            state={busy ? 'thinking' : blobUiState}
+            typingEnergy={typingLevel}
+            ready={heroBlobReady}
+          />
+        </div>
+        {#if busy}
+          <h2 class="cw-heading">Getting to know you…</h2>
+          <p class="cw-sub">Your twin is reading your signals.</p>
+        {:else if signalCount === 0}
+          <h2 class="cw-heading">Hey, I'm your twin</h2>
+          <p class="cw-sub">
+            Connect platforms in Profile and I'll know you deeply — music, calendar, work,
+            lifestyle.
+          </p>
+        {:else}
+          <h2 class="cw-heading">Hey {$profile.name?.split(' ')[0] || 'there'}</h2>
+          <p class="cw-sub">
+            Ask me anything — I'll use your identity to give you personalised answers.
+          </p>
+        {/if}
       </div>
-      {#if busy}
-        <h2 class="cw-heading">Getting to know you…</h2>
-        <p class="cw-sub">Your twin is reading your signals.</p>
-      {:else if signalCount === 0}
-        <h2 class="cw-heading">Hey, I'm your twin</h2>
-        <p class="cw-sub">Connect platforms in Profile and I'll know you deeply — music, calendar, work, lifestyle.</p>
-      {:else}
-        <h2 class="cw-heading">Hey {$profile.name?.split(' ')[0] || 'there'}</h2>
-        <p class="cw-sub">Ask me anything — I'll use your identity to give you personalised answers.</p>
-      {/if}
-    </div>
     {/if}
 
     {#if messages.length > 0}
@@ -844,56 +896,52 @@
     {#each messagesForList as msg}
       {#if msg.role === 'user'}
         <ChatUserBubble text={msg.text} fadeClass="wagwan-chat-fade-up" airy />
-
       {:else}
-      <div class="msg-ai fade-up">
-        {#if msg.loading}
-          <div class="msg-loading">
-            <span class="loading-text">{loadingStatus || 'Thinking'}{loadingDots}</span>
-          </div>
+        <div class="msg-ai fade-up">
+          {#if msg.loading}
+            <div class="msg-loading">
+              <span class="loading-text">{loadingStatus || 'Thinking'}{loadingDots}</span>
+            </div>
+          {:else if msg.error}
+            <div class="msg-error">{msg.text}</div>
+            {#if msg.query}
+              <button class="retry-btn" on:click={() => retry(msg.query!)}>↩ Try again</button>
+            {/if}
+          {:else}
+            <div class="msg-text">{@html renderChatMd(msg.text || '')}</div>
 
-        {:else if msg.error}
-          <div class="msg-error">{msg.text}</div>
-          {#if msg.query}
-          <button class="retry-btn" on:click={() => retry(msg.query!)}>↩ Try again</button>
+            <!-- TTS -->
+            {#if isSpeechSynthesisSupported()}
+              <div class="msg-tools">
+                <button class="tool-chip" on:click={() => speakLast(msg.text)}>🔊 Read</button>
+              </div>
+            {/if}
+
+            <!-- Pending actions -->
+            {#if msg.pendingActions?.length}
+              <div class="action-chips">
+                {#each msg.pendingActions as a}
+                  <button class="action-chip" on:click={() => applyAction(a)}>
+                    {#if a.type === 'set_reminder'}🔔 {a.text}
+                    {:else if a.type === 'gmail_draft'}✉️ Save Gmail draft
+                    {:else if a.type === 'navigate'}→ {a.path}
+                    {:else if a.type === 'copy_text'}📋 Copy
+                    {:else}Run action{/if}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- Result cards -->
+            {#if msg.cards?.length}
+              <div class="msg-cards">
+                {#each msg.cards as card (card.title + card.url)}
+                  <div class="fade-up"><ResultCard {card} /></div>
+                {/each}
+              </div>
+            {/if}
           {/if}
-
-        {:else}
-          <div class="msg-text">{@html renderChatMd(msg.text || '')}</div>
-
-          <!-- TTS -->
-          {#if isSpeechSynthesisSupported()}
-          <div class="msg-tools">
-            <button class="tool-chip" on:click={() => speakLast(msg.text)}>🔊 Read</button>
-          </div>
-          {/if}
-
-          <!-- Pending actions -->
-          {#if msg.pendingActions?.length}
-          <div class="action-chips">
-            {#each msg.pendingActions as a}
-            <button class="action-chip" on:click={() => applyAction(a)}>
-              {#if a.type === 'set_reminder'}🔔 {a.text}
-              {:else if a.type === 'gmail_draft'}✉️ Save Gmail draft
-              {:else if a.type === 'navigate'}→ {a.path}
-              {:else if a.type === 'copy_text'}📋 Copy
-              {:else}Run action{/if}
-            </button>
-            {/each}
-          </div>
-          {/if}
-
-          <!-- Result cards -->
-          {#if msg.cards?.length}
-          <div class="msg-cards">
-            {#each msg.cards as card (card.title + card.url)}
-            <div class="fade-up"><ResultCard {card} /></div>
-            {/each}
-          </div>
-          {/if}
-
-        {/if}
-      </div>
+        </div>
       {/if}
     {/each}
 
@@ -903,10 +951,10 @@
   <!-- Composer stack: shared chat module (same chrome as agent threads) -->
   <div class="composer-stack">
     <ChatSuggestionChips
-      items={composerChips.map(c => ({ label: c.label, value: c.query }))}
+      items={composerChips.map((c) => ({ label: c.label, value: c.query }))}
       disabled={busy}
       layout="twin"
-      on:pick={e => send(e.detail.value)}
+      on:pick={(e) => send(e.detail.value)}
     />
     <div class="composer-wrap">
       <ChatComposerPill
@@ -917,8 +965,12 @@
         {busy}
         focused={inputFocused}
         on:input={bumpTypingEnergy}
-        on:focus={() => { inputFocused = true; }}
-        on:blur={() => { inputFocused = false; }}
+        on:focus={() => {
+          inputFocused = true;
+        }}
+        on:blur={() => {
+          inputFocused = false;
+        }}
         on:submit={() => send()}
       >
         <svelte:fragment slot="leading">
@@ -933,7 +985,14 @@
               aria-label={listening ? 'Stop listening' : 'Voice input'}
               aria-pressed={listening}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
               </svg>
@@ -955,12 +1014,26 @@
               aria-pressed={voiceMode}
             >
               {#if voiceMode}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                   <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
                 </svg>
               {:else}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                   <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
                 </svg>
@@ -976,31 +1049,45 @@
 
 <!-- Gmail draft modal -->
 {#if draftOpen}
-<div class="ai-draft-overlay" role="dialog" aria-modal="true">
-  <div class="ai-draft-sheet">
-    <div class="ai-draft-title">Save Gmail draft?</div>
-    <p class="ai-draft-lead">Review recipient and body. Nothing is sent until you send from Gmail.</p>
-    <label for="draft-to" class="ai-draft-label">To</label>
-    <input id="draft-to" bind:value={draftTo} class="ai-draft-field w-full mb-3" />
-    <label for="draft-subject" class="ai-draft-label">Subject</label>
-    <input id="draft-subject" bind:value={draftSubject} class="ai-draft-field w-full mb-3" />
-    <label for="draft-body" class="ai-draft-label">Body</label>
-    <textarea id="draft-body" bind:value={draftBody} rows="6" class="ai-draft-field ai-draft-field--area w-full mb-4"></textarea>
-    <div class="flex gap-2">
-      <button type="button" class="ai-draft-btn ai-draft-btn--ghost flex-1 py-3 rounded-xl" on:click={() => { draftOpen = false; }}
-      >Cancel</button>
-      <button
-        type="button"
-        class="ai-draft-btn ai-draft-btn--primary flex-1 py-3 rounded-xl"
-        disabled={draftSubmitting || !$profile.googleConnected}
-        on:click={confirmDraft}
-      >Save draft</button>
+  <div class="ai-draft-overlay" role="dialog" aria-modal="true">
+    <div class="ai-draft-sheet">
+      <div class="ai-draft-title">Save Gmail draft?</div>
+      <p class="ai-draft-lead">
+        Review recipient and body. Nothing is sent until you send from Gmail.
+      </p>
+      <label for="draft-to" class="ai-draft-label">To</label>
+      <input id="draft-to" bind:value={draftTo} class="ai-draft-field w-full mb-3" />
+      <label for="draft-subject" class="ai-draft-label">Subject</label>
+      <input id="draft-subject" bind:value={draftSubject} class="ai-draft-field w-full mb-3" />
+      <label for="draft-body" class="ai-draft-label">Body</label>
+      <textarea
+        id="draft-body"
+        bind:value={draftBody}
+        rows="6"
+        class="ai-draft-field ai-draft-field--area w-full mb-4"
+      ></textarea>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="ai-draft-btn ai-draft-btn--ghost flex-1 py-3 rounded-xl"
+          on:click={() => {
+            draftOpen = false;
+          }}>Cancel</button
+        >
+        <button
+          type="button"
+          class="ai-draft-btn ai-draft-btn--primary flex-1 py-3 rounded-xl"
+          disabled={draftSubmitting || !$profile.googleConnected}
+          on:click={confirmDraft}>Save draft</button
+        >
+      </div>
+      {#if !$profile.googleConnected}
+        <p style="font-size:11px;color:var(--amber);margin-top:10px;">
+          Connect Google in Profile (includes Gmail compose) to save drafts.
+        </p>
+      {/if}
     </div>
-    {#if !$profile.googleConnected}
-      <p style="font-size:11px;color:var(--amber);margin-top:10px;">Connect Google in Profile (includes Gmail compose) to save drafts.</p>
-    {/if}
   </div>
-</div>
 {/if}
 
 <style>
@@ -1083,7 +1170,11 @@
   }
 
   .ai-draft-btn--primary {
-    background: linear-gradient(135deg, var(--brand-red), color-mix(in srgb, var(--brand-red) 75%, #000));
+    background: linear-gradient(
+      135deg,
+      var(--brand-red),
+      color-mix(in srgb, var(--brand-red) 75%, #000)
+    );
     color: #fff;
   }
 
@@ -1199,7 +1290,9 @@
     color: var(--text-primary);
     font-family: var(--font-sans);
     font-size: 13px;
-    transition: border-color var(--dur-micro) var(--ease-premium), box-shadow var(--dur-micro) var(--ease-premium);
+    transition:
+      border-color var(--dur-micro) var(--ease-premium),
+      box-shadow var(--dur-micro) var(--ease-premium);
   }
 
   .chat-thread-search__input:focus {
@@ -1407,7 +1500,9 @@
     color: var(--text-primary);
     cursor: pointer;
     text-align: left;
-    transition: background var(--dur-standard) var(--ease-premium), border-color var(--dur-standard) var(--ease-premium);
+    transition:
+      background var(--dur-standard) var(--ease-premium),
+      border-color var(--dur-standard) var(--ease-premium);
     white-space: normal;
   }
 
@@ -1467,7 +1562,10 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background var(--dur-standard) var(--ease-premium), border-color var(--dur-standard) var(--ease-premium), box-shadow var(--dur-standard) var(--ease-premium);
+    transition:
+      background var(--dur-standard) var(--ease-premium),
+      border-color var(--dur-standard) var(--ease-premium),
+      box-shadow var(--dur-standard) var(--ease-premium);
   }
 
   .composer-mic:focus-visible {
@@ -1501,7 +1599,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .composer-mic.live { animation: none; }
+    .composer-mic.live {
+      animation: none;
+    }
   }
 
   .composer-side {
@@ -1518,7 +1618,10 @@
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
-    transition: background var(--dur-micro) var(--ease-premium), border-color var(--dur-micro) var(--ease-premium), color var(--dur-micro) var(--ease-premium);
+    transition:
+      background var(--dur-micro) var(--ease-premium),
+      border-color var(--dur-micro) var(--ease-premium),
+      color var(--dur-micro) var(--ease-premium);
   }
 
   .composer-side:focus-visible {
@@ -1551,5 +1654,4 @@
     margin-left: auto;
     margin-right: auto;
   }
-
 </style>

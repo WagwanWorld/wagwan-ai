@@ -17,6 +17,7 @@
   import OfferCard from '$lib/components/earn/OfferCard.svelte';
   import VisibilityControls from '$lib/components/earn/VisibilityControls.svelte';
   import PortraitPreview from '$lib/components/earn/PortraitPreview.svelte';
+  import { wagwanAuthHeaders } from '$lib/auth/wagwanApi';
 
   let loading = true;
   let err = '';
@@ -79,7 +80,13 @@
     ig_reel_rate_inr: number;
     whatsapp_intro_rate_inr: number;
     available: boolean;
-  } = { ig_post_rate_inr: 0, ig_story_rate_inr: 0, ig_reel_rate_inr: 0, whatsapp_intro_rate_inr: 0, available: false };
+  } = {
+    ig_post_rate_inr: 0,
+    ig_story_rate_inr: 0,
+    ig_reel_rate_inr: 0,
+    whatsapp_intro_rate_inr: 0,
+    available: false,
+  };
 
   let visibility = {
     music_visible: true,
@@ -103,7 +110,7 @@
     try {
       const [cRes, wRes, pRes, tRes, gRes] = await Promise.all([
         fetch(`/api/user/campaigns?sub=${encodeURIComponent(sub)}`),
-        fetch(`/api/user/wallet?sub=${encodeURIComponent(sub)}`),
+        fetch('/api/user/wallet', { headers: wagwanAuthHeaders() }),
         fetch(`/api/user/marketing-prefs?sub=${encodeURIComponent(sub)}`),
         fetch(`/api/user/identity-tags?sub=${encodeURIComponent(sub)}`),
         fetch(`/api/user/graph-strength?sub=${encodeURIComponent(sub)}`),
@@ -119,8 +126,7 @@
       if (pJson.ok && pJson.prefs) {
         const p = pJson.prefs as Record<string, unknown>;
         prefs = {
-          channels:
-            (p.channels as { email?: boolean; in_app?: boolean; whatsapp?: boolean }) ?? {},
+          channels: (p.channels as { email?: boolean; in_app?: boolean; whatsapp?: boolean }) ?? {},
           categories: (p.categories as Record<string, boolean>) ?? {},
           max_campaigns_per_week: Number(p.max_campaigns_per_week) || 5,
           manual_interest_tags: (p.manual_interest_tags as string[]) ?? [],
@@ -133,11 +139,14 @@
           manual_interest_tags: [],
         };
       }
-      identityTags = tJson.ok ? tJson.tags ?? [] : [];
-      const inf = tJson.ok ? (tJson as { inference?: InferenceIdentityWrapper | null }).inference : null;
+      identityTags = tJson.ok ? (tJson.tags ?? []) : [];
+      const inf = tJson.ok
+        ? (tJson as { inference?: InferenceIdentityWrapper | null }).inference
+        : null;
       inferenceIdentity = inf ?? null;
       const intel = tJson.ok
-        ? (tJson as { identityIntelligence?: IdentityIntelligenceWrapper | null }).identityIntelligence
+        ? (tJson as { identityIntelligence?: IdentityIntelligenceWrapper | null })
+            .identityIntelligence
         : null;
       identityIntelligence = intel ?? null;
       manualTagInput = (prefs.manual_interest_tags ?? []).join(', ');
@@ -175,7 +184,7 @@
     if (!sub || !prefs) return;
     const manualInterestTags = manualTagInput
       .split(/[,;\n]+/)
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean);
     const res = await fetch('/api/user/update-preferences', {
       method: 'POST',
@@ -225,8 +234,8 @@
     try {
       const res = await fetch('/api/user/wallet/withdraw', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ googleSub: sub }),
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({}),
       });
       const j = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -271,7 +280,8 @@
         return;
       }
       identityIntelligence =
-        (j as { identityIntelligence?: IdentityIntelligenceWrapper | null }).identityIntelligence ?? null;
+        (j as { identityIntelligence?: IdentityIntelligenceWrapper | null }).identityIntelligence ??
+        null;
       intelligenceMsg = (j as { fromCache?: boolean }).fromCache
         ? 'Loaded saved operator view.'
         : 'Operator view updated.';
@@ -295,7 +305,10 @@
       });
 
       const reader = res.body?.getReader();
-      if (!reader) { graphRefreshMsg = 'No response stream'; return; }
+      if (!reader) {
+        graphRefreshMsg = 'No response stream';
+        return;
+      }
       const decoder = new TextDecoder();
       let buffer = '';
       let finalData: Record<string, unknown> | null = null;
@@ -317,7 +330,8 @@
       }
 
       if (finalData?.ok) {
-        graphRefreshMsg = 'Signals updated. Brand match quality usually improves with fresher data.';
+        graphRefreshMsg =
+          'Signals updated. Brand match quality usually improves with fresher data.';
         await loadAll();
       } else {
         graphRefreshMsg = (finalData?.error as string) || 'Refresh failed';
@@ -351,15 +365,15 @@
 
   async function acceptOffer(e: CustomEvent) {
     const { campaignId } = e.detail;
-    const phone =
-      localStorage.getItem('wagwan_user_id') ? localStorage.getItem('wagwan_phone') || '' : '';
+    const phone = localStorage.getItem('wagwan_user_id')
+      ? localStorage.getItem('wagwan_phone') || ''
+      : '';
     const campaign = campaigns.find((c) => c.campaign_id === campaignId);
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'accept',
           phone,
@@ -390,8 +404,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sub, campaignId, action: 'decline' }),
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ campaignId, action: 'decline' }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
@@ -415,9 +429,8 @@
     try {
       const res = await fetch('/api/creator/brief-response', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: wagwanAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          sub,
           campaignId,
           action: 'complete',
           igPostUrl: igPostUrl.trim(),
@@ -438,7 +451,11 @@
   const categoryKeys = ['music', 'fashion', 'events', 'sports', 'tech'];
 
   $: acctRows = [
-    { label: 'Instagram', ok: $profile.instagramConnected, sub: $profile.instagramIdentity?.username },
+    {
+      label: 'Instagram',
+      ok: $profile.instagramConnected,
+      sub: $profile.instagramIdentity?.username,
+    },
     { label: 'Google', ok: $profile.googleConnected },
     { label: 'Spotify', ok: $profile.spotifyConnected },
     { label: 'LinkedIn', ok: $profile.linkedinConnected },
@@ -456,11 +473,7 @@
         Connect Instagram to start earning
       {/if}
     </span>
-    <button
-      class="earn-refresh-btn"
-      aria-label="Refresh"
-      on:click={() => loadAll()}
-    >
+    <button class="earn-refresh-btn" aria-label="Refresh" on:click={() => loadAll()}>
       <ArrowClockwise size={16} class={loading ? 'animate-spin' : ''} />
     </button>
   </div>
@@ -519,7 +532,9 @@
   {#if whatsappLink}
     <div class="earn-whatsapp">
       <p class="earn-whatsapp-text">Brief accepted! Connect with the brand:</p>
-      <a href={whatsappLink} target="_blank" rel="noopener" class="earn-whatsapp-btn">Open WhatsApp</a>
+      <a href={whatsappLink} target="_blank" rel="noopener" class="earn-whatsapp-btn"
+        >Open WhatsApp</a
+      >
     </div>
   {/if}
 
@@ -552,7 +567,7 @@
   </div>
 
   <!-- Details toggle -->
-  <button class="earn-details-toggle" on:click={() => showDetails = !showDetails}>
+  <button class="earn-details-toggle" on:click={() => (showDetails = !showDetails)}>
     {showDetails ? 'Hide details' : 'Show details'}
   </button>
 
@@ -568,7 +583,8 @@
             <span class="signal-label">{graphStrength.label}</span>
           </div>
           <p class="signal-meta">
-            {graphStrength.source_count} sources · {graphStrength.freshness_bucket} · {graphStrength.tag_count} tags
+            {graphStrength.source_count} sources · {graphStrength.freshness_bucket} · {graphStrength.tag_count}
+            tags
           </p>
           <div class="signal-bar-track">
             <div class="signal-bar-fill" style="width: {Math.min(100, graphStrength.score)}%"></div>
@@ -579,9 +595,11 @@
               disabled={refreshingGraph}
               on:click={() => refreshIdentitySignals()}
             >
-              {refreshingGraph ? (graphRefreshMsg || 'Refreshing...') : 'Refresh signals'}
+              {refreshingGraph ? graphRefreshMsg || 'Refreshing...' : 'Refresh signals'}
             </button>
-            <a href="/profile" class="earn-link">Connect more accounts <ArrowSquareOut size={14} /></a>
+            <a href="/profile" class="earn-link"
+              >Connect more accounts <ArrowSquareOut size={14} /></a
+            >
           </div>
           {#if graphRefreshMsg}
             <p class="signal-msg">{graphRefreshMsg}</p>
@@ -649,7 +667,10 @@
     </div>
 
     <!-- Portrait preview -->
-    <button class="earn-details-toggle" on:click={() => showPortraitPreview = !showPortraitPreview}>
+    <button
+      class="earn-details-toggle"
+      on:click={() => (showPortraitPreview = !showPortraitPreview)}
+    >
       {showPortraitPreview ? 'Hide portrait preview' : 'Preview your portrait'}
     </button>
     {#if showPortraitPreview}
@@ -662,7 +683,9 @@
         followers={$profile.instagramIdentity?.followersCount ?? 0}
         posts={$profile.instagramIdentity?.mediaCount ?? 0}
         rates={creatorRates}
-        visibleSections={Object.entries(visibility).filter(([_, v]) => v).map(([k]) => k.replace('_visible', ''))}
+        visibleSections={Object.entries(visibility)
+          .filter(([_, v]) => v)
+          .map(([k]) => k.replace('_visible', ''))}
       />
     {/if}
 
@@ -719,7 +742,9 @@
     font-weight: 600;
     color: var(--text-secondary);
   }
-  .earn-status.live { color: var(--text-primary); }
+  .earn-status.live {
+    color: var(--text-primary);
+  }
   .status-dot {
     width: 8px;
     height: 8px;
@@ -855,7 +880,9 @@
     cursor: pointer;
     transition: background 0.15s;
   }
-  .earn-details-toggle:hover { background: var(--glass-medium); }
+  .earn-details-toggle:hover {
+    background: var(--glass-medium);
+  }
 
   /* ── Glass panel ── */
   .earn-glass-panel {
@@ -931,8 +958,13 @@
     cursor: pointer;
     transition: background 0.15s;
   }
-  .earn-action-btn:hover { background: rgba(255, 255, 255, 0.12); }
-  .earn-action-btn:disabled { opacity: 0.5; cursor: default; }
+  .earn-action-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .earn-action-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 
   .earn-link {
     display: inline-flex;
@@ -942,7 +974,9 @@
     color: var(--accent-tertiary);
     text-decoration: none;
   }
-  .earn-link:hover { text-decoration: underline; }
+  .earn-link:hover {
+    text-decoration: underline;
+  }
 
   /* ── Wallet ── */
   .wallet-stats {
@@ -1007,7 +1041,7 @@
     display: inline-block;
     padding: 10px 24px;
     border-radius: 100px;
-    background: #25D366;
+    background: #25d366;
     color: white;
     font-size: 14px;
     font-weight: 700;
@@ -1065,7 +1099,11 @@
     animation: spin 1s linear infinite;
   }
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

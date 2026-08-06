@@ -1,22 +1,20 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
+import { assertCreatorProfileFromRequest } from '$lib/server/creatorAuth';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
     return json({ ok: false, error: 'supabase_not_configured' }, { status: 503 });
   }
 
-  const sub = url.searchParams.get('sub');
-  if (!sub?.trim()) {
-    throw error(400, 'sub is required');
-  }
+  const { googleSub } = await assertCreatorProfileFromRequest(request);
 
   const sb = getServiceSupabase();
   const { data: rows, error: qErr } = await sb
     .from('user_earnings')
     .select('id, campaign_id, amount_inr, status, note, created_at')
-    .eq('user_google_sub', sub.trim())
+    .eq('user_google_sub', googleSub)
     .order('created_at', { ascending: false })
     .limit(100);
 
@@ -48,7 +46,7 @@ export const GET: RequestHandler = async ({ url }) => {
       pending_inr,
       withdrawable_inr: available_inr,
     },
-    transactions: list.map(r => ({
+    transactions: list.map((r) => ({
       id: r.id,
       campaign_id: r.campaign_id,
       amount_inr: r.amount_inr,
