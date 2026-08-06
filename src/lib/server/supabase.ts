@@ -244,19 +244,22 @@ export async function getIdentityGraph(
  * Sets wagwan_user_id on the user_profiles row identified by google_sub.
  */
 export async function linkWagwanUser(googleSub: string, wagwanUserId: string): Promise<boolean> {
-  const { error } = await getClient()
+  const { data, error } = await getClient()
     .from('user_profiles')
     .update({
       wagwan_user_id: wagwanUserId,
       updated_at: new Date().toISOString(),
     })
-    .eq('google_sub', googleSub);
+    .eq('google_sub', googleSub)
+    .or(`wagwan_user_id.is.null,wagwan_user_id.eq.${wagwanUserId}`)
+    .select('google_sub')
+    .maybeSingle();
 
   if (error) {
     console.error('[Supabase] linkWagwanUser error:', error.message);
     return false;
   }
-  return true;
+  return Boolean(data);
 }
 
 /**
