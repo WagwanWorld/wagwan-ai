@@ -7,7 +7,14 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
+import {
+  instagramUsernameFromProfile,
+  normalizeCreatorInstagramUsername,
+} from '../src/lib/server/creatorIdentity';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -21,6 +28,29 @@ describe('normalizeIgHandle', () => {
   it('rejects invalid handles', () => {
     expect(normalizeIgHandle('a')).toBeNull();
     expect(normalizeIgHandle('bad handle!')).toBeNull();
+  });
+});
+
+describe('creator identity helpers', () => {
+  it('normalizes Instagram usernames for roster ownership checks', () => {
+    expect(normalizeCreatorInstagramUsername('@Creator_Name')).toBe('creator_name');
+    expect(normalizeCreatorInstagramUsername('')).toBeNull();
+  });
+
+  it('extracts normalized Instagram username from a linked creator profile', () => {
+    expect(
+      instagramUsernameFromProfile({
+        google_sub: 'ig:user:creator_name',
+        email: null,
+        name: null,
+        profile_data: { instagramIdentity: { username: '@Creator_Name' } },
+        platform_tokens: {},
+        identity_graph: {},
+        identity_summary: '',
+        updated_at: '',
+        wagwan_user_id: 'wagwan-1',
+      }),
+    ).toBe('creator_name');
   });
 });
 
@@ -138,6 +168,37 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+
+  it('preserves bulk sheet metadata when coercing roster snapshots', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'riyahundi',
+        displayName: 'Riya Hundi',
+        bio: 'Fashion creator',
+        followers: '8.2K',
+        followersCount: 8200,
+        following: '400',
+        posts: '115',
+        isVerified: false,
+        onPlatform: false,
+        scrapedAt: '2026-08-07T00:00:00.000Z',
+        email: 'riya@example.com',
+        phone: '+919876543210',
+        rates: '15000',
+        notes: 'Prefers reels',
+        tags: 'fashion,lifestyle',
+        custom_fields: { manager: 'Asha', priority: 1 },
+      },
+      'riyahundi',
+    );
+
+    expect(snap.email).toBe('riya@example.com');
+    expect(snap.phone).toBe('+919876543210');
+    expect(snap.rates).toBe('15000');
+    expect(snap.notes).toBe('Prefers reels');
+    expect(snap.tags).toBe('fashion,lifestyle');
+    expect(snap.custom_fields).toEqual({ manager: 'Asha', priority: '1' });
   });
 });
 
