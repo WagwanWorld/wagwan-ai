@@ -11,7 +11,7 @@ import {
   coerceRosterProfileSnapshot,
   type BrandCreatorRosterEntry,
 } from '../src/lib/types/creator-invite';
-import { profileInstagramUsername } from '../src/lib/server/creatorAuth';
+import { profileInstagramUsername } from '../src/lib/server/creatorIdentity';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
