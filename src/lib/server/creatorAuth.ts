@@ -46,6 +46,7 @@ export function profileInstagramUsername(profileData: Record<string, unknown>): 
   const identity = profileData.instagramIdentity;
   if (!identity || typeof identity !== 'object') return null;
 
-  const raw = (identity as Record<string, unknown>).username ?? (identity as Record<string, unknown>).handle;
+  const raw =
+    (identity as Record<string, unknown>).username ?? (identity as Record<string, unknown>).handle;
   return typeof raw === 'string' ? normalizeIgHandle(raw) : null;
 }

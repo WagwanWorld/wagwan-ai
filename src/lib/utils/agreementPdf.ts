@@ -278,7 +278,7 @@ export function generateAgreementPdf(info: SigningInfo) {
   // 6. Refunds
   heading('6. REFUNDS, CHARGEBACKS, AND LIABILITY');
   body(
-    "6.1. The Service Provider shall facilitate refund requests as a technical and operational function only.",
+    '6.1. The Service Provider shall facilitate refund requests as a technical and operational function only.',
   );
   body(
     `6.2. ${cn} shall remain solely and exclusively responsible for funding and approving all customer refunds.`,
@@ -286,9 +286,7 @@ export function generateAgreementPdf(info: SigningInfo) {
   body(
     '6.3. If a refund arises solely due to a technical error attributable to the Platform, the Service Provider shall bear only the associated processing fees and chargeback fees.',
   );
-  body(
-    "6.4. The Service Provider's liability is limited to refund fees only.",
-  );
+  body("6.4. The Service Provider's liability is limited to refund fees only.");
   body(
     `6.5. ${cn} shall bear full responsibility for chargebacks. For verified technical errors, Wagwan shall reimburse chargeback fees within fifteen (15) business days.`,
   );
@@ -307,9 +305,7 @@ export function generateAgreementPdf(info: SigningInfo) {
   body(
     '7.1. This Agreement shall commence on the Effective Date and remain in effect for 12 months.',
   );
-  body(
-    "7.2. Either Party may terminate with 30 days' prior written notice.",
-  );
+  body("7.2. Either Party may terminate with 30 days' prior written notice.");
   body(
     `7.3. Upon termination: ${cn} shall cease Platform use and clear outstanding dues. The Service Provider shall provide all raw Client Data within fifteen (15) business days.`,
   );
