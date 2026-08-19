@@ -7,7 +7,11 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
+import { profileInstagramUsername } from '../src/lib/server/creatorIdentity';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +142,43 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk-uploaded sheet fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 10k/reel',
+        notes: 'Prefers evening events',
+        tags: 'nightlife, fashion',
+        custom_fields: { manager: 'Asha', tier: 2 },
+      },
+      'creator',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('INR 10k/reel');
+    expect(snap.notes).toBe('Prefers evening events');
+    expect(snap.tags).toBe('nightlife, fashion');
+    expect(snap.custom_fields).toEqual({ manager: 'Asha', tier: '2' });
+  });
+});
+
+describe('profileInstagramUsername', () => {
+  it('normalizes creator profile Instagram username for invite ownership checks', () => {
+    expect(profileInstagramUsername({ instagramIdentity: { username: '@Creator.Name' } })).toBe(
+      'creator.name',
+    );
+  });
+
+  it('returns null when no Instagram identity exists', () => {
+    expect(profileInstagramUsername({})).toBeNull();
   });
 });
 
