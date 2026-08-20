@@ -7,7 +7,10 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +141,38 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves sheet-upload metadata fields from stored roster rows', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        bio: 'Bio',
+        followers: '10K',
+        following: '100',
+        posts: '20',
+        isVerified: false,
+        onPlatform: false,
+        email: 'creator@example.com',
+        phone: '+910000000000',
+        rates: 'INR 25,000/reel',
+        notes: 'Prefers food campaigns',
+        tags: 'food, nightlife',
+        custom_fields: { manager: 'Asha', priority: 1 },
+        scrapedAt: '2026-08-20T00:00:00.000Z',
+      },
+      'creator',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+910000000000');
+    expect(snap.rates).toBe('INR 25,000/reel');
+    expect(snap.notes).toBe('Prefers food campaigns');
+    expect(snap.tags).toBe('food, nightlife');
+    expect(snap.custom_fields).toEqual({ manager: 'Asha', priority: '1' });
   });
 });
 
