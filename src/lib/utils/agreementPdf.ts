@@ -284,11 +284,9 @@ export function generateAgreementPdf(info: SigningInfo) {
     `6.2. ${cn} shall remain solely and exclusively responsible for funding and approving all customer refunds.`,
   );
   body(
-    "6.3. If a refund arises solely due to a technical error attributable to the Platform, the Service Provider shall bear only the associated processing fees and chargeback fees.",
+    '6.3. If a refund arises solely due to a technical error attributable to the Platform, the Service Provider shall bear only the associated processing fees and chargeback fees.',
   );
-  body(
-    "6.4. The Service Provider's liability is limited to refund fees only.",
-  );
+  body("6.4. The Service Provider's liability is limited to refund fees only.");
   body(
     `6.5. ${cn} shall bear full responsibility for chargebacks. For verified technical errors, Wagwan shall reimburse chargeback fees within fifteen (15) business days.`,
   );
@@ -311,10 +309,7 @@ export function generateAgreementPdf(info: SigningInfo) {
     "7.2. Termination for Convenience: Either Party may terminate with 30 days' prior written notice.",
   );
   body('7.3. Obligations upon Termination:');
-  numberedItem(
-    'a.',
-    `${cn} shall cease Platform use and clear outstanding dues.`,
-  );
+  numberedItem('a.', `${cn} shall cease Platform use and clear outstanding dues.`);
   numberedItem(
     'b.',
     `The Service Provider shall, within fifteen (15) business days, provide ${cn} with all raw Client Data.`,

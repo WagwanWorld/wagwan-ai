@@ -3,7 +3,10 @@ import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
 import { getAuthenticatedCreator } from '$lib/server/creatorAuth';
-import { extractProfileInstagramUsername, normalizeInstagramUsername } from '$lib/server/creatorIdentity';
+import {
+  extractProfileInstagramUsername,
+  normalizeInstagramUsername,
+} from '$lib/server/creatorIdentity';
 import { isWagwanAuthConfigured } from '$lib/server/wagwanAuth';
 
 export const POST: RequestHandler = async ({ request }) => {
