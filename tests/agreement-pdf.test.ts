@@ -16,7 +16,7 @@ vi.mock('jspdf', () => {
     splitTextToSize(text: string) {
       return [text];
     }
-    text(text: string, _x: number, _y: number) {
+    text(text: string) {
       pdfState.text.push(text);
     }
     addImage() {}
