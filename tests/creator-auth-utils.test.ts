@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizeInstagramUsername,
   profileInstagramUsername,
-} from '../src/lib/server/creatorAuth';
+} from '../src/lib/server/creatorIdentity';
 
 describe('creator auth utilities', () => {
   it('normalizes Instagram usernames from handles and URLs', () => {

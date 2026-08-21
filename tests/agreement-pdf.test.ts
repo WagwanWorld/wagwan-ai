@@ -53,6 +53,6 @@ describe('generateAgreementPdf', () => {
     expect(pdfText).not.toContain('Either Party may terminate immediately');
     expect(pdfText).not.toContain('appointment shall follow Section 11');
     expect(pdfText).not.toContain('penalty fees');
-    expect(pdfState.savedAs).toBe('Wagwan-Service-Agreement-Fuzone.pdf');
+    expect(pdfState.savedAs).toBe('Service Agreement Fuzone.pdf');
   });
 });
