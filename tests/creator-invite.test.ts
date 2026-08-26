@@ -7,6 +7,7 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
@@ -138,6 +139,42 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves optional sheet upload fields', () => {
+    const snapshot = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        bio: 'Bio',
+        followers: '10K',
+        following: '100',
+        posts: '25',
+        isVerified: false,
+        onPlatform: false,
+        scrapedAt: '2026-08-26T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 25,000',
+        notes: 'Prefers reels',
+        tags: 'nightlife, fashion',
+        custom_fields: {
+          Manager: 'Nia',
+          Score: 92,
+        },
+      },
+      'creator',
+      'Creator',
+    );
+
+    expect(snapshot.email).toBe('creator@example.com');
+    expect(snapshot.phone).toBe('+919999999999');
+    expect(snapshot.rates).toBe('INR 25,000');
+    expect(snapshot.notes).toBe('Prefers reels');
+    expect(snapshot.tags).toBe('nightlife, fashion');
+    expect(snapshot.custom_fields).toEqual({ Manager: 'Nia', Score: '92' });
   });
 });
 
