@@ -104,5 +104,19 @@ export function coerceRosterProfileSnapshot(
       ? (r.recentCaptions as string[]).slice(0, 6)
       : undefined,
     scrapedAt: String(r.scrapedAt ?? new Date(0).toISOString()),
+    email: r.email ? String(r.email) : undefined,
+    phone: r.phone ? String(r.phone) : undefined,
+    rates: r.rates ? String(r.rates) : undefined,
+    notes: r.notes ? String(r.notes) : undefined,
+    tags: r.tags ? String(r.tags) : undefined,
+    custom_fields:
+      r.custom_fields && typeof r.custom_fields === 'object'
+        ? Object.fromEntries(
+            Object.entries(r.custom_fields as Record<string, unknown>).map(([key, value]) => [
+              key,
+              String(value),
+            ]),
+          )
+        : undefined,
   };
 }
