@@ -7,7 +7,10 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -199,5 +202,38 @@ describe('rosterEntryToView', () => {
     expect(view.profilePicture).toBe('https://example.com/p.jpg');
     expect(view.fitScore).toBe(68);
     expect(view.feedSummary).toContain('fashion');
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk-upload contact and custom fields after roster reload', () => {
+    const snapshot = coerceRosterProfileSnapshot(
+      {
+        handle: 'testcreator',
+        displayName: 'Test Creator',
+        bio: 'Creator bio',
+        followers: '12K',
+        followersCount: 12000,
+        following: '200',
+        posts: '50',
+        isVerified: false,
+        onPlatform: false,
+        scrapedAt: '2026-08-28T00:00:00.000Z',
+        email: 'creator@example.test',
+        phone: '+919999999999',
+        rates: 'INR 50,000',
+        notes: 'Prefers reels',
+        tags: 'fashion,lifestyle',
+        custom_fields: { manager: 'Asha' },
+      },
+      'fallback',
+    );
+
+    expect(snapshot.email).toBe('creator@example.test');
+    expect(snapshot.phone).toBe('+919999999999');
+    expect(snapshot.rates).toBe('INR 50,000');
+    expect(snapshot.notes).toBe('Prefers reels');
+    expect(snapshot.tags).toBe('fashion,lifestyle');
+    expect(snapshot.custom_fields).toEqual({ manager: 'Asha' });
   });
 });
