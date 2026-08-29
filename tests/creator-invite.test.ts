@@ -8,6 +8,7 @@ import {
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +139,39 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk sheet contact and custom fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'riyahundi',
+        displayName: 'Riya Hundi',
+        bio: 'Fashion creator',
+        followers: '8.2K',
+        followersCount: 8200,
+        following: '400',
+        posts: '115',
+        isVerified: false,
+        onPlatform: false,
+        scrapedAt: '2026-08-29T00:00:00.000Z',
+        email: 'riya@example.com',
+        phone: '+919999999999',
+        rates: 'INR 25k/story',
+        notes: 'Prefers weekend shoots',
+        tags: 'fashion, mumbai',
+        custom_fields: { manager: 'Asha', priority: 1 },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('riya@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('INR 25k/story');
+    expect(snap.notes).toBe('Prefers weekend shoots');
+    expect(snap.tags).toBe('fashion, mumbai');
+    expect(snap.custom_fields).toEqual({ manager: 'Asha', priority: '1' });
   });
 });
 
