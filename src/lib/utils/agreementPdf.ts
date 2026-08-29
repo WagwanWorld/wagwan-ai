@@ -299,7 +299,7 @@ export function generateAgreementPdf(info: SigningInfo) {
   // 7. Term and Termination
   heading('7. TERM AND TERMINATION');
   body(
-    '7.1. This Agreement shall commence on the Effective Date and remain in effect for 12 months.',
+    '7.1. This Agreement shall commence on the Effective Date and remain in effect for three (3) years.',
   );
   body("7.2. Either Party may terminate with 30 days' prior written notice.");
   body(

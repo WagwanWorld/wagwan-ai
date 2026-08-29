@@ -63,6 +63,9 @@ describe('generateAgreementPdf', () => {
       'Upon termination: Fuzone shall cease Platform use and clear outstanding dues.',
     );
     expect(pdfText).toContain(
+      '7.1. This Agreement shall commence on the Effective Date and remain in effect for three (3) years.',
+    );
+    expect(pdfText).toContain(
       'This indemnity shall not extend to liability arising from the Service Provider',
     );
     expect(pdfText).toContain(
@@ -78,5 +81,6 @@ describe('generateAgreementPdf', () => {
     expect(pdfText).not.toContain('Either Party may terminate immediately');
     expect(pdfText).not.toContain('appointment shall follow Section 11 of the Act');
     expect(pdfText).not.toContain('This limitation applies to all claims under this Agreement.');
+    expect(pdfText).not.toContain('remain in effect for 12 months');
   });
 });
