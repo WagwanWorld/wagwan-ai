@@ -2,6 +2,9 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
+import { requireAuthenticatedCreator } from '$lib/server/creatorAuth';
+import { getProfileInstagramUsername } from '$lib/server/creatorIdentity';
+import { normalizeIgHandle } from '$lib/server/marketplace/creatorInviteUtils';
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
@@ -9,27 +12,59 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   const body = await request.json();
-  const googleSub = typeof body.googleSub === 'string' ? body.googleSub.trim() : '';
   const brandId = typeof body.brandId === 'string' ? body.brandId.trim() : '';
-  const rosterId = typeof body.rosterId === 'string' ? body.rosterId.trim() : undefined;
+  const rosterId = typeof body.rosterId === 'string' ? body.rosterId.trim() : '';
 
-  if (!googleSub) throw error(400, 'googleSub is required');
   if (!brandId) throw error(400, 'brandId is required');
+  if (!rosterId) throw error(400, 'rosterId is required');
+
+  const { googleSub, profile } = await requireAuthenticatedCreator(request);
+  const creatorHandle = getProfileInstagramUsername(profile.profile_data);
+  if (!creatorHandle) {
+    throw error(403, 'Authenticated creator profile is missing Instagram identity');
+  }
 
   const sb = getServiceSupabase();
 
-  // 1. Update roster entry if it exists: mark as on_platform, link google_sub
-  if (rosterId) {
-    await sb
-      .from('brand_creator_roster')
-      .update({
-        status: 'on_platform',
-        user_google_sub: googleSub,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', rosterId)
-      .eq('brand_id', brandId);
+  const { data: rosterRow, error: rosterError } = await sb
+    .from('brand_creator_roster')
+    .select('id, ig_username, analysis_snapshot, invite_message')
+    .eq('id', rosterId)
+    .eq('brand_id', brandId)
+    .eq('status', 'prospect')
+    .is('user_google_sub', null)
+    .maybeSingle();
+
+  if (rosterError) {
+    console.error('[link-invite] roster lookup failed:', rosterError.message);
+    throw error(500, 'Could not verify invite');
   }
+  if (!rosterRow) throw error(404, 'Invite not found or already claimed');
+
+  const rosterHandle = normalizeIgHandle(String(rosterRow.ig_username ?? ''));
+  if (!rosterHandle || rosterHandle !== creatorHandle) {
+    throw error(403, 'Invite does not belong to authenticated creator');
+  }
+
+  const { data: updatedRow, error: updateError } = await sb
+    .from('brand_creator_roster')
+    .update({
+      status: 'on_platform',
+      user_google_sub: googleSub,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', rosterId)
+    .eq('brand_id', brandId)
+    .eq('status', 'prospect')
+    .is('user_google_sub', null)
+    .select('id')
+    .maybeSingle();
+
+  if (updateError) {
+    console.error('[link-invite] roster claim failed:', updateError.message);
+    throw error(500, 'Could not claim invite');
+  }
+  if (!updatedRow) throw error(409, 'Invite was already claimed');
 
   // 2. Look up brand context for the signal
   const { data: account } = await sb
@@ -49,23 +84,11 @@ export const POST: RequestHandler = async ({ request }) => {
   let fitLabel: string | null = null;
   let fitScore: number | null = null;
   let inviteMessage: string | null = null;
-  let analysisSnapshot: Record<string, unknown> = {};
-
-  if (rosterId) {
-    const { data: rosterRow } = await sb
-      .from('brand_creator_roster')
-      .select('analysis_snapshot, invite_message')
-      .eq('id', rosterId)
-      .maybeSingle();
-
-    if (rosterRow) {
-      const analysis = rosterRow.analysis_snapshot as Record<string, unknown> | null;
-      fitLabel = (analysis?.fitLabel as string) ?? null;
-      fitScore = (analysis?.fitScore as number) ?? null;
-      inviteMessage = (rosterRow.invite_message as string) ?? null;
-      analysisSnapshot = analysis ?? {};
-    }
-  }
+  const analysis = rosterRow.analysis_snapshot as Record<string, unknown> | null;
+  fitLabel = (analysis?.fitLabel as string) ?? null;
+  fitScore = (analysis?.fitScore as number) ?? null;
+  inviteMessage = (rosterRow.invite_message as string) ?? null;
+  const analysisSnapshot = analysis ?? {};
 
   // 4. Upsert the signal
   await upsertCreatorBrandSignal(sb, {

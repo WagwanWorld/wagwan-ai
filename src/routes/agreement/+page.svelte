@@ -431,7 +431,7 @@
             <h2>7. TERM AND TERMINATION</h2>
             <p>
               7.1. This Agreement shall commence on the Effective Date and remain in effect for <strong
-                >12 months</strong
+                >three (3) years</strong
               >.
             </p>
             <p>

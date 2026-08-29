@@ -48,6 +48,12 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!profile) {
     return json({ ok: false, error: 'profile_not_found' }, { status: 404 });
   }
+  if (profile.wagwan_user_id && profile.wagwan_user_id !== wagwanUserId) {
+    return json(
+      { ok: false, error: 'profile_already_linked', linked_to: profile.wagwan_user_id },
+      { status: 409 },
+    );
+  }
 
   // Check if this wagwan user is already linked to a different profile
   const existing = await getProfileByWagwanId(wagwanUserId);
