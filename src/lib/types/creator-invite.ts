@@ -66,6 +66,28 @@ export type BrandCreatorRosterEntry = {
   updated_at: string;
 };
 
+function optionalString(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  const str = String(value);
+  return str ? str : undefined;
+}
+
+function optionalStringArray(value: unknown, limit: number): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .map((item) => String(item))
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function optionalCustomFields(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .map(([key, entryValue]) => [key, String(entryValue)] as const)
+    .filter(([key, entryValue]) => key && entryValue);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 /** Normalize legacy or partial profile_snapshot rows from the database. */
 export function coerceRosterProfileSnapshot(
   raw: Record<string, unknown> | null | undefined,
@@ -92,17 +114,19 @@ export function coerceRosterProfileSnapshot(
     strengthScore: typeof r.strengthScore === 'number' ? r.strengthScore : undefined,
     strengthLabel: r.strengthLabel ? String(r.strengthLabel) : undefined,
     engagementTier: r.engagementTier ? String(r.engagementTier) : undefined,
-    vibeTags: Array.isArray(r.vibeTags) ? (r.vibeTags as string[]).slice(0, 6) : undefined,
-    contentTags: Array.isArray(r.contentTags) ? (r.contentTags as string[]).slice(0, 8) : undefined,
-    colorPalette: Array.isArray(r.colorPalette)
-      ? (r.colorPalette as string[]).slice(0, 4)
-      : undefined,
+    vibeTags: optionalStringArray(r.vibeTags, 6),
+    contentTags: optionalStringArray(r.contentTags, 8),
+    colorPalette: optionalStringArray(r.colorPalette, 4),
     aesthetic: r.aesthetic ? String(r.aesthetic) : undefined,
     lifestyle: r.lifestyle ? String(r.lifestyle) : undefined,
     feedSummary: r.feedSummary ? String(r.feedSummary) : undefined,
-    recentCaptions: Array.isArray(r.recentCaptions)
-      ? (r.recentCaptions as string[]).slice(0, 6)
-      : undefined,
+    recentCaptions: optionalStringArray(r.recentCaptions, 6),
     scrapedAt: String(r.scrapedAt ?? new Date(0).toISOString()),
+    email: optionalString(r.email),
+    phone: optionalString(r.phone),
+    rates: optionalString(r.rates),
+    notes: optionalString(r.notes),
+    tags: optionalString(r.tags),
+    custom_fields: optionalCustomFields(r.custom_fields),
   };
 }
