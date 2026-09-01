@@ -6,6 +6,7 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
@@ -150,6 +151,38 @@ describe('buildFeedSummary', () => {
     });
     expect(feedSummary.length).toBeGreaterThan(10);
     expect(contentThemes.length).toBeGreaterThan(0);
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves optional sheet upload fields', () => {
+    const snapshot = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator Name',
+        scrapedAt: '2026-09-01T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 25K/story',
+        notes: 'Prefers weekend events',
+        tags: 'nightlife, fashion',
+        custom_fields: {
+          manager: 'Anika',
+          city: 'Bengaluru',
+        },
+      },
+      'creator',
+    );
+
+    expect(snapshot.email).toBe('creator@example.com');
+    expect(snapshot.phone).toBe('+919999999999');
+    expect(snapshot.rates).toBe('INR 25K/story');
+    expect(snapshot.notes).toBe('Prefers weekend events');
+    expect(snapshot.tags).toBe('nightlife, fashion');
+    expect(snapshot.custom_fields).toEqual({
+      manager: 'Anika',
+      city: 'Bengaluru',
+    });
   });
 });
 
