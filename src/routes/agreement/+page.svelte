@@ -4,6 +4,13 @@
   import SignaturePad from '$lib/components/SignaturePad.svelte';
   import { generateAgreementPdf } from '$lib/utils/agreementPdf';
 
+  type SignedAgreementView = {
+    name: string;
+    company: string;
+    signature: string | null;
+    date: string;
+  };
+
   let { form } = $props();
 
   let name = $state(form?.name ?? '');
@@ -32,7 +39,63 @@
     year: 'numeric',
   });
 
+  const signedAgreementStorageKey = 'wagwan_signed_agreement';
+  let signedAgreement = $state<SignedAgreementView | null>(null);
+
+  function parseStoredAgreement(value: string | null): SignedAgreementView | null {
+    if (!value) return null;
+    try {
+      const parsed = JSON.parse(value) as Partial<SignedAgreementView>;
+      if (
+        typeof parsed.name === 'string' &&
+        typeof parsed.company === 'string' &&
+        typeof parsed.date === 'string'
+      ) {
+        return {
+          name: parsed.name,
+          company: parsed.company,
+          signature: typeof parsed.signature === 'string' ? parsed.signature : null,
+          date: parsed.date,
+        };
+      }
+    } catch {
+      /* ignore invalid session storage */
+    }
+    return null;
+  }
+
+  $effect(() => {
+    if (!form?.success) return;
+    const next = {
+      name: String(form.name ?? ''),
+      company: String(form.company ?? ''),
+      signature: typeof form.signature === 'string' ? form.signature : null,
+      date: today,
+    };
+    signedAgreement = next;
+    try {
+      sessionStorage.setItem(signedAgreementStorageKey, JSON.stringify(next));
+    } catch {
+      /* download button remains available for this render */
+    }
+  });
+
+  function downloadSignedAgreement() {
+    const agreement = signedAgreement;
+    if (!agreement) return;
+    generateAgreementPdf({
+      signerName: agreement.name,
+      companyName: agreement.company,
+      signatureDataUrl: agreement.signature,
+      date: agreement.date,
+    });
+  }
+
   onMount(() => {
+    if (!signedAgreement) {
+      signedAgreement = parseStoredAgreement(sessionStorage.getItem(signedAgreementStorageKey));
+    }
+
     // Override the global overflow: hidden on html/body so this page scrolls
     document.documentElement.style.overflow = 'auto';
     document.documentElement.style.height = 'auto';
@@ -81,7 +144,7 @@
     </div>
   </header>
 
-  {#if form?.success}
+  {#if signedAgreement}
     <main class="ag-success-wrap">
       <div class="ag-success-card">
         <svg
@@ -98,22 +161,16 @@
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
         </svg>
         <h1>Agreement Signed</h1>
-        <p>Thank you, <strong>{form.name}</strong>. Your signed agreement has been recorded.</p>
+        <p>
+          Thank you, <strong>{signedAgreement.name}</strong>. Your signed agreement has been
+          recorded.
+        </p>
         <div class="ag-success-meta">
-          <div><span>Signed by</span><strong>{form.name}</strong></div>
-          <div><span>Company</span><strong>{form.company}</strong></div>
-          <div><span>Date</span><strong>{today}</strong></div>
+          <div><span>Signed by</span><strong>{signedAgreement.name}</strong></div>
+          <div><span>Company</span><strong>{signedAgreement.company}</strong></div>
+          <div><span>Date</span><strong>{signedAgreement.date}</strong></div>
         </div>
-        <button
-          class="ag-download"
-          onclick={() =>
-            generateAgreementPdf({
-              signerName: form.name,
-              companyName: form.company,
-              signatureDataUrl: form.signature ?? null,
-              date: today,
-            })}
-        >
+        <button class="ag-download" onclick={downloadSignedAgreement}>
           <svg
             width="16"
             height="16"
