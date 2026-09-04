@@ -2,8 +2,12 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import {
+  processCreatorInvite,
+  resolveBrandForSession,
+} from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
+import { splitRowsByBrandRoster } from '$lib/server/marketplace/bulkRosterPrecheck';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
 
 const BATCH_SIZE = 20;
@@ -51,25 +55,29 @@ export const POST: RequestHandler = async ({ request }) => {
   const sb = getServiceSupabase();
   let alreadyInRoster = 0;
   const toProcess: ParsedCreatorRow[] = [];
+  let resolvedBrandId: string | null = null;
 
   if (valid.length > 0) {
+    const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
+    resolvedBrandId = brandId;
     const handles = valid.map((r) => r.handle);
-    const { data: existingRows } = await sb
+    const { data: existingRows, error: existingRowsError } = await sb
       .from('brand_creator_roster')
-      .select('ig_username')
+      .select('brand_id, ig_username')
+      .eq('brand_id', brandId)
       .in('ig_username', handles);
 
-    const existingSet = new Set(
-      (existingRows ?? []).map((r: { ig_username: string }) => r.ig_username),
-    );
-
-    for (const row of valid) {
-      if (existingSet.has(row.handle)) {
-        alreadyInRoster++;
-      } else {
-        toProcess.push(row);
-      }
+    if (existingRowsError) {
+      throw error(500, 'Could not check existing roster entries');
     }
+
+    const split = splitRowsByBrandRoster(
+      valid,
+      (existingRows ?? []) as Array<{ brand_id: string; ig_username: string }>,
+      brandId,
+    );
+    alreadyInRoster = split.alreadyInRoster;
+    toProcess.push(...split.toProcess);
   }
 
   // Stream results via SSE
@@ -132,10 +140,15 @@ export const POST: RequestHandler = async ({ request }) => {
             // Update the roster entry with merged snapshot
             const entryId = (result.entry as Record<string, unknown>).id as string;
             if (entryId) {
-              await sb
+              if (!resolvedBrandId) throw new Error('brand_resolve_failed');
+              const { error: updateError } = await sb
                 .from('brand_creator_roster')
                 .update({ profile_snapshot: snapshot })
-                .eq('id', entryId);
+                .eq('id', entryId)
+                .eq('brand_id', resolvedBrandId)
+                .select('id')
+                .single();
+              if (updateError) throw new Error('roster_metadata_update_failed');
             }
 
             return { handle: row.handle, analysis: result.analysis };
