@@ -8,6 +8,7 @@ import {
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -199,5 +200,35 @@ describe('rosterEntryToView', () => {
     expect(view.profilePicture).toBe('https://example.com/p.jpg');
     expect(view.fitScore).toBe(68);
     expect(view.feedSummary).toContain('fashion');
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves contact and custom fields from bulk sheet uploads', () => {
+    const snapshot = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator Name',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 20k',
+        notes: 'Prefers weekend events',
+        tags: 'nightlife, fashion',
+        location: 'Bengaluru',
+        custom_fields: {
+          manager: 'Asha',
+          priority: 1,
+        },
+      },
+      'creator',
+    );
+
+    expect(snapshot.email).toBe('creator@example.com');
+    expect(snapshot.phone).toBe('+919999999999');
+    expect(snapshot.rates).toBe('INR 20k');
+    expect(snapshot.notes).toBe('Prefers weekend events');
+    expect(snapshot.tags).toBe('nightlife, fashion');
+    expect(snapshot.location).toBe('Bengaluru');
+    expect(snapshot.custom_fields).toEqual({ manager: 'Asha', priority: '1' });
   });
 });
