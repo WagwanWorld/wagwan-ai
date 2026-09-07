@@ -73,6 +73,11 @@
 
   async function startUpload() {
     if (!file) return;
+    if (!brandAuthenticated) {
+      errorMsg = 'Connect your brand Instagram before uploading creators.';
+      phase = 'error';
+      return;
+    }
     phase = 'uploading';
     progress = [];
     completed = 0;
@@ -132,6 +137,14 @@
             handleSSE(eventType, data);
           }
         }
+      }
+
+      if (phase === 'processing') {
+        errorMsg =
+          completed > 0
+            ? `Connection ended before completion after processing ${completed} of ${total} creators. Some creators may have been added; refresh the roster before retrying.`
+            : 'Connection ended before processing completed. Check the roster before retrying.';
+        phase = 'error';
       }
     } catch {
       errorMsg = 'Connection lost. Some creators may have been added.';

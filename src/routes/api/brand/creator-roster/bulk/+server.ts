@@ -12,6 +12,8 @@ import { splitRowsByBrandRoster } from '$lib/server/marketplace/bulkRosterPreche
 
 const BATCH_SIZE = 20;
 
+export const config = { maxDuration: 300 };
+
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
     throw error(503, 'Database not configured');
@@ -74,115 +76,140 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const stream = new ReadableStream({
     async start(controller) {
-      // Send validation summary
-      controller.enqueue(
-        sse('validated', {
-          total_rows,
-          valid_count: toProcess.length,
-          skipped_no_handle,
-          duplicates_in_file,
-          already_in_roster: alreadyInRoster,
-          errors: validationErrors.slice(0, 20),
-        }),
-      );
+      let closed = false;
+      const close = () => {
+        if (!closed) {
+          closed = true;
+          controller.close();
+        }
+      };
 
-      if (toProcess.length === 0) {
-        controller.enqueue(sse('done', { total: 0, succeeded: 0, failed: 0, skipped: 0 }));
-        controller.close();
-        return;
-      }
-
-      let succeeded = 0;
-      let failed = 0;
-      let completed = 0;
-      const total = toProcess.length;
-
-      // Process in batches
-      for (let batchStart = 0; batchStart < total; batchStart += BATCH_SIZE) {
-        const batch = toProcess.slice(batchStart, batchStart + BATCH_SIZE);
-
-        const results = await Promise.allSettled(
-          batch.map(async (row) => {
-            const result = await processCreatorInvite(
-              sb,
-              brandIgUserId,
-              row.handle,
-              scrapeInstagram,
-            );
-
-            // Merge extra sheet data into profile_snapshot
-            const snapshot = result.profile as Record<string, unknown>;
-            if (row.email) snapshot.email = row.email;
-            if (row.phone) snapshot.phone = row.phone;
-            if (row.rates) snapshot.rates = row.rates;
-            if (row.notes) snapshot.notes = row.notes;
-            if (row.tags) snapshot.tags = row.tags;
-            if (row.location) snapshot.location = row.location;
-            if (Object.keys(row.custom_fields).length > 0) {
-              snapshot.custom_fields = row.custom_fields;
-            }
-
-            // Update the roster entry with merged snapshot
-            const entryId = (result.entry as Record<string, unknown>).id as string;
-            if (entryId) {
-              const { data: updated, error: updateError } = await sb
-                .from('brand_creator_roster')
-                .update({ profile_snapshot: snapshot })
-                .eq('id', entryId)
-                .eq('brand_id', uploadBrandId)
-                .select('id')
-                .maybeSingle();
-              if (updateError || !updated) {
-                throw new Error('metadata_update_failed');
-              }
-            }
-
-            return { handle: row.handle, analysis: result.analysis };
+      try {
+        // Send validation summary
+        controller.enqueue(
+          sse('validated', {
+            total_rows,
+            valid_count: toProcess.length,
+            skipped_no_handle,
+            duplicates_in_file,
+            already_in_roster: alreadyInRoster,
+            errors: validationErrors.slice(0, 20),
           }),
         );
 
-        for (let i = 0; i < results.length; i++) {
-          completed++;
-          const r = results[i];
-          const handle = batch[i].handle;
+        if (toProcess.length === 0) {
+          controller.enqueue(
+            sse('done', {
+              total: 0,
+              succeeded: 0,
+              failed: 0,
+              skipped: alreadyInRoster + skipped_no_handle + duplicates_in_file,
+            }),
+          );
+          close();
+          return;
+        }
 
-          if (r.status === 'fulfilled') {
-            succeeded++;
-            controller.enqueue(
-              sse('progress', {
-                handle,
-                status: 'success',
-                fit_label: r.value.analysis.fitLabel,
-                fit_score: r.value.analysis.fitScore,
-                completed,
-                total,
-              }),
-            );
-          } else {
-            failed++;
-            const errMsg = r.reason instanceof Error ? r.reason.message : 'Unknown error';
-            controller.enqueue(
-              sse('progress', {
-                handle,
-                status: 'failed',
-                error: errMsg === 'profile_not_found' ? 'Profile not found' : errMsg,
-                completed,
-                total,
-              }),
-            );
+        let succeeded = 0;
+        let failed = 0;
+        let completed = 0;
+        const total = toProcess.length;
+
+        // Process in batches
+        for (let batchStart = 0; batchStart < total; batchStart += BATCH_SIZE) {
+          const batch = toProcess.slice(batchStart, batchStart + BATCH_SIZE);
+
+          const results = await Promise.allSettled(
+            batch.map(async (row) => {
+              const result = await processCreatorInvite(
+                sb,
+                brandIgUserId,
+                row.handle,
+                scrapeInstagram,
+              );
+
+              // Merge extra sheet data into profile_snapshot
+              const snapshot = result.profile as Record<string, unknown>;
+              if (row.email) snapshot.email = row.email;
+              if (row.phone) snapshot.phone = row.phone;
+              if (row.rates) snapshot.rates = row.rates;
+              if (row.notes) snapshot.notes = row.notes;
+              if (row.tags) snapshot.tags = row.tags;
+              if (row.location) snapshot.location = row.location;
+              if (Object.keys(row.custom_fields).length > 0) {
+                snapshot.custom_fields = row.custom_fields;
+              }
+
+              // Update the roster entry with merged snapshot
+              const entryId = (result.entry as Record<string, unknown>).id as string;
+              if (entryId) {
+                const { data: updated, error: updateError } = await sb
+                  .from('brand_creator_roster')
+                  .update({ profile_snapshot: snapshot })
+                  .eq('id', entryId)
+                  .eq('brand_id', uploadBrandId)
+                  .select('id')
+                  .maybeSingle();
+                if (updateError || !updated) {
+                  throw new Error('metadata_update_failed');
+                }
+              }
+
+              return { handle: row.handle, analysis: result.analysis };
+            }),
+          );
+
+          for (let i = 0; i < results.length; i++) {
+            completed++;
+            const r = results[i];
+            const handle = batch[i].handle;
+
+            if (r.status === 'fulfilled') {
+              succeeded++;
+              controller.enqueue(
+                sse('progress', {
+                  handle,
+                  status: 'success',
+                  fit_label: r.value.analysis.fitLabel,
+                  fit_score: r.value.analysis.fitScore,
+                  completed,
+                  total,
+                }),
+              );
+            } else {
+              failed++;
+              const errMsg = r.reason instanceof Error ? r.reason.message : 'Unknown error';
+              controller.enqueue(
+                sse('progress', {
+                  handle,
+                  status: 'failed',
+                  error: errMsg === 'profile_not_found' ? 'Profile not found' : errMsg,
+                  completed,
+                  total,
+                }),
+              );
+            }
           }
         }
-      }
 
-      controller.enqueue(
-        sse('done', {
-          total,
-          succeeded,
-          failed,
-          skipped: alreadyInRoster + skipped_no_handle + duplicates_in_file,
-        }),
-      );
-      controller.close();
+        controller.enqueue(
+          sse('done', {
+            total,
+            succeeded,
+            failed,
+            skipped: alreadyInRoster + skipped_no_handle + duplicates_in_file,
+          }),
+        );
+        close();
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'bulk_upload_failed';
+        try {
+          controller.enqueue(sse('error', { message }));
+        } catch {
+          // Client disconnected; nothing more can be sent.
+        }
+        close();
+      }
     },
   });
 
