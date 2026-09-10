@@ -7,7 +7,11 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
+import { extractCreatorInstagramUsername } from '../src/lib/server/creatorIdentity';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +142,51 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves sheet metadata stored in profile_snapshot', () => {
+    const snapshot = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator_a',
+        displayName: 'Creator A',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 5000',
+        notes: 'Prefers reels',
+        tags: 'fashion, travel',
+        custom_fields: {
+          manager: 'Asha',
+          priority: 1,
+        },
+      },
+      'creator_a',
+    );
+
+    expect(snapshot.email).toBe('creator@example.com');
+    expect(snapshot.phone).toBe('+919999999999');
+    expect(snapshot.rates).toBe('INR 5000');
+    expect(snapshot.notes).toBe('Prefers reels');
+    expect(snapshot.tags).toBe('fashion, travel');
+    expect(snapshot.custom_fields).toEqual({ manager: 'Asha', priority: '1' });
+  });
+});
+
+describe('extractCreatorInstagramUsername', () => {
+  it('normalizes the Instagram username from a linked creator profile', () => {
+    expect(
+      extractCreatorInstagramUsername({
+        instagramIdentity: { username: '@Creator.Name' },
+      }),
+    ).toBe('creator.name');
+  });
+
+  it('rejects missing or invalid Instagram usernames', () => {
+    expect(extractCreatorInstagramUsername({})).toBeNull();
+    expect(
+      extractCreatorInstagramUsername({ instagramIdentity: { username: 'bad handle!' } }),
+    ).toBeNull();
   });
 });
 
