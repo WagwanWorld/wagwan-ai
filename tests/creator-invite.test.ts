@@ -7,7 +7,10 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -138,6 +141,44 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves sheet upload metadata fields from persisted snapshots', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'riyahundi',
+        displayName: 'Riya Hundi',
+        bio: 'Fashion creator',
+        followers: '8.2K',
+        followersCount: 8200,
+        following: '400',
+        posts: '115',
+        isVerified: false,
+        onPlatform: false,
+        location: 'Mumbai',
+        email: 'riya@example.com',
+        phone: '+919999999999',
+        rates: 'INR 25k/reel',
+        notes: 'Prefers WhatsApp',
+        tags: 'fashion, lifestyle',
+        custom_fields: {
+          Manager: 'Anika',
+          Priority: 1,
+        },
+        scrapedAt: '2026-09-11T00:00:00.000Z',
+      },
+      'fallback',
+    );
+
+    expect(snap.location).toBe('Mumbai');
+    expect(snap.email).toBe('riya@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('INR 25k/reel');
+    expect(snap.notes).toBe('Prefers WhatsApp');
+    expect(snap.tags).toBe('fashion, lifestyle');
+    expect(snap.custom_fields).toEqual({ Manager: 'Anika', Priority: '1' });
   });
 });
 
