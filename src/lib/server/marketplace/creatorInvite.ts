@@ -362,12 +362,14 @@ async function persistRosterInvite(
       onboarding_url: links.onboarding,
       invite_message: messageWithLink,
     })
-    .eq('id', rosterId);
+    .eq('id', rosterId)
+    .eq('brand_id', brandId);
 
   const { data: entry } = await sb
     .from('brand_creator_roster')
     .select('*')
     .eq('id', rosterId)
+    .eq('brand_id', brandId)
     .single();
 
   // Insert creator-facing signal if creator is on-platform

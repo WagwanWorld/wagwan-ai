@@ -6,8 +6,12 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import { instagramUsernameFromProfileData } from '../src/lib/server/creatorIdentity';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -21,6 +25,22 @@ describe('normalizeIgHandle', () => {
   it('rejects invalid handles', () => {
     expect(normalizeIgHandle('a')).toBeNull();
     expect(normalizeIgHandle('bad handle!')).toBeNull();
+  });
+});
+
+describe('instagramUsernameFromProfileData', () => {
+  it('normalizes the connected creator Instagram username used for invite claims', () => {
+    expect(
+      instagramUsernameFromProfileData({
+        instagramIdentity: { username: '@Creator.Name' },
+      }),
+    ).toBe('creator.name');
+  });
+
+  it('returns null when no valid connected Instagram identity exists', () => {
+    expect(
+      instagramUsernameFromProfileData({ instagramIdentity: { username: 'bad handle!' } }),
+    ).toBeNull();
   });
 });
 
@@ -138,6 +158,37 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves uploaded sheet metadata after roster refresh', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator_a',
+        displayName: 'Creator A',
+        followers: '12K',
+        following: '100',
+        posts: '40',
+        isVerified: false,
+        onPlatform: false,
+        scrapedAt: '2026-09-18T00:00:00.000Z',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: '25000',
+        notes: 'Prefers weekend shoots',
+        tags: 'fashion,lifestyle',
+        custom_fields: { manager: 'Riya', empty: '' },
+      },
+      'creator_a',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('25000');
+    expect(snap.notes).toBe('Prefers weekend shoots');
+    expect(snap.tags).toBe('fashion,lifestyle');
+    expect(snap.custom_fields).toEqual({ manager: 'Riya' });
   });
 });
 
