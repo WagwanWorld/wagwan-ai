@@ -40,6 +40,6 @@ export async function requireAuthenticatedCreatorProfile(
   return {
     googleSub,
     wagwanUserId,
-    profileData: (data.profile_data ?? {}) as Record<string, unknown>,
+    profileData: (data?.profile_data ?? {}) as Record<string, unknown>,
   };
 }
