@@ -2,11 +2,11 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { upsertCreatorBrandSignal } from '$lib/server/creatorSignals';
+import { requireAuthenticatedCreatorProfile } from '$lib/server/creatorAuth';
 import {
   creatorInstagramUsername,
   normalizeCreatorRosterHandle,
-  requireAuthenticatedCreatorProfile,
-} from '$lib/server/creatorAuth';
+} from '$lib/server/creatorIdentity';
 
 export const POST: RequestHandler = async ({ request }) => {
   if (!isSupabaseConfigured()) {
