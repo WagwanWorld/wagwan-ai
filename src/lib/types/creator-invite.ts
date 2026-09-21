@@ -49,6 +49,23 @@ export type RosterProfileSnapshot = {
   custom_fields?: Record<string, string>;
 };
 
+function stringField(value: unknown): string | undefined {
+  return value ? String(value) : undefined;
+}
+
+function stringRecord(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, fieldValue]) => [
+      key,
+      String(fieldValue ?? ''),
+    ]),
+  );
+}
+
 export type BrandCreatorRosterEntry = {
   id: string;
   brand_id: string;
@@ -104,5 +121,11 @@ export function coerceRosterProfileSnapshot(
       ? (r.recentCaptions as string[]).slice(0, 6)
       : undefined,
     scrapedAt: String(r.scrapedAt ?? new Date(0).toISOString()),
+    email: stringField(r.email),
+    phone: stringField(r.phone),
+    rates: stringField(r.rates),
+    notes: stringField(r.notes),
+    tags: stringField(r.tags),
+    custom_fields: stringRecord(r.custom_fields),
   };
 }
