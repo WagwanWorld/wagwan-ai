@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractWagwanUserId, isWagwanAuthConfigured } from '$lib/server/wagwanAuth';
+export { normalizeInstagramUsername, profileInstagramUsername } from '$lib/server/creatorIdentity';
 
 export type AuthenticatedCreator = {
   googleSub: string;
@@ -11,18 +12,6 @@ export type CreatorAuthFailure = {
   status: 401 | 503;
   error: 'wagwan_auth_not_configured' | 'invalid_or_missing_token' | 'creator_profile_not_linked';
 };
-
-export function normalizeInstagramUsername(value: unknown): string {
-  return String(value ?? '')
-    .trim()
-    .replace(/^@/, '')
-    .toLowerCase();
-}
-
-export function profileInstagramUsername(profileData: Record<string, unknown>): string {
-  const instagramIdentity = profileData.instagramIdentity as Record<string, unknown> | undefined;
-  return normalizeInstagramUsername(instagramIdentity?.username);
-}
 
 export async function getAuthenticatedCreator(
   request: Request,
