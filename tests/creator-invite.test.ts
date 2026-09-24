@@ -8,6 +8,7 @@ import {
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -199,5 +200,33 @@ describe('rosterEntryToView', () => {
     expect(view.profilePicture).toBe('https://example.com/p.jpg');
     expect(view.fitScore).toBe(68);
     expect(view.feedSummary).toContain('fashion');
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk sheet metadata fields', () => {
+    const snapshot = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 25K/reel',
+        notes: 'Prefers weekend shoots',
+        tags: 'fashion, nightlife',
+        custom_fields: {
+          manager: 'Asha',
+          region: 'Bengaluru',
+        },
+      },
+      'creator',
+    );
+
+    expect(snapshot.email).toBe('creator@example.com');
+    expect(snapshot.phone).toBe('+919999999999');
+    expect(snapshot.rates).toBe('INR 25K/reel');
+    expect(snapshot.notes).toBe('Prefers weekend shoots');
+    expect(snapshot.tags).toBe('fashion, nightlife');
+    expect(snapshot.custom_fields).toEqual({ manager: 'Asha', region: 'Bengaluru' });
   });
 });
