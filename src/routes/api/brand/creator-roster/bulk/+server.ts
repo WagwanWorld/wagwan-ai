@@ -2,9 +2,13 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 import { getServiceSupabase, isSupabaseConfigured } from '$lib/server/supabase';
 import { assertBrandAccess } from '$lib/server/marketplace/brandAuth';
-import { processCreatorInvite } from '$lib/server/marketplace/creatorInvite';
+import {
+  processCreatorInvite,
+  resolveBrandForSession,
+} from '$lib/server/marketplace/creatorInvite';
 import { scrapeInstagram } from '$lib/server/marketplace/instagramScrape';
 import { parseAndValidate, type ParsedCreatorRow } from '$lib/server/marketplace/sheetParser';
+import { splitRowsByBrandRoster } from '$lib/server/marketplace/bulkRosterPrecheck';
 
 const BATCH_SIZE = 20;
 
@@ -47,8 +51,8 @@ export const POST: RequestHandler = async ({ request }) => {
     total_rows,
   } = validation;
 
-  // Check for existing handles in this brand's roster
   const sb = getServiceSupabase();
+  const { brandId } = await resolveBrandForSession(sb, brandIgUserId, 'Brand');
   let alreadyInRoster = 0;
   const toProcess: ParsedCreatorRow[] = [];
 
@@ -56,20 +60,17 @@ export const POST: RequestHandler = async ({ request }) => {
     const handles = valid.map((r) => r.handle);
     const { data: existingRows } = await sb
       .from('brand_creator_roster')
-      .select('ig_username')
+      .select('brand_id, ig_username')
+      .eq('brand_id', brandId)
       .in('ig_username', handles);
 
-    const existingSet = new Set(
-      (existingRows ?? []).map((r: { ig_username: string }) => r.ig_username),
+    const split = splitRowsByBrandRoster(
+      valid,
+      (existingRows ?? []) as Array<{ brand_id: string | null; ig_username: string | null }>,
+      brandId,
     );
-
-    for (const row of valid) {
-      if (existingSet.has(row.handle)) {
-        alreadyInRoster++;
-      } else {
-        toProcess.push(row);
-      }
-    }
+    alreadyInRoster = split.alreadyInRoster;
+    toProcess.push(...split.toProcess);
   }
 
   // Stream results via SSE
@@ -118,7 +119,7 @@ export const POST: RequestHandler = async ({ request }) => {
             );
 
             // Merge extra sheet data into profile_snapshot
-            const snapshot = result.profile as Record<string, unknown>;
+            const snapshot = { ...(result.profile as Record<string, unknown>) };
             if (row.email) snapshot.email = row.email;
             if (row.phone) snapshot.phone = row.phone;
             if (row.rates) snapshot.rates = row.rates;
@@ -131,11 +132,18 @@ export const POST: RequestHandler = async ({ request }) => {
 
             // Update the roster entry with merged snapshot
             const entryId = (result.entry as Record<string, unknown>).id as string;
-            if (entryId) {
-              await sb
-                .from('brand_creator_roster')
-                .update({ profile_snapshot: snapshot })
-                .eq('id', entryId);
+            if (!entryId) {
+              throw new Error('roster_entry_missing');
+            }
+
+            const { error: updateError } = await sb
+              .from('brand_creator_roster')
+              .update({ profile_snapshot: snapshot })
+              .eq('id', entryId)
+              .eq('brand_id', brandId);
+
+            if (updateError) {
+              throw new Error('sheet_metadata_update_failed');
             }
 
             return { handle: row.handle, analysis: result.analysis };
