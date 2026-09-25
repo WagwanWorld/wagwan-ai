@@ -7,6 +7,7 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
@@ -138,6 +139,34 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves bulk upload sheet metadata fields', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'sheetcreator',
+        displayName: 'Sheet Creator',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 25k',
+        notes: 'Prefers weekend shoots',
+        tags: 'fashion, nightlife',
+        custom_fields: {
+          Manager: 'Asha',
+          Priority: 1,
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('INR 25k');
+    expect(snap.notes).toBe('Prefers weekend shoots');
+    expect(snap.tags).toBe('fashion, nightlife');
+    expect(snap.custom_fields).toEqual({ Manager: 'Asha', Priority: '1' });
   });
 });
 
