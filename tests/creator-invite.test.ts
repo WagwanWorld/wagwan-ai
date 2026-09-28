@@ -6,8 +6,15 @@ import {
   buildFeedSummary,
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
+import {
+  instagramUsernameFromProfile,
+  normalizeInstagramUsername,
+} from '../src/lib/server/creatorIdentity';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
-import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
+import {
+  coerceRosterProfileSnapshot,
+  type BrandCreatorRosterEntry,
+} from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
   it('strips @ and lowercases', () => {
@@ -21,6 +28,23 @@ describe('normalizeIgHandle', () => {
   it('rejects invalid handles', () => {
     expect(normalizeIgHandle('a')).toBeNull();
     expect(normalizeIgHandle('bad handle!')).toBeNull();
+  });
+});
+
+describe('creator auth identity helpers', () => {
+  it('normalizes Instagram usernames for invite ownership checks', () => {
+    expect(normalizeInstagramUsername(' @Creator.Name ')).toBe('creator.name');
+    expect(normalizeInstagramUsername('')).toBeNull();
+    expect(normalizeInstagramUsername(null)).toBeNull();
+  });
+
+  it('extracts the authenticated creator Instagram username from profile data', () => {
+    expect(
+      instagramUsernameFromProfile({
+        instagramIdentity: { username: 'Real_Creator' },
+      }),
+    ).toBe('real_creator');
+    expect(instagramUsernameFromProfile({})).toBeNull();
   });
 });
 
@@ -138,6 +162,34 @@ describe('buildRosterProfileSnapshot', () => {
     expect(snap.profilePicture).toBe('https://cdn.example.com/riya.jpg');
     expect(snap.recentCaptions?.length).toBeGreaterThan(0);
     expect(snap.feedSummary).toBeTruthy();
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves contact and custom sheet fields from bulk upload snapshots', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'creator',
+        displayName: 'Creator',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 10k',
+        notes: 'Prefers email',
+        tags: 'fashion, lifestyle',
+        custom_fields: {
+          manager: 'Asha',
+          priority: 3,
+        },
+      },
+      'creator',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('INR 10k');
+    expect(snap.notes).toBe('Prefers email');
+    expect(snap.tags).toBe('fashion, lifestyle');
+    expect(snap.custom_fields).toEqual({ manager: 'Asha', priority: '3' });
   });
 });
 
