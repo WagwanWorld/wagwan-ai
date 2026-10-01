@@ -7,6 +7,7 @@ import {
   parseFollowerCount,
 } from '../src/lib/server/marketplace/creatorInviteUtils';
 import { rosterEntryToView } from '../src/lib/utils/creatorCardView';
+import { coerceRosterProfileSnapshot } from '../src/lib/types/creator-invite';
 import type { BrandCreatorRosterEntry } from '../src/lib/types/creator-invite';
 
 describe('normalizeIgHandle', () => {
@@ -199,5 +200,36 @@ describe('rosterEntryToView', () => {
     expect(view.profilePicture).toBe('https://example.com/p.jpg');
     expect(view.fitScore).toBe(68);
     expect(view.feedSummary).toContain('fashion');
+  });
+});
+
+describe('coerceRosterProfileSnapshot', () => {
+  it('preserves contact and custom fields uploaded from a sheet', () => {
+    const snap = coerceRosterProfileSnapshot(
+      {
+        handle: 'testcreator',
+        displayName: 'Test Creator',
+        email: 'creator@example.com',
+        phone: '+919999999999',
+        rates: 'INR 25k',
+        notes: 'Prefers WhatsApp',
+        tags: 'fashion, nightlife',
+        custom_fields: {
+          manager: 'Priya',
+          availability: 'weekends',
+        },
+      },
+      'fallback',
+    );
+
+    expect(snap.email).toBe('creator@example.com');
+    expect(snap.phone).toBe('+919999999999');
+    expect(snap.rates).toBe('INR 25k');
+    expect(snap.notes).toBe('Prefers WhatsApp');
+    expect(snap.tags).toBe('fashion, nightlife');
+    expect(snap.custom_fields).toEqual({
+      manager: 'Priya',
+      availability: 'weekends',
+    });
   });
 });
